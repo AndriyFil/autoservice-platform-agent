@@ -12,7 +12,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 defineProps<{
-    name?: string;
+    activeWorkshop: {
+        id: number;
+        name: string;
+        slug: string;
+    };
 }>();
 </script>
 
@@ -21,6 +25,9 @@ defineProps<{
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div class="text-sm font-medium text-foreground">
+                {{ activeWorkshop.name }}
+            </div>
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
                 <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     <PlaceholderPattern />
