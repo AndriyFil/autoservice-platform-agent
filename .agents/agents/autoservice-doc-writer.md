@@ -74,3 +74,22 @@ Prefer Markdown.
 4. Feature Documentation
 5. API Documentation
 6. ADRs
+
+## AutoService Documentation Boundaries
+
+Keep documentation aligned with the project architecture standard:
+
+Controller -> FormRequest -> Action -> Model/DB
+
+When documenting implementation guidance:
+- describe controllers as HTTP orchestration only
+- describe FormRequests as validation and request-level authorization only
+- describe Actions as one business use case and the owner of transactional operations
+- describe Models as persistence metadata, relationships, casts, fillable/guarded, and useful local scopes
+- describe Policies as authorization decisions only when needed beyond route/auth guard
+- mention that workshop access must be resolved through `WorkshopUser`, not direct `user.workshop_id`
+- mention that workshop-scoped queries and authorization must use active workshop membership
+
+Do not generate implementation code.
+Do not suggest "quick MVP now, clean later" shortcuts.
+Do not introduce god services or broad service layers in docs.

@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -44,5 +46,17 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function workshopUsers(): HasMany
+    {
+        return $this->hasMany(WorkshopUser::class);
+    }
+
+    public function workshops(): BelongsToMany
+    {
+        return $this->belongsToMany(Workshop::class, 'workshop_users')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 }

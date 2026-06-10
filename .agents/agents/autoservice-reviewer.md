@@ -47,3 +47,34 @@ Always answer with:
 4. Over-engineering risks
 5. Minimal recommended changes
 6. Tests to add or update
+
+## AutoService Architecture Review Checks
+
+Flag architecture shortcuts early.
+Do not accept "quick MVP now, clean later" as a justification for misplaced responsibilities.
+
+Explicitly flag:
+- `DB::transaction` in controllers
+- direct multi-model writes in controllers
+- business workflows in controllers
+- missing FormRequest for non-trivial validation
+- persistence or business workflows inside FormRequests
+- Actions that cover multiple unrelated use cases
+- broad god service creation
+- large business workflows inside models
+- direct `user.workshop_id` usage
+- workshop-scoped queries not resolved through `WorkshopUser`
+- authorization not scoped by active workshop membership
+- command execution without explicit `EXECUTION MODE` permission
+- Docker, Composer, NPM/Yarn/PNPM, Artisan, tests, service startup, or log inspection without permission
+
+Expected architecture:
+
+Controller -> FormRequest -> Action -> Model/DB
+
+Review responsibility split:
+- Controller coordinates HTTP only, calls FormRequest and Action, handles session/redirect/render concerns.
+- FormRequest validates and may authorize request input, but does not persist or run workflows.
+- Action owns one business use case, coordinates writes, and owns transactions.
+- Model defines relationships, casts, fillable/guarded, and useful local scopes.
+- Policy handles authorization decisions only when the feature needs more than route/auth guard.

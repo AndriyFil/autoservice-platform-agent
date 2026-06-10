@@ -26,3 +26,40 @@ The goal is to avoid blind code generation and force a disciplined workflow.
 - Keep changes small and reviewable.
 - Do not duplicate business rules.
 - Do not hide important logic in the wrong layer.
+
+## AutoService Execution Boundary
+
+Default mode: FILE CHANGES ONLY.
+
+Agents may create and modify files.
+
+Agents must not run commands unless the user explicitly says `EXECUTION MODE`.
+
+Forbidden by default:
+- Docker commands
+- Composer commands
+- NPM, Yarn, or PNPM commands
+- Artisan commands
+- tests
+- service startup
+- logs inspection
+
+After file modifications, stop and report changed files.
+
+## AutoService Architecture Boundary
+
+Do not produce "quick MVP now, clean later" code.
+Use simple but correct architecture from the beginning.
+
+Default flow:
+
+Controller -> FormRequest -> Action -> Model/DB
+
+Do not put business transactions in controllers.
+Do not put `DB::transaction` in controllers.
+Do not put direct multi-model business workflows in controllers.
+Do not create broad god services.
+
+Resolve workshop access through `WorkshopUser`.
+Do not use direct `user.workshop_id`.
+Scope queries and authorization by active workshop membership.
