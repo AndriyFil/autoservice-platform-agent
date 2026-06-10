@@ -38,3 +38,22 @@ A pattern is acceptable only if it reduces:
 - Queries and authorization must be scoped by active Workshop membership.
 - Do not use direct `user.workshop_id`.
 - Resolve role through `WorkshopUser`.
+
+## Agent Execution Policy
+
+Default mode: DESIGN ONLY
+
+Agents may create and modify files.
+
+Agents must not:
+
+- run docker commands
+- run composer commands
+- run npm/yarn commands
+- run artisan commands
+- run tests
+- start services
+
+unless the user explicitly enables EXECUTION MODE.
+
+After file modifications, agents must stop and wait for review.
