@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -12,6 +13,15 @@ Route::get('/', function () {
 Route::get('dashboard', [DashboardController::class, 'show'])
     ->middleware(['auth'])
     ->name('dashboard');
+
+Route::get('book/{workshop:slug}', [PublicBookingRequestController::class, 'create'])
+    ->name('public-booking-requests.create');
+
+Route::post('book/{workshop:slug}', [PublicBookingRequestController::class, 'store'])
+    ->name('public-booking-requests.store');
+
+Route::get('book/{workshop:slug}/success', [PublicBookingRequestController::class, 'success'])
+    ->name('public-booking-requests.success');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('workshop-onboarding', [WorkshopOnboardingController::class, 'create'])
