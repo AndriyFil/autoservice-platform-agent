@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardBookingRequestController;
 use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,17 @@ Route::get('/', function () {
 Route::get('dashboard', [DashboardController::class, 'show'])
     ->middleware(['auth'])
     ->name('dashboard');
+
+Route::middleware(['auth'])
+    ->prefix('dashboard/booking-requests')
+    ->name('dashboard.booking-requests.')
+    ->group(function () {
+        Route::get('{bookingRequest}', [DashboardBookingRequestController::class, 'show'])
+            ->name('show');
+
+        Route::patch('{bookingRequest}/status', [DashboardBookingRequestController::class, 'updateStatus'])
+            ->name('status');
+    });
 
 Route::get('book/{workshop:slug}', [PublicBookingRequestController::class, 'create'])
     ->name('public-booking-requests.create');

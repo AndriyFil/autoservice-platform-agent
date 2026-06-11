@@ -3,7 +3,7 @@
 namespace App\Queries\Dashboard;
 
 use App\Models\BookingRequest;
-use App\Models\Workshop;
+use App\Models\WorkshopUser;
 
 class DashboardBookingRequestsQuery
 {
@@ -19,11 +19,11 @@ class DashboardBookingRequestsQuery
      *     createdAt: string
      * }>
      */
-    public function handle(Workshop $workshop): array
+    public function handle(WorkshopUser $activeWorkshopUser): array
     {
         return BookingRequest::query()
             ->with('vehicle')
-            ->where('workshop_id', $workshop->id)
+            ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get()

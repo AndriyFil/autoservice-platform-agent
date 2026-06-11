@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { Eye } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -98,12 +100,18 @@ const formatDateTime = (date: string): string =>
                                 <th class="px-4 py-3">Vehicle</th>
                                 <th class="px-4 py-3">Status</th>
                                 <th class="px-4 py-3">Created</th>
+                                <th class="px-4 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
                             <tr v-for="bookingRequest in bookingRequests" :key="bookingRequest.id">
                                 <td class="px-4 py-3 align-top">
-                                    <div class="font-medium text-foreground">{{ bookingRequest.customerName }}</div>
+                                    <Link
+                                        :href="route('dashboard.booking-requests.show', { bookingRequest: bookingRequest.id })"
+                                        class="font-medium text-foreground underline-offset-4 hover:underline"
+                                    >
+                                        {{ bookingRequest.customerName }}
+                                    </Link>
                                     <div class="text-muted-foreground">{{ bookingRequest.customerPhone }}</div>
                                 </td>
                                 <td class="max-w-md px-4 py-3 align-top text-foreground">
@@ -122,6 +130,14 @@ const formatDateTime = (date: string): string =>
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
                                     {{ formatDateTime(bookingRequest.createdAt) }}
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right align-top">
+                                    <Button as-child size="sm" variant="outline">
+                                        <Link :href="route('dashboard.booking-requests.show', { bookingRequest: bookingRequest.id })">
+                                            <Eye class="size-4" />
+                                            Open
+                                        </Link>
+                                    </Button>
                                 </td>
                             </tr>
                         </tbody>

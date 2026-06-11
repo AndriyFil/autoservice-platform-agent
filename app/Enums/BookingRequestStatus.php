@@ -18,4 +18,13 @@ enum BookingRequestStatus: string
             self::Cancelled => 'Cancelled',
         };
     }
+
+    public function canTransitionTo(self $status): bool
+    {
+        return match ($this) {
+            self::New => in_array($status, [self::Confirmed, self::Rejected, self::Cancelled], true),
+            self::Confirmed => $status === self::Cancelled,
+            self::Rejected, self::Cancelled => false,
+        };
+    }
 }
