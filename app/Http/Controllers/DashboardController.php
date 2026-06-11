@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Queries\Dashboard\DashboardBookingRequestsQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -9,7 +10,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function show(Request $request): Response|RedirectResponse
+    public function show(Request $request, DashboardBookingRequestsQuery $bookingRequestsQuery): Response|RedirectResponse
     {
         $workshopUsers = $request->user()
             ->workshopUsers()
@@ -37,6 +38,7 @@ class DashboardController extends Controller
                 'name' => $activeWorkshop->name,
                 'slug' => $activeWorkshop->slug,
             ],
+            'bookingRequests' => $bookingRequestsQuery->handle($activeWorkshop),
         ]);
     }
 }
