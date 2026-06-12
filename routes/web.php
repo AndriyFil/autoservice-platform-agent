@@ -17,6 +17,20 @@ Route::get('dashboard', [DashboardController::class, 'show'])
     ->name('dashboard');
 
 Route::middleware(['auth'])
+    ->prefix('booking-requests')
+    ->name('booking-requests.')
+    ->group(function () {
+        Route::get('create', [DashboardBookingRequestController::class, 'create'])
+            ->name('create');
+
+        Route::get('customers/search', [DashboardBookingRequestController::class, 'searchCustomers'])
+            ->name('customers.search');
+
+        Route::post('/', [DashboardBookingRequestController::class, 'store'])
+            ->name('store');
+    });
+
+Route::middleware(['auth'])
     ->prefix('dashboard/booking-requests')
     ->name('dashboard.booking-requests.')
     ->group(function () {

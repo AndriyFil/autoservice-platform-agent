@@ -4,10 +4,10 @@ namespace App\Actions\BookingRequests;
 
 use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
-use App\Models\Workshop;
+use App\Models\WorkshopUser;
 use Illuminate\Support\Facades\DB;
 
-class CreatePublicBookingRequestAction
+class CreateDashboardBookingRequestAction
 {
     public function __construct(
         private readonly ResolveBookingRequestCustomerAction $resolveBookingRequestCustomer,
@@ -16,6 +16,7 @@ class CreatePublicBookingRequestAction
 
     /**
      * @param  array{
+     *     customer_id?: int|null,
      *     customer_name: string,
      *     customer_phone: string,
      *     problem_description: string,
@@ -23,21 +24,25 @@ class CreatePublicBookingRequestAction
      *     vehicle?: array{brand?: string|null, model?: string|null, license_plate?: string|null}
      * }  $data
      */
-    public function handle(Workshop $workshop, array $data): BookingRequest
+    public function handle(WorkshopUser $activeWorkshopUser, array $data): BookingRequest
     {
-        return DB::transaction(function () use ($workshop, $data): BookingRequest {
-            $customerName = $data['customer_name'];
-            $customerPhone = $data['customer_phone'];
-            $customer = $this->resolveBookingRequestCustomer->handle($workshop, $customerName, $customerPhone);
+        return DB::transaction(function () use ($activeWorkshopUser, $data): BookingRequest {
+            $workshop = $activeWorkshopUser->workshop;
+            $customer = $this->resolveBookingRequestCustomer->handle(
+                $workshop,
+                $data['customer_name'],
+                $data['customer_phone'],
+                $data['customer_id'] ?? null,
+            );
             $vehicle = $this->createBookingRequestVehicle->handle($workshop, $customer, $data['vehicle'] ?? []);
 
             return BookingRequest::create([
-                'workshop_id' => $workshop->id,
+                'workshop_id' => $activeWorkshopUser->workshop_id,
                 'customer_id' => $customer->id,
                 'vehicle_id' => $vehicle?->id,
-                'created_by_user_id' => null,
-                'customer_name' => $customerName,
-                'customer_phone' => $customerPhone,
+                'created_by_user_id' => $activeWorkshopUser->user_id,
+                'customer_name' => $data['customer_name'],
+                'customer_phone' => $data['customer_phone'],
                 'problem_description' => $data['problem_description'],
                 'preferred_date' => $data['preferred_date'] ?? null,
                 'status' => BookingRequestStatus::New,

@@ -109,3 +109,17 @@ Frontend structure:
 Architecture posture:
 - do not accept "quick MVP now, clean later" as an architecture excuse
 - prefer simple but correct architecture from the beginning
+# Agent Quality Update
+
+Duplication threshold:
+- If two Actions duplicate customer/vehicle resolution rules, mention rule-drift risk.
+- Suggest a small helper or focused Action only when it reduces rule drift.
+- Do not suggest broad services for unrelated use cases.
+
+SQL/search checklist:
+- Normalized search should avoid fragile raw `LIKE` escaping.
+- Formatted phone input must be tested against normalized storage.
+
+Test-quality checklist:
+- Avoid giant feature test files when helper or factory extraction improves readability.
+- Prefer readable test setup that makes business rules visible.

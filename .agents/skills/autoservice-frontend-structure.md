@@ -112,3 +112,14 @@ Flag:
 - feature-specific components prematurely moved to shared UI
 - large modals embedded in page files
 - frontend state that conflicts with backend/Inertia source of truth
+# Agent Quality Update
+
+Feature-local type extraction:
+- If the same DTO appears in both a page and a feature component, extract that type near the feature.
+- Do not duplicate frontend DTO shapes across page/component boundaries.
+- Keep shared UI types only when multiple features reuse them.
+
+Validation:
+- After adding a Vue page or component, require a frontend smoke/build check when `EXECUTION MODE` is enabled and dependencies are available.
+- Use `npm run build` only when dependencies are already installed.
+- If build cannot run because dependencies are missing, report environment risk instead of claiming code success.

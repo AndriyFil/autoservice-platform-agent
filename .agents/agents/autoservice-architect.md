@@ -67,3 +67,12 @@ Inertia page props -> page orchestration component -> feature components -> shar
 - Resolve workshop access through `WorkshopUser`.
 - Scope queries and authorization by active workshop membership.
 - Cross-workshop access must return 404 or be denied according to the route context.
+# Agent Quality Update
+
+Before implementation plans, run this architecture checklist:
+- Is this one business use case or shared domain behavior?
+- Will public/dashboard flows duplicate the same rule?
+- Does this need Action, Query, FormRequest, or just controller orchestration?
+- What should the reviewer verify before acceptance?
+
+Prefer the smallest Laravel-conventional boundary that reduces rule drift or responsibility confusion. Do not introduce broad services unless they remove visible duplication, complexity, or testing risk.

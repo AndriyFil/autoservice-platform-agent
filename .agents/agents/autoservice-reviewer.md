@@ -80,3 +80,22 @@ Frontend:
 Workflow:
 - command execution without explicit `EXECUTION MODE` permission
 - Docker, Composer, NPM/Yarn/PNPM, Artisan, tests, service startup, or log inspection without permission
+# Agent Quality Update
+
+When `EXECUTION MODE` allows read access, inspect the actual diff before giving a final verdict.
+
+Allowed read-only inspection commands under `EXECUTION MODE`:
+- `rg`
+- `sed`
+- `git diff`
+- `git status`
+- `php artisan route:list`
+
+If there is no `EXECUTION MODE` and no diff was provided, report review blocked by no read access. Do not invent findings from unavailable code.
+
+Review checklist:
+- cross-workshop leaks
+- business rule placement
+- duplicated domain rules across Actions
+- frontend type duplication
+- missing build/test validation

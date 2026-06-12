@@ -2,57 +2,52 @@
 
 ## Goal
 
-Add local development seed data for AutoService.
+Add a visible dashboard entry point for creating booking requests.
 
 ## Files Changed
 
-- `database/seeders/DatabaseSeeder.php`
+- `resources/js/components/dashboard/BookingRequestTable.vue`
 - `.ai/task-report.md`
 
 ## Implementation Summary
 
-- Replaced default starter seed user with deterministic local demo data.
-- Added one owner user:
-  - email: `owner@example.com`
-  - password: `password`
-- Added one workshop:
-  - name: `Main Auto`
-  - slug: `main-auto`
-- Added owner membership from `owner@example.com` to `Main Auto`.
-- Added five realistic demo customers.
-- Added vehicles for four customers, including one customer with two vehicles.
-- Added six booking requests covering `new`, `confirmed`, `rejected`, and `cancelled`.
-- Included booking requests with vehicles and without vehicles.
+Added a `Create request` button to the booking request table header on the dashboard.
+
+The button links to the existing `booking-requests.create` route and uses the existing `Button` and Inertia `Link` UI patterns.
 
 ## Architecture Decisions
 
-- Kept all changes in `DatabaseSeeder` because the task only needs local demo data and no production behavior.
-- Used `updateOrCreate` with stable keys so repeated local seeding updates demo rows instead of creating duplicate users, workshop, customers, vehicles, memberships, or booking requests.
-- Used existing enums `WorkshopUserRole` and `BookingRequestStatus` so seeded values match domain values.
-- Did not create factories for vehicles or booking requests because this seed data is explicit and small; extra factories would not reduce current complexity.
-- Demo credentials are documented in a seeder comment and in this task report.
+Kept this as a frontend-only UX change because the create route and backend flow already exist.
+
+Placed the button beside the `Booking requests` heading because that is the user’s decision point for adding a new request.
 
 ## Tradeoffs
 
-- Booking request idempotence uses the tuple `workshop_id`, `customer_id`, and `problem_description` as a stable demo key because the table has no dedicated natural unique key.
-- Seed dates are fixed for predictable local screens instead of relative to current date.
-- Seed data is intentionally single-workshop because multi-branch and extra roles are out of scope.
+The table header now has one more control. On small screens it stacks above the table to avoid squeezing the title and button.
 
 ## Tests
 
-Not run. `EXECUTION MODE` was not enabled.
+Not rerun for this frontend-only button change.
 
-Suggested command for later `EXECUTION MODE`:
+Previously attempted frontend build still cannot validate until the local Vite binary is available:
 
-```sh
-php artisan migrate:fresh --seed
+```bash
+npm run build
+```
+
+Failure:
+
+```txt
+sh: vite: command not found
 ```
 
 ## Risks
 
-- Seeder was not executed, so runtime validation was not performed in this turn.
-- Re-running `db:seed` in a non-fresh local database may update matching demo rows but will not remove unrelated local rows.
+Frontend build could not validate due to incomplete local dependencies or missing Vite binary. No package install was run because install/update commands are forbidden unless explicitly requested.
+
+The worktree had pre-existing modified/staged files before this task. This task did not revert them.
 
 ## Follow Ups
 
-- Consider `docs/learning/laravel-seeders-and-factories.md` if seeders versus factories need a project-specific learning note.
+- Repair frontend dependencies, then rerun `npm run build`.
+- Consider adding a small browser smoke check after build works: dashboard button opens the create request page.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/vue3';
-import { Ban, Check, Eye, X } from 'lucide-vue-next';
+import { Ban, Check, Eye, Plus, X } from 'lucide-vue-next';
 import BookingRequestEmptyState from './BookingRequestEmptyState.vue';
 import BookingRequestStatusBadge from './BookingRequestStatusBadge.vue';
 import type { DashboardBookingRequest, StatusAction } from './types';
@@ -19,8 +19,15 @@ defineEmits<{
 
 <template>
     <div class="overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
-        <div class="border-b border-sidebar-border/70 px-4 py-3 dark:border-sidebar-border">
+        <div class="flex flex-col gap-3 border-b border-sidebar-border/70 px-4 py-3 dark:border-sidebar-border sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-base font-semibold text-foreground">Booking requests</h2>
+
+            <Button as-child size="sm">
+                <Link :href="route('booking-requests.create')">
+                    <Plus class="size-4" />
+                    Create request
+                </Link>
+            </Button>
         </div>
 
         <BookingRequestEmptyState v-if="bookingRequests.length === 0" />

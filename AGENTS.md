@@ -74,6 +74,23 @@ For learning notes, follow:
 
 - `.agents/skills/autoservice-learning-note.md`
 
+## Quality Update Rules
+
+Architects must review these questions before implementation plans:
+- Is this one business use case or shared domain behavior?
+- Will public/dashboard flows duplicate the same rule?
+- Does this need Action, Query, FormRequest, or just controller orchestration?
+- What should the reviewer verify before acceptance?
+
+Reviewers must inspect the actual diff before final verdict when `EXECUTION MODE` allows read access. If there is no `EXECUTION MODE` and no diff was provided, reviewers must report the review as blocked by no read access.
+
+Reviewers must check:
+- cross-workshop leaks
+- business rule placement
+- duplicated domain rules across Actions
+- frontend type duplication
+- missing build/test validation
+
 ## Execution Policy
 
 Default mode: FILE CHANGES ONLY.
@@ -96,6 +113,29 @@ unless the user explicitly writes:
 ```txt
 EXECUTION MODE
 ```
+
+Without `EXECUTION MODE`, agents must not run shell commands. They may only create or modify files needed for the requested task.
+
+With `EXECUTION MODE`, agents may run read-only inspection commands:
+- `rg`
+- `sed`
+- `git diff`
+- `git status`
+- `php artisan route:list`
+
+With `EXECUTION MODE`, agents may run validation commands:
+- `php artisan test`
+- focused `php artisan test` filters
+- `npm run build` only when dependencies are already installed
+
+Still forbidden unless the user explicitly requests the specific action:
+- Docker commands
+- Composer install/update
+- NPM/Yarn/PNPM install/update
+- service startup
+- migrations
+- formatters with write mode
+- log inspection
 
 For implementation tasks, use the Task Packet workflow.
 
