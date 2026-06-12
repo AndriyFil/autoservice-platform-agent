@@ -13,7 +13,7 @@ import {
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Ban, Check, X } from 'lucide-vue-next';
+import { ArrowLeft, Ban, Check, ClipboardList, Wrench, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 type StatusAction = 'confirmed' | 'rejected' | 'cancelled';
@@ -45,6 +45,13 @@ const props = defineProps<{
             model: string | null;
             licensePlate: string | null;
         } | null;
+        repairOrder: {
+            id: number;
+            status: {
+                value: 'open' | 'completed' | 'cancelled';
+                label: string;
+            };
+        } | null;
         createdAt: string;
         updatedAt: string;
     };
@@ -74,12 +81,17 @@ const pendingStatusChange = ref<PendingStatusChange | null>(null);
 const canConfirm = () => props.bookingRequest.status.value === 'new';
 const canReject = () => props.bookingRequest.status.value === 'new';
 const canCancel = () => ['new', 'confirmed'].includes(props.bookingRequest.status.value);
+const canCreateRepairOrder = () => props.bookingRequest.status.value === 'confirmed' && props.bookingRequest.repairOrder === null;
+const repairOrderCreateUrl = () =>
+    route('dashboard.repair-orders.create', {
+        booking_request: props.bookingRequest.id,
+    });
 
 const statusActionDetails = (status: StatusAction) =>
     ({
         confirmed: {
-            label: 'Confirm request',
-            description: 'This marks the request as confirmed. You can still cancel it later if needed.',
+            label: 'Confirm and start work',
+            description: 'This confirms the request and opens a prefilled repair order form. The repair order is created only after you save that form.',
             confirmButtonClass: 'bg-green-600 text-white hover:bg-green-700',
         },
         rejected: {
@@ -153,6 +165,7 @@ const submitPendingStatus = () => {
     statusDialogOpen.value = false;
     pendingStatusChange.value = null;
 };
+
 </script>
 
 <template>
@@ -174,6 +187,20 @@ const submitPendingStatus = () => {
                 </div>
 
                 <div class="flex flex-wrap gap-2">
+                    <Button v-if="canCreateRepairOrder()" as-child size="sm">
+                        <Link :href="repairOrderCreateUrl()">
+                            <Wrench class="size-4" />
+                            Start work
+                        </Link>
+                    </Button>
+
+                    <Button v-if="bookingRequest.repairOrder" as-child size="sm" variant="outline">
+                        <Link :href="route('dashboard.repair-orders.show', { repairOrder: bookingRequest.repairOrder.id })">
+                            <ClipboardList class="size-4" />
+                            Repair order
+                        </Link>
+                    </Button>
+
                     <Button
                         v-if="canConfirm()"
                         type="button"
@@ -183,7 +210,7 @@ const submitPendingStatus = () => {
                         @click="openStatusDialog('confirmed')"
                     >
                         <Check class="size-4" />
-                        Confirm
+                        Confirm and start work
                     </Button>
 
                     <Button

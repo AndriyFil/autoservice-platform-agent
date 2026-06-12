@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
-use App\Enums\BookingRequestStatus;
+use App\Enums\RepairOrderStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class BookingRequest extends Model
+class RepairOrder extends Model
 {
-    /** @use HasFactory<\Database\Factories\BookingRequestFactory> */
+    /** @use HasFactory<\Database\Factories\RepairOrderFactory> */
     use HasFactory;
 
     /**
@@ -22,12 +21,11 @@ class BookingRequest extends Model
         'workshop_id',
         'customer_id',
         'vehicle_id',
-        'created_by_user_id',
-        'customer_name',
-        'customer_phone',
-        'problem_description',
-        'preferred_date',
+        'booking_request_id',
         'status',
+        'problem_description',
+        'opened_at',
+        'closed_at',
     ];
 
     /**
@@ -38,8 +36,9 @@ class BookingRequest extends Model
     protected function casts(): array
     {
         return [
-            'preferred_date' => 'date',
-            'status' => BookingRequestStatus::class,
+            'status' => RepairOrderStatus::class,
+            'opened_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 
@@ -58,13 +57,8 @@ class BookingRequest extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function creator(): BelongsTo
+    public function bookingRequest(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by_user_id');
-    }
-
-    public function repairOrder(): HasOne
-    {
-        return $this->hasOne(RepairOrder::class);
+        return $this->belongsTo(BookingRequest::class);
     }
 }

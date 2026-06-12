@@ -59,6 +59,9 @@ Action:
 Query/read class:
 - use for reusable or growing read concerns, filtering, pagination, or large presentation mapping
 - do not create for trivial reads
+- never leave non-trivial Eloquent reads in controllers
+- eager loading, multi-step sorting/filtering, nested relation payloads, and DTO/presentation mapping belong in Query/read classes
+- controller inline queries are acceptable only for tiny reads with no eager-loaded nested payload and no presentation mapping
 
 Tests:
 - test behavior, not implementation details

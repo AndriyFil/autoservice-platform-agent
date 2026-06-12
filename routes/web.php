@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CancelDashboardRepairOrderController;
+use App\Http\Controllers\CompleteDashboardRepairOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
+use App\Http\Controllers\DashboardRepairOrderController;
 use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\WorkshopOnboardingController;
+use App\Http\Middleware\EnsureActiveWorkshop;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -13,24 +17,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('dashboard', [DashboardController::class, 'show'])
-    ->middleware(['auth'])
+    ->middleware(['auth', EnsureActiveWorkshop::class])
     ->name('dashboard');
 
-Route::middleware(['auth'])
-    ->prefix('booking-requests')
-    ->name('booking-requests.')
-    ->group(function () {
-        Route::get('create', [DashboardBookingRequestController::class, 'create'])
-            ->name('create');
-
-        Route::get('customers/search', [DashboardBookingRequestController::class, 'searchCustomers'])
-            ->name('customers.search');
-
-        Route::post('/', [DashboardBookingRequestController::class, 'store'])
-            ->name('store');
-    });
-
-Route::middleware(['auth'])
+Route::middleware(['auth', EnsureActiveWorkshop::class])
     ->prefix('dashboard/booking-requests')
     ->name('dashboard.booking-requests.')
     ->group(function () {
@@ -41,7 +31,30 @@ Route::middleware(['auth'])
             ->name('status');
     });
 
-Route::middleware(['auth'])
+Route::middleware(['auth', EnsureActiveWorkshop::class])
+    ->prefix('dashboard/repair-orders')
+    ->name('dashboard.repair-orders.')
+    ->group(function () {
+        Route::get('/', [DashboardRepairOrderController::class, 'index'])
+            ->name('index');
+
+        Route::get('create', [DashboardRepairOrderController::class, 'create'])
+            ->name('create');
+
+        Route::post('/', [DashboardRepairOrderController::class, 'store'])
+            ->name('store');
+
+        Route::get('{repairOrder}', [DashboardRepairOrderController::class, 'show'])
+            ->name('show');
+
+        Route::post('{repairOrder}/complete', [CompleteDashboardRepairOrderController::class, 'store'])
+            ->name('complete');
+
+        Route::post('{repairOrder}/cancel', [CancelDashboardRepairOrderController::class, 'store'])
+            ->name('cancel');
+    });
+
+Route::middleware(['auth', EnsureActiveWorkshop::class])
     ->prefix('customers')
     ->name('customers.')
     ->group(function () {

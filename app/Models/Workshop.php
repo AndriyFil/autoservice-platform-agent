@@ -48,4 +48,9 @@ class Workshop extends Model
     {
         return $this->hasMany(BookingRequest::class);
     }
+
+    public function repairOrders(): HasMany
+    {
+        return $this->hasMany(RepairOrder::class);
+    }
 }

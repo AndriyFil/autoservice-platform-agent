@@ -256,6 +256,8 @@ Action:
 Query/read class:
 - use for non-trivial read flows, reusable reads, filtering, pagination, or heavy presentation mapping
 - do not create query classes for tiny read-only pages that remain clear in the controller
+- never put non-trivial Eloquent queries, eager loading, sorting chains, or DTO/presentation mapping in controllers
+- if a controller needs a nested payload such as customers with vehicles, move that read and mapping into a Query/read class
 
 Model:
 - relationships
@@ -274,6 +276,8 @@ Policy:
 Page components should orchestrate layout and pass props.
 Large tables, lists, cards, and modals must be extracted into feature components.
 Do not create god components.
+Components should contain component things: template, local UI state, event handlers, and small computed values.
+Move reusable or bulky TypeScript types into nearby `type.ts` or existing feature type files instead of declaring them inside Vue components.
 Do not introduce stores for page-local server props.
 Use stores only for shared application state such as auth user, active workshop, theme, locale, sidebar, and notifications.
 Modal and popup components must live near the feature they belong to, for example `components/dashboard/modals/`.
@@ -343,3 +347,6 @@ briefly explain:
 - why it is better than the obvious alternative
 
 Do not assume prior knowledge.
+
+Do not restate approved plans in full.
+Implementation prompts should reference the approved plan and contain only task-specific instructions.

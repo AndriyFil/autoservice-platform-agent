@@ -2,52 +2,42 @@
 
 ## Goal
 
-Add a visible dashboard entry point for creating booking requests.
+Update BookingRequest status transition tests to match the approved "Confirm and start work" redirect behavior.
 
 ## Files Changed
 
-- `resources/js/components/dashboard/BookingRequestTable.vue`
+- `tests/Feature/DashboardBookingRequestManagementTest.php`
 - `.ai/task-report.md`
 
 ## Implementation Summary
 
-Added a `Create request` button to the booking request table header on the dashboard.
-
-The button links to the existing `booking-requests.create` route and uses the existing `Button` and Inertia `Link` UI patterns.
+- Updated valid status transition expectations so `confirmed` redirects to the RepairOrder create route with `booking_request` query context.
+- Kept non-confirm transitions expecting the previous back/dashboard redirect behavior.
+- Updated dashboard-list status action expectations so confirm uses the new confirmation flash message and RepairOrder create redirect.
 
 ## Architecture Decisions
 
-Kept this as a frontend-only UX change because the create route and backend flow already exist.
-
-Placed the button beside the `Booking requests` heading because that is the user’s decision point for adding a new request.
+- No production code changed because the failures were caused by outdated tests after the workflow change.
+- Tests now assert the actual business behavior: confirming a lead starts the RepairOrder creation flow but does not create the RepairOrder automatically.
 
 ## Tradeoffs
 
-The table header now has one more control. On small screens it stacks above the table to avoid squeezing the title and button.
+- The test now branches expected redirect behavior by target status because confirmation has a different workflow than reject/cancel.
 
 ## Tests
 
-Not rerun for this frontend-only button change.
+Not run because this task did not include `EXECUTION MODE`.
 
-Previously attempted frontend build still cannot validate until the local Vite binary is available:
+Recommended validation command:
 
 ```bash
-npm run build
-```
-
-Failure:
-
-```txt
-sh: vite: command not found
+php artisan test --filter=DashboardBookingRequestManagementTest
 ```
 
 ## Risks
 
-Frontend build could not validate due to incomplete local dependencies or missing Vite binary. No package install was run because install/update commands are forbidden unless explicitly requested.
-
-The worktree had pre-existing modified/staged files before this task. This task did not revert them.
+- If other tests still assume confirmation redirects back to the source page, they should be updated to expect the source BookingRequest query parameter.
 
 ## Follow Ups
 
-- Repair frontend dependencies, then rerun `npm run build`.
-- Consider adding a small browser smoke check after build works: dashboard button opens the create request page.
+- None.
