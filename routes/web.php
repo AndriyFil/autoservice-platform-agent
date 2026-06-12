@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
 use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\WorkshopOnboardingController;
@@ -24,6 +25,17 @@ Route::middleware(['auth'])
 
         Route::patch('{bookingRequest}/status', [DashboardBookingRequestController::class, 'updateStatus'])
             ->name('status');
+    });
+
+Route::middleware(['auth'])
+    ->prefix('customers')
+    ->name('customers.')
+    ->group(function () {
+        Route::get('/', [CustomerController::class, 'index'])
+            ->name('index');
+
+        Route::get('{customer}', [CustomerController::class, 'show'])
+            ->name('show');
     });
 
 Route::get('book/{workshop:slug}', [PublicBookingRequestController::class, 'create'])
