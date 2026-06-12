@@ -1,10 +1,28 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, Ban, Check, X } from 'lucide-vue-next';
+import { ref } from 'vue';
+
+type StatusAction = 'confirmed' | 'rejected' | 'cancelled';
+type PendingStatusChange = {
+    status: StatusAction;
+    label: string;
+    description: string;
+    confirmButtonClass: string;
+};
 
 const props = defineProps<{
     activeWorkshop: {
@@ -30,6 +48,9 @@ const props = defineProps<{
         createdAt: string;
         updatedAt: string;
     };
+    flash?: {
+        status?: string | null;
+    };
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -47,9 +68,31 @@ const form = useForm({
     status: '',
 });
 
+const statusDialogOpen = ref(false);
+const pendingStatusChange = ref<PendingStatusChange | null>(null);
+
 const canConfirm = () => props.bookingRequest.status.value === 'new';
 const canReject = () => props.bookingRequest.status.value === 'new';
 const canCancel = () => ['new', 'confirmed'].includes(props.bookingRequest.status.value);
+
+const statusActionDetails = (status: StatusAction) =>
+    ({
+        confirmed: {
+            label: 'Confirm request',
+            description: 'This marks the request as confirmed. You can still cancel it later if needed.',
+            confirmButtonClass: 'bg-green-600 text-white hover:bg-green-700',
+        },
+        rejected: {
+            label: 'Reject request',
+            description: 'This marks the request as rejected. There is no valid transition back from rejected.',
+            confirmButtonClass: '',
+        },
+        cancelled: {
+            label: 'Cancel request',
+            description: 'This marks the request as cancelled. Use this when the request should no longer continue.',
+            confirmButtonClass: 'bg-amber-600 text-white hover:bg-amber-700',
+        },
+    })[status];
 
 const vehicleSummary = (vehicle: { brand: string | null; model: string | null; licensePlate: string | null } | null): string => {
     if (!vehicle) {
@@ -84,12 +127,31 @@ const formatDateTime = (date: string): string =>
         minute: '2-digit',
     }).format(new Date(date));
 
-const submitStatus = (status: 'confirmed' | 'rejected' | 'cancelled') => {
+const openStatusDialog = (status: StatusAction) => {
+    pendingStatusChange.value = {
+        status,
+        ...statusActionDetails(status),
+    };
+    statusDialogOpen.value = true;
+};
+
+const submitStatus = (status: StatusAction) => {
     form.status = status;
 
     form.patch(route('dashboard.booking-requests.status', { bookingRequest: props.bookingRequest.id }), {
         preserveScroll: true,
+        onFinish: () => form.reset('status'),
     });
+};
+
+const submitPendingStatus = () => {
+    if (!pendingStatusChange.value) {
+        return;
+    }
+
+    submitStatus(pendingStatusChange.value.status);
+    statusDialogOpen.value = false;
+    pendingStatusChange.value = null;
 };
 </script>
 
@@ -116,8 +178,9 @@ const submitStatus = (status: 'confirmed' | 'rejected' | 'cancelled') => {
                         v-if="canConfirm()"
                         type="button"
                         size="sm"
+                        class="bg-green-600 text-white hover:bg-green-700"
                         :disabled="form.processing"
-                        @click="submitStatus('confirmed')"
+                        @click="openStatusDialog('confirmed')"
                     >
                         <Check class="size-4" />
                         Confirm
@@ -127,9 +190,9 @@ const submitStatus = (status: 'confirmed' | 'rejected' | 'cancelled') => {
                         v-if="canReject()"
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="destructive"
                         :disabled="form.processing"
-                        @click="submitStatus('rejected')"
+                        @click="openStatusDialog('rejected')"
                     >
                         <X class="size-4" />
                         Reject
@@ -139,14 +202,18 @@ const submitStatus = (status: 'confirmed' | 'rejected' | 'cancelled') => {
                         v-if="canCancel()"
                         type="button"
                         size="sm"
-                        variant="outline"
+                        class="bg-amber-600 text-white hover:bg-amber-700"
                         :disabled="form.processing"
-                        @click="submitStatus('cancelled')"
+                        @click="openStatusDialog('cancelled')"
                     >
                         <Ban class="size-4" />
                         Cancel
                     </Button>
                 </div>
+            </div>
+
+            <div v-if="flash?.status" class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                {{ flash.status }}
             </div>
 
             <InputError :message="form.errors.status" />
@@ -200,6 +267,37 @@ const submitStatus = (status: 'confirmed' | 'rejected' | 'cancelled') => {
                     </div>
                 </aside>
             </div>
+
+            <Dialog v-model:open="statusDialogOpen">
+                <DialogContent>
+                    <DialogHeader class="space-y-3">
+                        <DialogTitle>{{ pendingStatusChange?.label }}</DialogTitle>
+                        <DialogDescription>
+                            {{ pendingStatusChange?.description }}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div class="rounded-md border border-sidebar-border/70 bg-muted/40 px-3 py-2 text-sm text-foreground">
+                        {{ bookingRequest.customerName }}
+                    </div>
+
+                    <DialogFooter>
+                        <DialogClose as-child>
+                            <Button type="button" variant="outline">Keep current status</Button>
+                        </DialogClose>
+
+                        <Button
+                            type="button"
+                            :variant="pendingStatusChange?.status === 'rejected' ? 'destructive' : 'default'"
+                            :class="pendingStatusChange?.confirmButtonClass"
+                            :disabled="form.processing"
+                            @click="submitPendingStatus"
+                        >
+                            {{ pendingStatusChange?.label }}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     </AppLayout>
 </template>

@@ -59,7 +59,7 @@ class DashboardBookingRequestController extends Controller
             ]);
         }
 
-        return to_route('dashboard.booking-requests.show', $bookingRequest)
+        return back()
             ->with('status', 'Booking request status updated.');
     }
 }

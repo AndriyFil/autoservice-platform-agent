@@ -124,6 +124,74 @@ class DashboardBookingRequestManagementTest extends TestCase
         $this->assertRoleCanApplyValidStatusTransitions(WorkshopUserRole::Staff);
     }
 
+    public function test_dashboard_list_exposes_booking_request_statuses_for_quick_actions(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+
+        $newRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::New,
+        ]);
+        $confirmedRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+        $rejectedRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Rejected,
+        ]);
+        $cancelledRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Cancelled,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('bookingRequests.0.id', $cancelledRequest->id)
+                ->where('bookingRequests.0.status.value', 'cancelled')
+                ->where('bookingRequests.1.id', $rejectedRequest->id)
+                ->where('bookingRequests.1.status.value', 'rejected')
+                ->where('bookingRequests.2.id', $confirmedRequest->id)
+                ->where('bookingRequests.2.status.value', 'confirmed')
+                ->where('bookingRequests.3.id', $newRequest->id)
+                ->where('bookingRequests.3.status.value', 'new'));
+    }
+
+    public function test_dashboard_list_status_actions_redirect_back_to_dashboard(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+
+        $transitions = [
+            [BookingRequestStatus::New, BookingRequestStatus::Confirmed],
+            [BookingRequestStatus::New, BookingRequestStatus::Rejected],
+            [BookingRequestStatus::New, BookingRequestStatus::Cancelled],
+            [BookingRequestStatus::Confirmed, BookingRequestStatus::Cancelled],
+        ];
+
+        foreach ($transitions as [$fromStatus, $expectedStatus]) {
+            $bookingRequest = $this->createBookingRequest($workshop, [
+                'status' => $fromStatus,
+            ]);
+
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard'))
+                ->patch(route('dashboard.booking-requests.status', $bookingRequest), [
+                    'status' => $expectedStatus->value,
+                ])
+                ->assertRedirect(route('dashboard'))
+                ->assertSessionHas('status', 'Booking request status updated.');
+
+            $this->assertSame($expectedStatus, $bookingRequest->refresh()->status);
+        }
+    }
+
     public function test_invalid_status_transitions_are_rejected(): void
     {
         $user = User::factory()->create();
@@ -198,6 +266,7 @@ class DashboardBookingRequestManagementTest extends TestCase
             $this
                 ->actingAs($user)
                 ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard.booking-requests.show', $bookingRequest))
                 ->patch(route('dashboard.booking-requests.status', $bookingRequest), [
                     'status' => $expectedStatus->value,
                 ])

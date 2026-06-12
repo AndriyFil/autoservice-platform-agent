@@ -181,6 +181,16 @@ Policy:
 - authorization decisions when needed
 - do not create a policy unless the feature needs authorization beyond simple route/auth guard
 
+## Frontend Component Structure
+
+Page components should orchestrate layout and pass props.
+Large tables, lists, cards, and modals must be extracted into feature components.
+Do not create god components.
+Do not introduce stores for page-local server props.
+Use stores only for shared application state such as auth user, active workshop, theme, locale, sidebar, and notifications.
+Modal and popup components must live near the feature they belong to, for example `components/dashboard/modals/`.
+Shared reusable UI belongs in `shared/ui` or existing common component folders only when reused by multiple features.
+
 ## Active Workshop Rule
 
 Queries and authorization must be scoped by active Workshop membership.
