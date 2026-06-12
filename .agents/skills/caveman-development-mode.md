@@ -14,7 +14,7 @@ The goal is to avoid blind code generation and force a disciplined workflow.
 4. Propose a small plan.
 5. Implement only the agreed scope.
 6. Review the result.
-7. Suggest or run tests when behavior changes.
+7. Suggest tests when behavior changes.
 
 ## Rules
 
@@ -51,9 +51,11 @@ After file modifications, stop and report changed files.
 Do not produce "quick MVP now, clean later" code.
 Use simple but correct architecture from the beginning.
 
-Default flow:
+Default backend flow:
 
+```txt
 Controller -> FormRequest -> Action -> Model/DB
+```
 
 Do not put business transactions in controllers.
 Do not put `DB::transaction` in controllers.

@@ -22,20 +22,57 @@ A pattern is acceptable only if it reduces:
 Do not produce "quick MVP now, clean later" code.
 The default target is simple but correct architecture from the beginning.
 
-## Required workflow
+## Agent roles
 
-For development and review work, follow:
+Use roles intentionally:
+
+- `autoservice-architect`: plans architecture and responsibility boundaries. Does not implement unless explicitly asked.
+- `autoservice-backend-lead`: implements Laravel/backend work with senior-level maintainability standards.
+- `autoservice-frontend-lead`: implements Vue/Inertia frontend work with senior-level component/state discipline.
+- `autoservice-reviewer`: reviews diffs before acceptance.
+- `autoservice-doc-writer`: documents existing decisions and creates learning notes when requested.
+
+For large features, prefer:
+
+```txt
+autoservice-architect -> autoservice-backend-lead + autoservice-frontend-lead -> autoservice-reviewer -> autoservice-doc-writer when needed
+```
+
+For small backend-only tasks:
+
+```txt
+autoservice-backend-lead -> autoservice-reviewer
+```
+
+For small frontend-only tasks:
+
+```txt
+autoservice-frontend-lead -> autoservice-reviewer
+```
+
+## Required skills
+
+For implementation workflow, follow:
 
 - `.agents/skills/caveman-development-mode.md`
 - `.agents/skills/autoservice-task-workflow.md`
 
-For controller/action/query responsibility rules, follow:
+For backend responsibility boundaries, follow:
 
 - `.agents/skills/autoservice-controller-flow.md`
+- `.agents/skills/autoservice-testing-strategy.md`
 
-For architecture review, follow:
+For frontend structure, follow:
+
+- `.agents/skills/autoservice-frontend-structure.md`
+
+For review, follow:
 
 - `.agents/skills/laravel-grasp-solid-review.md`
+
+For learning notes, follow:
+
+- `.agents/skills/autoservice-learning-note.md`
 
 ## Execution Policy
 
@@ -55,9 +92,12 @@ Agents must not run:
 - log inspection
 
 unless the user explicitly writes:
-EXECUTION MODE
 
-For implementation tasks, use the Task Packet workflow below.
+```txt
+EXECUTION MODE
+```
+
+For implementation tasks, use the Task Packet workflow.
 
 After file changes:
 1. Create or update `.ai/task-report.md`.
@@ -87,9 +127,9 @@ Do not ask the user to copy information between chat, assistant, and Codex when 
 
 If tests should be run, list the exact command under the Tests section in `.ai/task-report.md`, but do not run it unless the user explicitly writes `EXECUTION MODE`.
 
-If a Laravel, PHP, architecture, database, or backend concept may be useful for learning, suggest a `docs/learning/<topic>.md` note in the Follow Ups section. Do not create the learning note unless requested.
+If a Laravel, PHP, architecture, database, backend, Vue, TypeScript, or Inertia concept may be useful for learning, suggest a `docs/learning/<topic>.md` note in the Follow Ups section. Do not create the learning note unless requested.
 
-Standard Task Packet format:
+## Standard Task Packet
 
 ```md
 # Task Packet
@@ -107,7 +147,7 @@ Standard Task Packet format:
 ## Out of Scope
 ```
 
-Standard Task Report format:
+## Standard Task Report
 
 ```md
 # Task Report
@@ -131,9 +171,11 @@ Standard Task Report format:
 
 ## Architecture Standard
 
-Default flow:
+Default backend flow:
 
+```txt
 Controller -> FormRequest -> Action -> Model/DB
+```
 
 Controllers coordinate HTTP only.
 FormRequests validate and authorize request input when appropriate.
@@ -145,7 +187,7 @@ Do not put business transactions in controllers.
 Do not use controllers for direct multi-model business workflows.
 Do not create broad god services that collect unrelated use cases.
 
-## Responsibility Split
+## Backend Responsibility Split
 
 Controller:
 - HTTP orchestration only
@@ -160,6 +202,7 @@ Controller:
 FormRequest:
 - validation
 - request-level authorization when appropriate
+- input preparation only when it is request-shaping, not business workflow
 - no persistence
 - no business workflows
 
@@ -170,11 +213,16 @@ Action:
 - may use `DB::transaction` when one business operation writes multiple records
 - returns result to controller
 
+Query/read class:
+- use for non-trivial read flows, reusable reads, filtering, pagination, or heavy presentation mapping
+- do not create query classes for tiny read-only pages that remain clear in the controller
+
 Model:
 - relationships
 - casts
 - fillable or guarded
 - local scopes if useful
+- enum behavior that belongs to the enum/model
 - no large business workflows
 
 Policy:
@@ -189,7 +237,7 @@ Do not create god components.
 Do not introduce stores for page-local server props.
 Use stores only for shared application state such as auth user, active workshop, theme, locale, sidebar, and notifications.
 Modal and popup components must live near the feature they belong to, for example `components/dashboard/modals/`.
-Shared reusable UI belongs in `shared/ui` or existing common component folders only when reused by multiple features.
+Shared reusable UI belongs in existing common component folders only when reused by multiple features.
 
 ## Active Workshop Rule
 
@@ -198,32 +246,6 @@ Queries and authorization must be scoped by active Workshop membership.
 Do not use direct `user.workshop_id`.
 Resolve workshop access through `WorkshopUser`.
 Use active workshop membership as the source of truth for workshop-scoped queries, permissions, and business actions.
-
-
-
-## Change Reporting
-
-After every task:
-1. Create or update `.ai/task-report.md` for implementation tasks.
-2. List changed files.
-3. Explain why each file changed.
-4. Explain architecture decisions.
-5. Explain tradeoffs.
-6. Stop.
-Do not print full file contents unless requested.
-
-## Learning Workflow
-
-When a Laravel, PHP, architecture, database, or backend concept causes confusion during implementation, suggest creating:
-
-docs/learning/<topic>.md
-
-Learning notes should:
-- use examples from the current AutoService project
-- explain concepts in practical terms
-- include implementation examples from the codebase
-- avoid copying framework documentation
-- include common mistakes and self-check questions
 
 ## Scope Control
 
@@ -236,17 +258,48 @@ Do not introduce:
 - future features
 
 If a potential improvement is discovered:
-- mention it in tradeoffs
+- mention it in Tradeoffs or Follow Ups
 - do not implement it unless requested
+
+## Change Reporting
+
+After every task:
+1. Create or update `.ai/task-report.md` for implementation tasks.
+2. List changed files.
+3. Explain why each file changed.
+4. Explain architecture decisions.
+5. Explain tradeoffs.
+6. Stop.
+
+Do not print full file contents unless requested.
+
+## Learning Workflow
+
+When a Laravel, PHP, architecture, database, backend, Vue, TypeScript, or Inertia concept causes confusion during implementation, suggest creating:
+
+```txt
+docs/learning/<topic>.md
+```
+
+Learning notes should:
+- use examples from the current AutoService project
+- explain concepts in practical terms
+- include implementation examples from the codebase
+- avoid copying framework documentation
+- include common mistakes and self-check questions
 
 ## Explain Decisions
 
 When introducing:
 - Laravel features
+- Vue/Inertia features
+- TypeScript patterns
 - framework abstractions
 - architectural patterns
+
 briefly explain:
 - what it is
 - why it is used
 - why it is better than the obvious alternative
+
 Do not assume prior knowledge.

@@ -2,51 +2,41 @@
 
 ## Goal
 
-Add Customer admin section for the active workshop.
+Add local development seed data for AutoService.
 
 ## Files Changed
 
-- `routes/web.php`
-- `app/Http/Controllers/CustomerController.php`
-- `app/Queries/Customers/CustomerListQuery.php`
-- `app/Queries/Customers/CustomerDetailsQuery.php`
-- `resources/js/pages/Customers/Index.vue`
-- `resources/js/pages/Customers/Show.vue`
-- `resources/js/components/customers/CustomerTable.vue`
-- `resources/js/components/customers/CustomerEmptyState.vue`
-- `resources/js/components/customers/CustomerBookingRequests.vue`
-- `resources/js/components/customers/CustomerVehicles.vue`
-- `resources/js/components/customers/types.ts`
-- `resources/js/components/customers/utils.ts`
-- `resources/js/components/AppSidebar.vue`
-- `resources/js/components/NavMain.vue`
-- `tests/Feature/CustomerManagementTest.php`
+- `database/seeders/DatabaseSeeder.php`
 - `.ai/task-report.md`
 
 ## Implementation Summary
 
-- Added authenticated `/customers` and `/customers/{customer}` routes.
-- Added a customer controller that resolves active workshop membership and redirects users without membership to workshop onboarding.
-- Added customer list/detail query classes that scope all reads by `WorkshopUser::workshop_id`.
-- Added customer list and detail Inertia pages.
-- Extracted customer table, vehicles, booking requests, empty state, types, and formatting helpers into feature components.
-- Added Customers navigation entry and fixed main nav to use the shared `href` nav shape.
-- Added feature tests for guest redirects, onboarding redirect, active workshop list scoping, detail access, cross-workshop 404, and detail payload contents.
+- Replaced default starter seed user with deterministic local demo data.
+- Added one owner user:
+  - email: `owner@example.com`
+  - password: `password`
+- Added one workshop:
+  - name: `Main Auto`
+  - slug: `main-auto`
+- Added owner membership from `owner@example.com` to `Main Auto`.
+- Added five realistic demo customers.
+- Added vehicles for four customers, including one customer with two vehicles.
+- Added six booking requests covering `new`, `confirmed`, `rejected`, and `cancelled`.
+- Included booking requests with vehicles and without vehicles.
 
 ## Architecture Decisions
 
-- No FormRequest was added because customer pages are read-only and accept no input needing validation.
-- No Action was added because there is no business write use case or transaction.
-- Query classes own list/detail mapping because customer counts, latest booking date, vehicles, booking requests, and status labels would make the controller too busy.
-- Active workshop access is resolved through `ActiveWorkshopMembershipResolver` and `WorkshopUser`; no direct `user.workshop_id` usage was introduced.
-- Cross-workshop detail access uses scoped query plus `firstOrFail()`, producing a 404 without a broad policy or service.
-- Frontend pages orchestrate layout and props; reusable customer UI lives under `resources/js/components/customers`.
+- Kept all changes in `DatabaseSeeder` because the task only needs local demo data and no production behavior.
+- Used `updateOrCreate` with stable keys so repeated local seeding updates demo rows instead of creating duplicate users, workshop, customers, vehicles, memberships, or booking requests.
+- Used existing enums `WorkshopUserRole` and `BookingRequestStatus` so seeded values match domain values.
+- Did not create factories for vehicles or booking requests because this seed data is explicit and small; extra factories would not reduce current complexity.
+- Demo credentials are documented in a seeder comment and in this task report.
 
 ## Tradeoffs
 
-- Customer list has no pagination/search/filter because those were out of scope; this is acceptable for current requested admin section but may need pagination as data grows.
-- Detail query returns all vehicles and booking requests for the customer; this keeps the page simple now, but pagination may be needed later for high-volume customers.
-- A small query layer was added instead of controller Eloquent mapping to reduce controller responsibility without introducing repositories or broad services.
+- Booking request idempotence uses the tuple `workshop_id`, `customer_id`, and `problem_description` as a stable demo key because the table has no dedicated natural unique key.
+- Seed dates are fixed for predictable local screens instead of relative to current date.
+- Seed data is intentionally single-workshop because multi-branch and extra roles are out of scope.
 
 ## Tests
 
@@ -55,15 +45,14 @@ Not run. `EXECUTION MODE` was not enabled.
 Suggested command for later `EXECUTION MODE`:
 
 ```sh
-php artisan test --filter=CustomerManagementTest
+php artisan migrate:fresh --seed
 ```
 
 ## Risks
 
-- Frontend build and feature tests were not executed due to file-only execution policy.
-- Large customer histories may create heavy detail payloads until pagination is added.
+- Seeder was not executed, so runtime validation was not performed in this turn.
+- Re-running `db:seed` in a non-fresh local database may update matching demo rows but will not remove unrelated local rows.
 
 ## Follow Ups
 
-- Consider `docs/learning/active-workshop-scoping.md` to explain how `WorkshopUser` scopes admin pages in this project.
-- Add customer pagination/search/filter only when requested or when list size makes it necessary.
+- Consider `docs/learning/laravel-seeders-and-factories.md` if seeders versus factories need a project-specific learning note.

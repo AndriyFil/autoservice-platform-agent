@@ -7,8 +7,9 @@ Controllers are orchestration only.
 ## Controller may
 
 - Receive a FormRequest.
-- Pass validated data or route models into an Action or Query.
-- Return a View, Redirect, JSON Resource, or Response.
+- Pass validated data or route models into an Action or Query/read class.
+- Write session only when it is an HTTP/session concern.
+- Return a View, Redirect, JSON Resource, Inertia Response, or Response.
 
 ## Controller must not
 
@@ -17,75 +18,81 @@ Controllers are orchestration only.
 - Build complex queries.
 - Calculate domain values.
 - Coordinate many model changes directly.
+- Open business transactions.
+- Call `DB::transaction`.
 
 ## Preferred write flow
 
-Controller → FormRequest → Action → Model
+```txt
+Controller -> FormRequest -> Action -> Model/DB
+```
 
 ## Preferred read/list flow
 
-Controller → FormRequest → Query → View/Resource
+```txt
+Controller -> optional FormRequest -> Query/read class -> Inertia props/View/Resource
+```
 
-## Exception
+## Exception for simple reads
 
-For very small read-only pages or trivial CRUD operations, direct model access in a controller is acceptable only if:
+For very small read-only pages or trivial CRUD reads, direct model access in a controller is acceptable only if:
 
 - there is no business workflow
 - there is no status transition
 - there is no complex filtering
 - there is no coordination of multiple models
 - there is no duplication risk
-- the controller remains tiny
+- the controller remains small and obvious
 
-## Required AutoService Flow
+If query/mapping grows, extract a feature-specific Query/read class.
 
-Use this default flow for non-trivial features:
+## FormRequest
 
-Controller -> FormRequest -> Action -> Model/DB
+Use a FormRequest when:
 
-Do not produce "quick MVP now, clean later" code.
-Use simple but correct architecture from the beginning.
+- validation is non-trivial
+- authorization belongs to the request
+- input needs preparation before validation
 
-Controller:
-- HTTP orchestration only
-- call FormRequest
-- call Action
-- write session only when it is an HTTP/session concern
-- redirect or render response
-- no business transactions
-- no `DB::transaction`
-- no direct multi-model business workflows
+FormRequest must not:
 
-FormRequest:
-- validation
-- request-level authorization when appropriate
-- no persistence
-- no business workflows
+- persist data
+- execute workflows
+- call Actions
+- make business transitions
 
-Action:
-- one business use case
-- transactional operations
-- coordinates model writes
-- may use `DB::transaction` when one business operation writes multiple records
-- returns result to controller
+## Action
 
-Model:
-- relationships
-- casts
-- fillable or guarded
-- local scopes if useful
-- no large business workflows
+Use an Action for one business use case.
 
-Policy:
-- authorization decisions when needed
-- do not create a policy unless the feature needs authorization beyond simple route/auth guard
+Action may:
 
-Service guidance:
-- avoid broad services
-- do not create god services that collect unrelated use cases
-- prefer Actions for use cases
+- coordinate model writes
+- own `DB::transaction`
+- enforce business invariants
+- return the created/updated model or result
 
-Active workshop:
-- do not use direct `user.workshop_id`
-- resolve workshop access through `WorkshopUser`
-- scope queries and authorization by active workshop membership
+Action must not:
+
+- render responses
+- redirect
+- write flash/session data
+- become a broad service object
+
+## Policy
+
+Use policies only when authorization decisions exceed simple auth/route guard or active workshop membership checks.
+
+Policy answers:
+
+```txt
+Can the user do this?
+```
+
+Policy does not execute the business operation.
+
+## Active workshop
+
+- Do not use direct `user.workshop_id`.
+- Resolve workshop access through `WorkshopUser`.
+- Scope queries and authorization by active workshop membership.

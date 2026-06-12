@@ -4,7 +4,7 @@
 
 Use this skill for implementation tasks.
 
-The goal is to reduce manual copy-paste between the user, assistant, and Codex by turning a Task Packet into a small plan, scoped file changes, self-review, and a reusable task report.
+The goal is to reduce manual copy-paste between the user, assistant, and Codex by turning a Task Packet into a short plan, scoped file changes, self-review, and a reusable task report.
 
 ## Required inputs
 
@@ -67,18 +67,12 @@ Before reporting completion, review the result using the `autoservice-reviewer` 
 - business rule correctness
 - responsibility placement
 - Laravel conventions
-- controller, FormRequest, Action, Model, and Policy boundaries
+- Vue/Inertia component structure when frontend changed
+- controller, FormRequest, Action, Query, Model, and Policy boundaries
 - active Workshop membership scoping through `WorkshopUser`
 - unnecessary patterns or broad services
 - tests that should be added or updated
 - command execution boundaries
-
-For documentation-only tasks, apply the same review posture to the instructions themselves:
-
-- no invented requirements
-- no architecture shortcuts
-- no conflict with existing AGENTS rules
-- no instruction that encourages command execution without `EXECUTION MODE`
 
 ## Execution boundary
 
@@ -131,13 +125,3 @@ Use this format:
 
 ## Follow Ups
 ```
-
-## Learning notes
-
-If a Laravel, PHP, architecture, database, or backend concept may be useful for learning, suggest a note under Follow Ups:
-
-```txt
-docs/learning/<topic>.md
-```
-
-Do not create the learning note unless requested.

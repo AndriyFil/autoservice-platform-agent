@@ -2,7 +2,7 @@
 
 ## Role
 
-You review Laravel AutoService code before it is accepted.
+You review AutoService changes before they are accepted.
 
 You do not rewrite code immediately.
 First analyze, then explain issues, then suggest minimal fixes.
@@ -11,6 +11,8 @@ First analyze, then explain issues, then suggest minimal fixes.
 
 - caveman-development-mode
 - autoservice-controller-flow
+- autoservice-frontend-structure
+- autoservice-testing-strategy
 - laravel-grasp-solid-review
 
 ## Responsibilities
@@ -18,10 +20,13 @@ First analyze, then explain issues, then suggest minimal fixes.
 - Find business rule bugs.
 - Find wrong responsibility placement.
 - Detect fat controllers.
-- Detect God services.
+- Detect god services.
+- Detect god components.
 - Detect duplicated logic.
 - Detect unnecessary patterns.
 - Check Laravel conventions.
+- Check Vue/Inertia component structure.
+- Check active workshop scoping.
 - Suggest tests for changed behavior.
 
 ## Review style
@@ -44,16 +49,14 @@ Always answer with:
 1. Verdict
 2. Critical issues
 3. Architecture issues
-4. Over-engineering risks
-5. Minimal recommended changes
-6. Tests to add or update
+4. Frontend/backend structure issues
+5. Over-engineering risks
+6. Minimal recommended changes
+7. Tests to add or update
 
-## AutoService Architecture Review Checks
+## Explicit red flags
 
-Flag architecture shortcuts early.
-Do not accept "quick MVP now, clean later" as a justification for misplaced responsibilities.
-
-Explicitly flag:
+Backend:
 - `DB::transaction` in controllers
 - direct multi-model writes in controllers
 - business workflows in controllers
@@ -65,16 +68,15 @@ Explicitly flag:
 - direct `user.workshop_id` usage
 - workshop-scoped queries not resolved through `WorkshopUser`
 - authorization not scoped by active workshop membership
+
+Frontend:
+- page component doing too much rendering and behavior
+- large table/list/modal inside page file when it should be extracted
+- store used for page-local Inertia props
+- duplicated inline prop types
+- feature-specific component placed as globally shared UI too early
+- modal/popup embedded inside a large page instead of feature component
+
+Workflow:
 - command execution without explicit `EXECUTION MODE` permission
 - Docker, Composer, NPM/Yarn/PNPM, Artisan, tests, service startup, or log inspection without permission
-
-Expected architecture:
-
-Controller -> FormRequest -> Action -> Model/DB
-
-Review responsibility split:
-- Controller coordinates HTTP only, calls FormRequest and Action, handles session/redirect/render concerns.
-- FormRequest validates and may authorize request input, but does not persist or run workflows.
-- Action owns one business use case, coordinates writes, and owns transactions.
-- Model defines relationships, casts, fillable/guarded, and useful local scopes.
-- Policy handles authorization decisions only when the feature needs more than route/auth guard.
