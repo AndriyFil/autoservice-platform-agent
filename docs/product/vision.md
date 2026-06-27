@@ -1,58 +1,125 @@
-# AutoService Platform Vision
+# AutoService Product Vision v2
 
-## Purpose
+## Vision
 
-AutoService is a multi-workshop SaaS platform for small and medium auto workshops.
+AutoService is a modern platform for auto service intake and workshop management.
 
-The platform helps each workshop receive customer requests and keep track of its own customers, vehicles, and booking requests.
+The platform follows a chat-first user experience approach.
 
-## Target Workshops
+Customers should be able to describe their problem naturally instead of filling long and complex forms. The system progressively collects the required information and converts it into structured workshop data.
 
-AutoService is designed for:
+The goal is to reduce friction, increase booking completion rates, and make communication with workshops feel simple and natural.
 
-- small workshops
-- medium workshops
-- workshops with approximately 1–10 employees
+---
 
-Each workshop is a business entity in the platform.
+## Core Principles
 
-## Target Customers
+### Conversation First
 
-Customers who need vehicle maintenance, diagnostics, or repairs and want a simple way to contact a workshop.
+Customer interactions should start with a simple question:
+
+"What happened to your car?"
+
+The system should collect information progressively rather than presenting large forms.
+
+### One Step At A Time
+
+Users should answer one question at a time.
+
+Avoid overwhelming customers with many fields, sections, or configuration options on a single screen.
+
+### Progressive Data Collection
+
+Required information should be collected only when needed.
+
+Examples:
+
+- describe the problem
+- preferred date
+- vehicle information
+- contact information
+
+### Internal Complexity Stays Internal
+
+Customers should never be exposed to internal workshop terminology.
+
+Terms such as:
+
+- BookingRequest
+- RepairOrder
+- WorkshopUser
+
+are internal implementation details.
+
+Customers only see concepts they understand:
+
+- Request
+- Appointment
+- Service
+- Vehicle
+
+### Consistent Experience
+
+The same customer journey should work across all future customer-facing channels.
+
+Business rules should remain independent from the presentation layer.
+
+---
+
+## Product Positioning
+
+AutoService is not a traditional CRM.
+
+AutoService is a customer-first service intake and workshop management platform.
+
+Workshop management remains important, but customer interaction and simplicity are first-class product goals.
+
+---
+
+## Core Domain
+
+Workshop
+
+WorkshopUser
+
+Customer
+
+Vehicle
+
+BookingRequest
+- customer intake
+- service request
+- lead
+
+RepairOrder
+- actual workshop work
+- operational document
+
+---
 
 ## MVP Goal
 
-The first version must allow a workshop to:
+A workshop should be able to:
 
-- receive customer requests online
-- review incoming requests
-- contact customers
-- manage request status
-- keep basic customer and vehicle information
+- receive requests
+- manage customers
+- manage vehicles
+- create repair orders
+- track work status
 
-Public customers submit booking requests through a workshop-specific public form.
+A customer should be able to:
 
-Users are platform accounts. A user may access one or more workshops through workshop membership.
+- describe a problem
+- submit a request with minimal effort
+- receive a clear and simple experience
 
-Authorization is evaluated in the context of the active workshop.
+---
 
-MVP roles are simple role checks: owner and staff.
+## Product Rule
 
-## Product Principles
+When a choice exists between:
 
-- Simple before powerful.
-- Minimize administrative work.
-- Focus on workshop communication.
-- Avoid unnecessary complexity.
-- Build only features that solve real workshop problems.
+1. a simpler customer experience
+2. exposing internal business complexity
 
-## Out Of Scope
-
-The MVP intentionally excludes:
-
-- inventory management
-- invoices
-- payments
-- accounting
-- multi-branch support
-- advanced scheduling
+the simpler customer experience should be preferred.

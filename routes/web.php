@@ -1,20 +1,34 @@
 <?php
 
+use App\Models\Workshop;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CancelDashboardRepairOrderController;
 use App\Http\Controllers\CompleteDashboardRepairOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
 use App\Http\Controllers\DashboardRepairOrderController;
+use App\Http\Controllers\PublicIntakeController;
 use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use App\Http\Middleware\EnsureActiveWorkshop;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
+Route::get('/', function (Request $request) {
+    return Inertia::render('Welcome', [
+        'workshops' => Workshop::query()
+            ->select(['id', 'name', 'slug'])
+            ->orderBy('name')
+            ->get(),
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'intakeSubmitted' => $request->session()->get('intake_submitted', false),
+    ]);
 })->name('home');
+
+Route::post('intake', [PublicIntakeController::class, 'store'])
+    ->name('public-intake.store');
 
 Route::get('dashboard', [DashboardController::class, 'show'])
     ->middleware(['auth', EnsureActiveWorkshop::class])

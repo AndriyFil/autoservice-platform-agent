@@ -26,6 +26,7 @@ class BookingRequest extends Model
         'customer_name',
         'customer_phone',
         'problem_description',
+        'original_message',
         'preferred_date',
         'status',
     ];

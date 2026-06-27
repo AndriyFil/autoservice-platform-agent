@@ -22,6 +22,24 @@ A pattern is acceptable only if it reduces:
 Do not produce "quick MVP now, clean later" code.
 The default target is simple but correct architecture from the beginning.
 
+## Workflow Rules
+
+Use the workflow docs in `.ai/workflow/` for normal agent work:
+
+- `.ai/workflow/README.md`
+- `.ai/workflow/planning.md`
+- `.ai/workflow/execution.md`
+- `.ai/workflow/verification.md`
+- `.ai/workflow/lessons.md`
+
+For non-trivial tasks, agents must check `.ai/lessons/autoservice.md` before planning.
+
+For non-trivial tasks, agents must plan first, implement the smallest useful slice, verify the result, update `.ai/task-report.md`, and stop.
+
+When the user gives a reusable correction, append a concise lesson to `.ai/lessons/autoservice.md` before completing the task report.
+
+Normal safe work should not require the user to type special mode names. Agents may inspect and edit files needed for the requested task by default. Agents must still ask before broad or destructive commands, dependency installation or updates, service startup, migrations, Docker operations, log inspection, or any command that changes external state beyond the requested work.
+
 ## Agent roles
 
 Use roles intentionally:
@@ -29,6 +47,8 @@ Use roles intentionally:
 - `autoservice-architect`: plans architecture and responsibility boundaries. Does not implement unless explicitly asked.
 - `autoservice-backend-lead`: implements Laravel/backend work with senior-level maintainability standards.
 - `autoservice-frontend-lead`: implements Vue/Inertia frontend work with senior-level component/state discipline.
+- `autoservice-product-ux`: validates product flows, user journeys, and chat-first customer intake before implementation.
+- `autoservice-ui-designer`: designs visual structure, component breakdowns, states, accessibility, and responsive behavior before frontend implementation.
 - `autoservice-reviewer`: reviews diffs before acceptance.
 - `autoservice-doc-writer`: documents existing decisions and creates learning notes when requested.
 
@@ -50,6 +70,56 @@ For small frontend-only tasks:
 autoservice-frontend-lead -> autoservice-reviewer
 ```
 
+## Product and Design Workflow
+
+For new customer-facing flows, run `autoservice-product-ux` before `autoservice-frontend-lead`.
+
+For visual implementation, run `autoservice-ui-designer` before `autoservice-frontend-lead`.
+
+`autoservice-architect` still owns backend/domain boundaries, not visual UX.
+
+## Chat-First Intake Direction
+
+AutoService is a chat-first auto service intake and workshop management platform.
+
+This is not an AI mechanic. This is an AI intake assistant.
+
+LLM may be used only for:
+- extracting structured intake data from customer text
+- summarizing the customer's original message
+- detecting missing required fields
+- asking the next missing question
+
+LLM must not:
+- diagnose vehicle problems
+- recommend repairs
+- estimate prices
+- promise appointment availability
+- replace staff confirmation
+- act as a general-purpose chatbot
+
+Customer-facing intake must start from a natural customer message, for example:
+
+```txt
+Opel Insignia, check engine light came on, maybe sensors, when can I come?
+```
+
+The system should extract what it can, show a short confirmation summary, and ask only for missing required information. Do not force the customer to re-enter data already extracted.
+
+Use examples, suggestions, or animated placeholder behavior to teach customers what to write. After submit, show:
+
+```txt
+Request received. A service advisor will contact you to confirm details and visit time.
+```
+
+Phone call remains the safest final confirmation channel. Customer-facing UI should look like a conversation or timeline, not a traditional form.
+
+Product Manager must prevent AI diagnosis scope creep.
+Product UX must prefer a free-text first message over rigid question-answer flow.
+UI Designer must include first-message examples, placeholder or suggestion behavior, submitted-state message, and conversation/timeline layout.
+Architect must keep future LLM integration behind a small intake extraction boundary, not spread AI calls across controllers or components.
+Backend and Frontend leads must not implement LLM unless a spec explicitly asks for it.
+
 ## Required skills
 
 For implementation workflow, follow:
@@ -65,6 +135,10 @@ For backend responsibility boundaries, follow:
 For frontend structure, follow:
 
 - `.agents/skills/autoservice-frontend-structure.md`
+
+For chat-first customer intake and product UX, follow:
+
+- `.agents/skills/chat-first-ux-flow.md`
 
 For review, follow:
 
@@ -82,7 +156,7 @@ Architects must review these questions before implementation plans:
 - Does this need Action, Query, FormRequest, or just controller orchestration?
 - What should the reviewer verify before acceptance?
 
-Reviewers must inspect the actual diff before final verdict when `EXECUTION MODE` allows read access. If there is no `EXECUTION MODE` and no diff was provided, reviewers must report the review as blocked by no read access.
+Reviewers must inspect the actual diff before final verdict when safe file read access is available. If there is no read access and no diff was provided, reviewers must report the review as blocked by no read access.
 
 Reviewers must check:
 - cross-workshop leaks
@@ -93,37 +167,24 @@ Reviewers must check:
 
 ## Execution Policy
 
-Default mode: FILE CHANGES ONLY.
+Default mode: SAFE FILE WORK.
 
 Agents may:
+- inspect files needed to understand the requested task
 - create files
 - modify files
+- inspect diffs or status when needed to verify their own scoped changes
 
-Agents must not run:
-- Docker commands
-- Composer commands
-- NPM/Yarn/PNPM commands
-- Artisan commands
-- tests
-- service startup
-- log inspection
+Agents must ask before running broad or destructive commands, dependency installation or updates, service startup, migrations, Docker operations, log inspection, or commands that change external state beyond the requested work.
 
-unless the user explicitly writes:
-
-```txt
-EXECUTION MODE
-```
-
-Without `EXECUTION MODE`, agents must not run shell commands. They may only create or modify files needed for the requested task.
-
-With `EXECUTION MODE`, agents may run read-only inspection commands:
+Allowed safe inspection commands include:
 - `rg`
 - `sed`
 - `git diff`
 - `git status`
 - `php artisan route:list`
 
-With `EXECUTION MODE`, agents may run validation commands:
+Allowed validation commands when appropriate for the requested task:
 - `php artisan test`
 - focused `php artisan test` filters
 - `npm run build` only when dependencies are already installed
@@ -165,7 +226,7 @@ Required behavior:
 Do not continue into extra features after finishing the requested task.
 Do not ask the user to copy information between chat, assistant, and Codex when the agent can write the plan, report, or workflow file directly.
 
-If tests should be run, list the exact command under the Tests section in `.ai/task-report.md`, but do not run it unless the user explicitly writes `EXECUTION MODE`.
+Do not run tests unless the user requested validation or the task explicitly calls for it. If tests should be run later, list the exact command under the Tests section in `.ai/task-report.md`.
 
 If a Laravel, PHP, architecture, database, backend, Vue, TypeScript, or Inertia concept may be useful for learning, suggest a `docs/learning/<topic>.md` note in the Follow Ups section. Do not create the learning note unless requested.
 
@@ -350,3 +411,20 @@ Do not assume prior knowledge.
 
 Do not restate approved plans in full.
 Implementation prompts should reference the approved plan and contain only task-specific instructions.
+
+### Default Behavior
+
+For non-trivial tasks, do not jump directly to implementation.
+
+Use:
+1. plan;
+2. smallest useful slice;
+3. implementation;
+4. verification;
+5. task report;
+6. lesson update if the user corrected something reusable.
+
+### User Corrections
+
+When the user corrects product direction, architecture, workflow, or implementation approach, decide whether it should be added to `.ai/lessons/autoservice.md`.
+Do not make the user repeat the same correction in future tasks.

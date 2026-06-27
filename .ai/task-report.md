@@ -2,42 +2,58 @@
 
 ## Goal
 
-Update BookingRequest status transition tests to match the approved "Confirm and start work" redirect behavior.
+Continue the chat-first public intake MVP with one small backend validation slice: reject whitespace-only intake messages before creating a `BookingRequest`.
 
 ## Files Changed
 
-- `tests/Feature/DashboardBookingRequestManagementTest.php`
+- `app/Http/Requests/StorePublicIntakeRequest.php`
+- `tests/Feature/PublicIntakeSubmissionTest.php`
 - `.ai/task-report.md`
 
 ## Implementation Summary
 
-- Updated valid status transition expectations so `confirmed` redirects to the RepairOrder create route with `booking_request` query context.
-- Kept non-confirm transitions expecting the previous back/dashboard redirect behavior.
-- Updated dashboard-list status action expectations so confirm uses the new confirmation flash message and RepairOrder create redirect.
+Added a FormRequest validation rule that fails when `message` contains only whitespace.
+
+Added a focused feature test proving a whitespace-only public intake submission redirects back with a validation error and creates no `booking_requests` row.
 
 ## Architecture Decisions
 
-- No production code changed because the failures were caused by outdated tests after the workflow change.
-- Tests now assert the actual business behavior: confirming a lead starts the RepairOrder creation flow but does not create the RepairOrder automatically.
+Kept validation in `StorePublicIntakeRequest` because rejecting invalid request input belongs at the HTTP validation boundary.
+
+Left `PublicIntakeController` thin and unchanged: it still delegates the accepted message to `SubmitIntakeRequestAction`.
+
+Left `SubmitIntakeRequestAction` unchanged so valid messages continue to be stored exactly as submitted in both `original_message` and `problem_description`.
 
 ## Tradeoffs
 
-- The test now branches expected redirect behavior by target status because confirmation has a different workflow than reject/cancel.
+Used a small closure rule instead of trimming input during preparation. This avoids mutating legitimate user text and preserves the existing test expectation that original message content remains unchanged.
+
+Did not introduce reusable validation objects because this rule is currently used in one request only.
 
 ## Tests
 
-Not run because this task did not include `EXECUTION MODE`.
+Ran:
 
-Recommended validation command:
+```txt
+php artisan test tests/Feature/PublicIntakeSubmissionTest.php
+```
 
-```bash
-php artisan test --filter=DashboardBookingRequestManagementTest
+Result:
+
+```txt
+6 passed, 42 assertions
 ```
 
 ## Risks
 
-- If other tests still assume confirmation redirects back to the source page, they should be updated to expect the source BookingRequest query parameter.
+The validation message is intentionally simple and customer-facing. If localization is added later, it should move into Laravel language files.
 
 ## Follow Ups
 
-- None.
+Next recommended step: remove the stale `workshops` prop/query from the home route or add a small assertion that the public landing no longer exposes workshop-specific booking entry points.
+
+Suggested learning note if useful later:
+
+```txt
+docs/learning/laravel-formrequest-custom-validation.md
+```
