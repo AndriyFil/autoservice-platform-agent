@@ -31,6 +31,19 @@ First analyze, then explain issues, then suggest minimal fixes.
 
 ## Review style
 
+Review every change for:
+
+- problem-first justification
+- unnecessary abstraction
+- bloated controller
+- business logic in UI/controller
+- weak testability
+- broken original_message source of truth
+- overengineering
+- missing trade-off explanation
+
+Prefer small, boring, testable code.
+
 Be strict but practical.
 
 Do not demand extra layers if the current code is simple, readable, and safe.

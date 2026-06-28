@@ -37,3 +37,15 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: The public landing page must not show workshop cards or link to the old `/book/{slug}` workshop-specific flow.
 - Lesson: Keep the public landing page focused only on chat-first intake: header, hero, intake textarea, example chips, submit state, and received state.
 - Applies when: Implementing or reviewing the public landing page, chat-first intake entry point, or legacy workshop booking exposure.
+
+## 2026-06-27 - Phone Is Primary Intake Identity
+
+- Correction: Chat-first intake must ask for phone before vehicle when both are missing, because the workshop needs phone to contact the customer.
+- Lesson: Missing-field priority for intake extraction is phone, then vehicle, then preferred time, then null when enough information is present.
+- Applies when: Implementing or reviewing intake extraction, missing-field detection, fallback parsing, LLM prompts, or customer follow-up flows.
+
+## 2026-06-28 - Prefer Strategies For Expandable Branching
+
+- Correction: Avoid growing many `if` branches when the behavior is likely to expand soon; use a strategy-style boundary with an interface or abstract class when it reduces future change risk.
+- Lesson: Small conditionals are fine for stable local checks, but expandable business selection rules should move behind focused strategy objects instead of accumulating branch logic.
+- Applies when: Implementing or reviewing backend rules with ordered choices, replaceable algorithms, provider-specific behavior, or near-future expansion paths.

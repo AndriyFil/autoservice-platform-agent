@@ -8,26 +8,27 @@ class ManualFallbackIntakeExtractor implements IntakeExtractorInterface
 {
     public function __construct(
         private readonly PhoneNormalizer $phoneNormalizer,
+        private readonly MissingNextIntakeFieldResolver $missingNextFieldResolver,
     ) {}
 
     public function extract(string $message): IntakeExtractionResult
     {
         $phone = $this->extractPhone($message);
-        $missingFields = ['vehicle'];
-
-        if ($phone === null) {
-            $missingFields[] = 'phone';
-        }
 
         return new IntakeExtractionResult(
+            phone: $phone,
             vehicleMake: null,
             vehicleModel: null,
-            vehicleYear: null,
-            issueText: $message,
-            customerSuspectedCause: null,
+            vehiclePlate: null,
             preferredTimeText: null,
-            phone: $phone,
-            missingFields: $missingFields,
+            problemSummary: $message,
+            missingNextField: $this->missingNextFieldResolver->resolve(
+                phone: $phone,
+                vehicleMake: null,
+                vehicleModel: null,
+                vehiclePlate: null,
+                preferredTimeText: null,
+            ),
             confidence: $phone === null ? 0.0 : 0.2,
         );
     }

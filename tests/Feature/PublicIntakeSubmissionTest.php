@@ -15,6 +15,18 @@ class PublicIntakeSubmissionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_home_page_does_not_expose_workshop_props(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Welcome')
+                ->has('canLogin')
+                ->has('canRegister')
+                ->has('intakeSubmitted')
+                ->missing('workshops'));
+    }
+
     public function test_guest_can_submit_natural_message_without_account(): void
     {
         $message = 'Opel Insignia, check engine light came on, maybe sensors, when can I come?';
@@ -25,10 +37,17 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
+            ->assertSessionHas('intake_submitted', true)
             ->assertRedirect('/');
+
+        $bookingRequest = BookingRequest::first();
 
         $this->assertGuest();
         $this->assertDatabaseCount('booking_requests', 1);
+        $this->assertNotNull($bookingRequest);
+        $this->assertSame($message, $bookingRequest->original_message);
+        $this->assertSame($message, $bookingRequest->problem_description);
+        $this->assertSame(BookingRequestStatus::Submitted, $bookingRequest->status);
     }
 
     public function test_blank_public_intake_message_is_rejected_without_creating_booking_request(): void
@@ -72,14 +91,13 @@ class PublicIntakeSubmissionTest extends TestCase
             public function extract(string $message): IntakeExtractionResult
             {
                 return new IntakeExtractionResult(
+                    phone: '15551234567',
                     vehicleMake: 'Honda',
                     vehicleModel: 'Civic',
-                    vehicleYear: null,
-                    issueText: 'Honda Civic makes noise.',
-                    customerSuspectedCause: 'Customer suspects suspension.',
+                    vehiclePlate: 'ABC123',
                     preferredTimeText: 'Tomorrow',
-                    phone: '15551234567',
-                    missingFields: [],
+                    problemSummary: 'Honda Civic makes noise.',
+                    missingNextField: null,
                     confidence: 0.9,
                 );
             }

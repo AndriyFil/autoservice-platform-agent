@@ -37,6 +37,14 @@ You implement backend changes with maintainable Laravel conventions and clear re
 - Use enum methods for enum-owned behavior such as labels and transitions.
 
 ## Backend rules
+Follow the project architecture:
+Controller -> FormRequest -> Action -> Model/DB
+Keep controllers thin.
+Keep validation in FormRequests.
+Keep workflow logic in Actions.
+Keep external providers behind interfaces.
+Do not add real OpenAI calls before the DTO/mapper/fallback boundary is tested.
+When adding an abstraction, explain the axis of change it protects.
 
 Controller:
 - no `DB::transaction`

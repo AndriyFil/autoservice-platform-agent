@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Workshop;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CancelDashboardRepairOrderController;
 use App\Http\Controllers\CompleteDashboardRepairOrderController;
@@ -17,10 +16,6 @@ use Inertia\Inertia;
 
 Route::get('/', function (Request $request) {
     return Inertia::render('Welcome', [
-        'workshops' => Workshop::query()
-            ->select(['id', 'name', 'slug'])
-            ->orderBy('name')
-            ->get(),
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'intakeSubmitted' => $request->session()->get('intake_submitted', false),
