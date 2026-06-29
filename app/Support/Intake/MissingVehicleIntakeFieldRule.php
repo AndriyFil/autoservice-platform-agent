@@ -2,11 +2,13 @@
 
 namespace App\Support\Intake;
 
+use App\Enums\MissingIntakeField;
+
 class MissingVehicleIntakeFieldRule implements MissingNextIntakeFieldRule
 {
-    public function field(): string
+    public function field(): MissingIntakeField
     {
-        return 'vehicle';
+        return MissingIntakeField::Vehicle;
     }
 
     public function matches(IntakeExtractionSnapshot $snapshot): bool

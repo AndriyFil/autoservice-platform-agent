@@ -78,17 +78,26 @@ User role is resolved from WorkshopUser for the active workshop.
 
 ## Booking Request
 
-Belongs to one workshop.
+May be unassigned during chat-first intake.
 
-Belongs to one customer.
+Belongs to one workshop after routing or workshop-specific creation.
+
+May have no customer during initial chat-first intake.
+
+Belongs to one customer after customer resolution.
 
 May reference one vehicle.
 
-Required fields:
+Required fields for workshop-specific booking:
 
 - customer name
 - customer phone
 - problem description
+
+Required fields for chat-first landing intake:
+
+- original message
+- problem description copied from the original message
 
 Optional fields:
 
@@ -131,6 +140,7 @@ Store:
 
 Booking request status is an enum/value object, not a domain entity.
 
+- submitted
 - new
 - confirmed
 - rejected
@@ -144,11 +154,18 @@ Owner and staff can see data for the active workshop:
 - confirmed requests
 - cancelled requests
 
-## Public Form
+## Public Intake
 
-Customers can submit requests without authentication through a workshop-specific public form.
+MVP currently has two public intake paths:
 
-During public booking submission:
+- Chat-first landing intake creates an unassigned `BookingRequest` with `status = submitted` and `workshop_id = null`.
+- The older workshop-specific public booking form creates a workshop-scoped `BookingRequest` with `status = new`.
+
+The MVP direction is the chat-first landing intake plus central admin assignment.
+
+Public landing intake must not ask the customer to select a workshop. Workshop routing happens internally through the central admin queue.
+
+During workshop-specific public booking submission:
 
 1. Find customer by `workshop_id` and normalized phone.
 2. Create customer if missing.

@@ -76,13 +76,13 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertNotNull($bookingRequest);
         $this->assertNull($bookingRequest->workshop_id);
         $this->assertNull($bookingRequest->customer_id);
-        $this->assertNull($bookingRequest->customer_phone);
+        $this->assertSame('380501112233', $bookingRequest->customer_phone);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame($message, $bookingRequest->problem_description);
         $this->assertSame(BookingRequestStatus::Submitted, $bookingRequest->status);
     }
 
-    public function test_intake_action_uses_extractor_interface_without_persisting_extracted_fields(): void
+    public function test_intake_action_persists_safe_phone_without_creating_customer_or_vehicle(): void
     {
         $message = 'Honda Civic makes noise. Call +1 (555) 123-4567.';
 
@@ -111,8 +111,13 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->assertNotNull($bookingRequest);
         $this->assertSame($message, $bookingRequest->original_message);
-        $this->assertNull($bookingRequest->customer_phone);
+        $this->assertNull($bookingRequest->workshop_id);
+        $this->assertNull($bookingRequest->customer_id);
         $this->assertNull($bookingRequest->vehicle_id);
+        $this->assertNull($bookingRequest->created_by_user_id);
+        $this->assertSame('15551234567', $bookingRequest->customer_phone);
+        $this->assertSame($message, $bookingRequest->problem_description);
+        $this->assertNull($bookingRequest->preferred_date);
     }
 
     public function test_public_intake_response_supports_inertia_submitted_state(): void

@@ -2,11 +2,13 @@
 
 namespace App\Support\Intake;
 
+use App\Enums\MissingIntakeField;
+
 class MissingPreferredTimeIntakeFieldRule implements MissingNextIntakeFieldRule
 {
-    public function field(): string
+    public function field(): MissingIntakeField
     {
-        return 'preferred_time';
+        return MissingIntakeField::PreferredTime;
     }
 
     public function matches(IntakeExtractionSnapshot $snapshot): bool

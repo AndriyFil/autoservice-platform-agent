@@ -28,7 +28,7 @@ class ManualFallbackIntakeExtractor implements IntakeExtractorInterface
                 vehicleModel: null,
                 vehiclePlate: null,
                 preferredTimeText: null,
-            ),
+            )?->value,
             confidence: $phone === null ? 0.0 : 0.2,
         );
     }

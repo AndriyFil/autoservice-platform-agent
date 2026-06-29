@@ -2,9 +2,11 @@
 
 namespace App\Support\Intake;
 
+use App\Enums\MissingIntakeField;
+
 interface MissingNextIntakeFieldRule
 {
-    public function field(): string;
+    public function field(): MissingIntakeField;
 
     public function matches(IntakeExtractionSnapshot $snapshot): bool;
 }

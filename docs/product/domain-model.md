@@ -93,11 +93,14 @@ Purpose:
 
 Relationships:
 
-- Belongs to one workshop.
-- Belongs to one customer.
+- May be unassigned during chat-first intake.
+- Belongs to one workshop after routing or workshop-specific creation.
+- May have no customer during initial chat-first intake.
+- Belongs to one customer after customer resolution.
 - May reference one vehicle.
-- Created by a public customer through a workshop-specific public form.
-- Contains customer name, customer phone, and required problem description.
+- Created by a public customer through chat-first landing intake or the older workshop-specific public form.
+- Contains original customer message for chat-first intake.
+- Contains customer name, customer phone, and required problem description after workshop-specific creation or later enrichment.
 - Always stores snapshot fields: `customer_name`, `customer_phone`.
 - May include preferred date.
 - May include vehicle information.
@@ -118,10 +121,12 @@ Purpose:
 Relationships:
 
 - Used by booking request.
-- Initial status is `new`.
+- Initial chat-first landing intake status is `submitted`.
+- Initial workshop-scoped booking status is `new`.
 
 MVP statuses:
 
+- `submitted`: public chat-first request received, not yet routed to a workshop
 - `new`
 - `confirmed`
 - `rejected`

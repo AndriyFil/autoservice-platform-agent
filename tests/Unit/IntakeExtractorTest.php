@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Enums\MissingIntakeField;
 use App\Support\Intake\IntakeExtractionResult;
 use App\Support\Intake\LlmIntakeExtractor;
 use App\Support\Intake\ManualFallbackIntakeExtractor;
@@ -20,7 +21,7 @@ class IntakeExtractorTest extends TestCase
         $this->assertNull($data->vehicleMake);
         $this->assertNull($data->vehicleModel);
         $this->assertNull($data->vehiclePlate);
-        $this->assertSame('vehicle', $data->missingNextField);
+        $this->assertSame(MissingIntakeField::Vehicle->value, $data->missingNextField);
     }
 
     public function test_extractor_contract_has_no_diagnosis_or_recommendation_fields(): void
@@ -49,7 +50,7 @@ class IntakeExtractorTest extends TestCase
         $data = $this->fallback()->extract('Something is wrong with my car.');
 
         $this->assertNull($data->phone);
-        $this->assertSame('phone', $data->missingNextField);
+        $this->assertSame(MissingIntakeField::Phone->value, $data->missingNextField);
     }
 
     public function test_missing_next_field_resolver_prioritizes_phone_before_vehicle(): void
@@ -62,7 +63,7 @@ class IntakeExtractorTest extends TestCase
             preferredTimeText: null,
         );
 
-        $this->assertSame('phone', $field);
+        $this->assertSame(MissingIntakeField::Phone, $field);
     }
 
     public function test_missing_next_field_is_vehicle_when_phone_exists_but_vehicle_is_missing(): void
@@ -70,7 +71,7 @@ class IntakeExtractorTest extends TestCase
         $data = $this->fallback()->extract('Something is wrong with my car. Call +38 (050) 111-22-33.');
 
         $this->assertSame('380501112233', $data->phone);
-        $this->assertSame('vehicle', $data->missingNextField);
+        $this->assertSame(MissingIntakeField::Vehicle->value, $data->missingNextField);
     }
 
     public function test_phone_can_still_be_normalized_safely_when_provided(): void
@@ -78,7 +79,7 @@ class IntakeExtractorTest extends TestCase
         $data = $this->fallback()->extract('Please call me at +38 (050) 111-22-33.');
 
         $this->assertSame('380501112233', $data->phone);
-        $this->assertSame('vehicle', $data->missingNextField);
+        $this->assertSame(MissingIntakeField::Vehicle->value, $data->missingNextField);
     }
 
     public function test_missing_next_field_resolver_returns_preferred_time_after_phone_and_vehicle(): void
@@ -91,7 +92,7 @@ class IntakeExtractorTest extends TestCase
             preferredTimeText: null,
         );
 
-        $this->assertSame('preferred_time', $field);
+        $this->assertSame(MissingIntakeField::PreferredTime, $field);
     }
 
     public function test_missing_next_field_resolver_returns_null_when_enough_information_exists(): void
@@ -113,6 +114,18 @@ class IntakeExtractorTest extends TestCase
         $this->assertStringNotContainsString('repair_recommendations:', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringNotContainsString('price_estimate:', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringNotContainsString('availability_promise:', LlmIntakeExtractor::PROMPT_SPEC);
+    }
+
+    public function test_llm_prompt_spec_uses_nested_vehicle_schema(): void
+    {
+        $this->assertStringContainsString('- vehicle: object|null with these keys:', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringContainsString('  - make: string|null', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringContainsString('  - model: string|null', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringContainsString('  - plate: string|null', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringContainsString('- missing_next_field: "phone"|"vehicle"|"preferred_time"|null', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringNotContainsString('vehicle_make:', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringNotContainsString('vehicle_model:', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringNotContainsString('vehicle_plate:', LlmIntakeExtractor::PROMPT_SPEC);
     }
 
     private function fallback(): ManualFallbackIntakeExtractor

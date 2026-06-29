@@ -49,3 +49,15 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: Avoid growing many `if` branches when the behavior is likely to expand soon; use a strategy-style boundary with an interface or abstract class when it reduces future change risk.
 - Lesson: Small conditionals are fine for stable local checks, but expandable business selection rules should move behind focused strategy objects instead of accumulating branch logic.
 - Applies when: Implementing or reviewing backend rules with ordered choices, replaceable algorithms, provider-specific behavior, or near-future expansion paths.
+
+## 2026-06-28 - Avoid Over-Safe Tiny Mappers
+
+- Correction: Do not add excessive helper methods for simple array mapping safety.
+- Lesson: For small DTO mappers, prefer direct readable field mapping and only keep guards that protect a real edge case or business rule.
+- Applies when: Mapping decoded JSON, request-shaped arrays, DTO payloads, or other small boundary data.
+
+## 2026-06-28 - Centralize Intake Field Values In Enums
+
+- Correction: Missing intake field values such as phone, vehicle, and preferred time should not be hardcoded in rules, queries, or tests.
+- Lesson: Put reusable intake field values and labels in an enum and reference that enum from rules, read models, and tests to avoid drift.
+- Applies when: Implementing or reviewing missing-field detection, intake extraction, LLM schema mapping, dashboard/admin queue read models, or tests around intake fields.

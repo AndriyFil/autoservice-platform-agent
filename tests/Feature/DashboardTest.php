@@ -238,6 +238,39 @@ class DashboardTest extends TestCase
                 ->where('bookingRequests.1.vehicle', null));
     }
 
+    public function test_dashboard_does_not_include_unassigned_submitted_public_intake_requests(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+
+        BookingRequest::create([
+            'workshop_id' => null,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '380501112233',
+            'problem_description' => 'Opel Insignia, check engine light came on.',
+            'original_message' => 'Opel Insignia, check engine light came on.',
+            'preferred_date' => null,
+            'status' => BookingRequestStatus::Submitted,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get('/dashboard');
+
+        $response
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('activeWorkshop.id', $workshop->id)
+                ->has('bookingRequests', 0)
+                ->missing('unassignedIntakeRequests'));
+    }
+
     private function createMembership(User $user, Workshop $workshop): WorkshopUser
     {
         return WorkshopUser::create([

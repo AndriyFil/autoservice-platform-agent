@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Enums\MissingIntakeField;
 use App\Support\Intake\OpenAiIntakeExtractionResultMapper;
 use PHPUnit\Framework\TestCase;
 
@@ -32,7 +33,7 @@ class OpenAiIntakeExtractionResultMapperTest extends TestCase
         $this->assertSame(0.85, $result->confidence);
     }
 
-    public function test_missing_optional_keys_become_null(): void
+    public function test_missing_optional_extraction_values_become_null(): void
     {
         $result = $this->mapper()->map([]);
 
@@ -42,7 +43,7 @@ class OpenAiIntakeExtractionResultMapperTest extends TestCase
         $this->assertNull($result->vehiclePlate);
         $this->assertNull($result->preferredTimeText);
         $this->assertNull($result->problemSummary);
-        $this->assertNull($result->missingNextField);
+        $this->assertSame(MissingIntakeField::Phone->value, $result->missingNextField);
         $this->assertNull($result->confidence);
     }
 
@@ -51,14 +52,52 @@ class OpenAiIntakeExtractionResultMapperTest extends TestCase
         $result = $this->mapper()->map([
             'phone' => '380501112233',
             'vehicle' => 'Opel Insignia',
-            'missing_next_field' => 'vehicle',
+            'missing_next_field' => MissingIntakeField::Vehicle->value,
         ]);
 
         $this->assertSame('380501112233', $result->phone);
         $this->assertNull($result->vehicleMake);
         $this->assertNull($result->vehicleModel);
         $this->assertNull($result->vehiclePlate);
-        $this->assertSame('vehicle', $result->missingNextField);
+        $this->assertSame(MissingIntakeField::Vehicle->value, $result->missingNextField);
+    }
+
+    public function test_missing_next_field_is_resolved_from_mapped_fields_not_model_output(): void
+    {
+        $result = $this->mapper()->map([
+            'phone' => null,
+            'vehicle' => [
+                'make' => 'Opel',
+                'model' => 'Insignia',
+                'plate' => null,
+            ],
+            'preferred_time_text' => 'tomorrow morning',
+            'missing_next_field' => null,
+        ]);
+
+        $this->assertSame(MissingIntakeField::Phone->value, $result->missingNextField);
+    }
+
+    public function test_non_string_text_fields_are_treated_as_missing(): void
+    {
+        $result = $this->mapper()->map([
+            'phone' => ['+380501112233'],
+            'vehicle' => [
+                'make' => 123,
+                'model' => false,
+                'plate' => ['AA1234BB'],
+            ],
+            'preferred_time_text' => ['tomorrow morning'],
+            'problem_summary' => ['Check engine light came on.'],
+        ]);
+
+        $this->assertNull($result->phone);
+        $this->assertNull($result->vehicleMake);
+        $this->assertNull($result->vehicleModel);
+        $this->assertNull($result->vehiclePlate);
+        $this->assertNull($result->preferredTimeText);
+        $this->assertNull($result->problemSummary);
+        $this->assertSame(MissingIntakeField::Phone->value, $result->missingNextField);
     }
 
     public function test_invalid_or_out_of_range_confidence_does_not_crash(): void

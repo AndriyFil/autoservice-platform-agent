@@ -14,8 +14,7 @@ class SubmitIntakeRequestAction
 
     public function handle(string $message): BookingRequest
     {
-        // Keep extraction behind one boundary; this slice stores only the original intake message.
-        $this->intakeExtractor->extract($message);
+        $extractionResult = $this->intakeExtractor->extract($message);
 
         return BookingRequest::create([
             'workshop_id' => null,
@@ -23,7 +22,7 @@ class SubmitIntakeRequestAction
             'vehicle_id' => null,
             'created_by_user_id' => null,
             'customer_name' => null,
-            'customer_phone' => null,
+            'customer_phone' => $extractionResult->phone,
             'problem_description' => $message,
             'original_message' => $message,
             'preferred_date' => null,

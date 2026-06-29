@@ -70,15 +70,25 @@ User role is resolved from WorkshopUser for the active workshop.
 
 ## Booking Request Creation
 
-A booking request can be created by a public customer through a workshop-specific public form.
+A booking request can be created from chat-first public intake without an assigned workshop.
 
-A booking request belongs to one workshop.
+Chat-first public intake:
 
-A booking request belongs to one customer.
+- stores the original customer message
+- creates `status = submitted`
+- leaves `workshop_id`, `customer_id`, and `vehicle_id` empty until routing rules assign or enrich the request
+- may store a safely extracted phone number in `customer_phone`
+- must not appear in workshop dashboards before assignment
+
+Workshop-scoped booking creation remains supported for existing workshop-specific flows and creates `status = new`.
+
+A workshop-scoped booking request belongs to one workshop.
+
+A workshop-scoped booking request belongs to one customer.
 
 A booking request may reference one vehicle.
 
-Required:
+Required for workshop-specific booking:
 
 - name
 - phone
@@ -114,7 +124,11 @@ Vehicle belongs to one customer in MVP.
 
 ## Initial Status
 
-Every new booking request starts with:
+Chat-first public intake starts with:
+
+submitted
+
+Workshop-scoped booking requests start with:
 
 new
 

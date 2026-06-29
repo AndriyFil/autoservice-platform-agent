@@ -2,6 +2,8 @@
 
 namespace App\Support\Intake;
 
+use App\Enums\MissingIntakeField;
+
 class MissingNextIntakeFieldResolver
 {
     /**
@@ -24,7 +26,7 @@ class MissingNextIntakeFieldResolver
         ?string $vehicleModel,
         ?string $vehiclePlate,
         ?string $preferredTimeText,
-    ): ?string {
+    ): ?MissingIntakeField {
         $snapshot = new IntakeExtractionSnapshot(
             phone: $phone,
             vehicleMake: $vehicleMake,
