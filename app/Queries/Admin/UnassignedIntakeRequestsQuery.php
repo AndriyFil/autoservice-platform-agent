@@ -3,7 +3,9 @@
 namespace App\Queries\Admin;
 
 use App\Enums\BookingRequestStatus;
+use App\Enums\WorkshopUserRole;
 use App\Models\BookingRequest;
+use App\Models\WorkshopUser;
 use App\Support\Intake\MissingNextIntakeFieldResolver;
 
 class UnassignedIntakeRequestsQuery
@@ -24,8 +26,12 @@ class UnassignedIntakeRequestsQuery
      *     status: array{value: string, label: string}
      * }>
      */
-    public function handle(int $limit = 25): array
+    public function handle(WorkshopUser $activeWorkshopUser, int $limit = 25): array
     {
+        if ($activeWorkshopUser->role !== WorkshopUserRole::Owner) {
+            return [];
+        }
+
         return BookingRequest::query()
             ->whereNull('workshop_id')
             ->where('status', BookingRequestStatus::Submitted)

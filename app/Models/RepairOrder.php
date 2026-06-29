@@ -6,6 +6,7 @@ use App\Enums\RepairOrderStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RepairOrder extends Model
 {
@@ -23,6 +24,8 @@ class RepairOrder extends Model
         'vehicle_id',
         'booking_request_id',
         'status',
+        'notes',
+        'created_by_user_id',
         'problem_description',
         'opened_at',
         'closed_at',
@@ -60,5 +63,30 @@ class RepairOrder extends Model
     public function bookingRequest(): BelongsTo
     {
         return $this->belongsTo(BookingRequest::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function lines(): HasMany
+    {
+        return $this->hasMany(RepairOrderLine::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function subtotalCents(): int
+    {
+        return $this->lines->sum(fn (RepairOrderLine $line): int => $line->subtotalCents());
+    }
+
+    public function taxCents(): int
+    {
+        return $this->lines->sum(fn (RepairOrderLine $line): int => $line->taxCents());
+    }
+
+    public function totalCents(): int
+    {
+        return $this->lines->sum(fn (RepairOrderLine $line): int => $line->totalCents());
     }
 }

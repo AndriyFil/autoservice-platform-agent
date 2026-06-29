@@ -44,6 +44,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->assertGuest();
         $this->assertDatabaseCount('booking_requests', 1);
+        $this->assertDatabaseCount('repair_orders', 0);
         $this->assertNotNull($bookingRequest);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame($message, $bookingRequest->problem_description);

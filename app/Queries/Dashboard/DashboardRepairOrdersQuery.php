@@ -11,7 +11,7 @@ class DashboardRepairOrdersQuery
      * @return array<int, array{
      *     id: int,
      *     customerName: string,
-     *     problemDescription: string,
+     *     problemDescription: string|null,
      *     status: array{value: string, label: string},
      *     vehicle: array{brand: string|null, model: string|null, licensePlate: string|null}|null,
      *     openedAt: string,

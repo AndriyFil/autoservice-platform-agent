@@ -107,6 +107,51 @@ Relationships:
 - Has booking request status.
 - Is reviewed by workshop staff.
 - Leads to manual customer contact by workshop staff.
+- Is the intake aggregate and may lead to one repair order after staff review.
+- Must not contain staff-authored estimates, invoices, payments, accounting records, or repair execution details.
+
+MVP: yes
+
+### RepairOrder
+
+Purpose:
+
+- Represents staff-owned workshop work after intake review.
+- Tracks workshop work that may start from a reviewed booking request.
+- Holds staff notes and safe estimate lines before any future invoice workflow exists.
+
+Relationships:
+
+- Belongs to one workshop.
+- May originate from one booking request.
+- May belong to one customer.
+- May reference one vehicle.
+- Has many repair order lines.
+- May record the staff user who created it.
+- Does not represent customer approval, invoice, payment, PDF export, or accounting.
+
+MVP: yes
+
+### RepairOrderLine
+
+Purpose:
+
+- Represents one staff-authored estimate line on a repair order.
+
+Allowed line types:
+
+- labor
+- part
+- fee
+- discount
+
+Rules:
+
+- Lines are created or edited by workshop staff.
+- Money is stored as integer cents.
+- The system may calculate totals from staff-entered values.
+- AI must not diagnose repairs, recommend work, or generate prices.
+- Repair order lines are not invoices and do not record payment.
 
 MVP: yes
 
@@ -131,6 +176,42 @@ MVP statuses:
 - `confirmed`
 - `rejected`
 - `cancelled`
+
+MVP: yes
+
+Domain entity: no
+
+### RepairOrderStatus
+
+Purpose:
+
+- Tracks staff-owned repair order workflow state.
+
+MVP statuses:
+
+- `draft`
+- `estimated`
+- `approved`
+- `in_progress`
+- `completed`
+- `cancelled`
+
+MVP: yes
+
+Domain entity: no
+
+### RepairOrderLineType
+
+Purpose:
+
+- Classifies staff-authored repair order estimate lines.
+
+MVP values:
+
+- `labor`
+- `part`
+- `fee`
+- `discount`
 
 MVP: yes
 
@@ -218,12 +299,11 @@ MVP: yes
 
 Purpose:
 
-- Represents scheduled service work after a customer request.
+- Use `RepairOrder` for the MVP staff-owned work record.
 
 Relationships:
 
-- May come from a customer request.
-- Workflow from confirmed request to scheduled service work is unresolved. See `docs/product/open-questions.md`.
+- Do not introduce a separate ServiceWork entity unless a future scheduling or execution workflow creates a clear responsibility that RepairOrder should not own.
 
 MVP: no
 
@@ -256,11 +336,13 @@ MVP: no
 
 Purpose:
 
-- Represents billing for workshop services.
+- Represents billing after estimate approval and/or work completion.
 
 Relationships:
 
-- Out of scope for MVP.
+- May be created later from an approved or completed repair order.
+- Not part of the Repair Order + Estimate foundation milestone.
+- Does not exist only because an estimate exists.
 
 MVP: no
 

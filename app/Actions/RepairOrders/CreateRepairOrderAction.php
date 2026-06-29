@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class CreateRepairOrderAction
 {
     /**
-     * @param  array{customer_id: int, vehicle_id?: int|null, booking_request_id?: int|null, problem_description: string}  $data
+     * @param  array{customer_id: int, vehicle_id?: int|null, booking_request_id?: int|null, problem_description: string, notes?: string|null}  $data
      */
     public function handle(WorkshopUser $activeWorkshopUser, array $data): RepairOrder
     {
@@ -62,7 +62,9 @@ class CreateRepairOrderAction
                 'customer_id' => $customer->id,
                 'vehicle_id' => $vehicleId,
                 'booking_request_id' => $bookingRequest?->id,
-                'status' => RepairOrderStatus::Open,
+                'status' => RepairOrderStatus::Draft,
+                'notes' => $data['notes'] ?? null,
+                'created_by_user_id' => $activeWorkshopUser->user_id,
                 'problem_description' => $data['problem_description'],
                 'opened_at' => now(),
                 'closed_at' => null,

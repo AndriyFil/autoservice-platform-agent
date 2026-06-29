@@ -2,138 +2,119 @@
 
 ## Goal
 
-Build the safe Intake MVP v1 foundation:
-
-- public chat-first request creates an unassigned `submitted` `BookingRequest`
-- safe extraction boundary remains behind `IntakeExtractorInterface`
-- safe phone extraction may be persisted
-- central admin queue foundation exists without exposing global unassigned requests to workshop dashboards
+Implement the backend/domain foundation for Repair Orders and staff-authored estimate lines.
 
 ## Files Changed
 
-- `app/Actions/BookingRequests/SubmitIntakeRequestAction.php`
-- `app/Enums/MissingIntakeField.php`
-- `app/Support/Intake/MissingNextIntakeFieldRule.php`
-- `app/Support/Intake/MissingPhoneIntakeFieldRule.php`
-- `app/Support/Intake/MissingVehicleIntakeFieldRule.php`
-- `app/Support/Intake/MissingPreferredTimeIntakeFieldRule.php`
-- `app/Support/Intake/MissingNextIntakeFieldResolver.php`
-- `app/Queries/Admin/UnassignedIntakeRequestsQuery.php`
+- `database/migrations/2026_06_29_000001_update_repair_orders_for_estimate_foundation.php`
+- `database/migrations/2026_06_29_000002_create_repair_order_lines_table.php`
+- `app/Enums/RepairOrderStatus.php`
+- `app/Enums/RepairOrderLineType.php`
+- `app/Models/RepairOrder.php`
+- `app/Models/RepairOrderLine.php`
+- `app/Models/Workshop.php`
+- `app/Actions/RepairOrders/CreateRepairOrderAction.php`
+- `app/Http/Requests/StoreRepairOrderRequest.php`
+- `app/Queries/Dashboard/DashboardRepairOrderDetailsQuery.php`
+- `app/Queries/Dashboard/DashboardRepairOrdersQuery.php`
+- `database/factories/RepairOrderFactory.php`
+- `database/factories/RepairOrderLineFactory.php`
+- `tests/Unit/RepairOrderTotalsTest.php`
+- `tests/Feature/RepairOrderTest.php`
 - `tests/Feature/PublicIntakeSubmissionTest.php`
-- `tests/Feature/DashboardTest.php`
-- `tests/Feature/UnassignedIntakeRequestsQueryTest.php`
-- `tests/Unit/IntakeExtractorTest.php`
-- `tests/Unit/OpenAiIntakeExtractionResultMapperTest.php`
-- `docs/product/admin-workshop-inbox.md`
-- `docs/product/business-rules.md`
+- `tests/Feature/RepairOrderManagementTest.php`
 - `docs/product/domain-model.md`
 - `docs/product/mvp-scope.md`
-- `.ai/lessons/autoservice.md`
 - `.ai/task-report.md`
+
+Pre-existing unrelated dirty files were left in place:
+
+- `app/Queries/Admin/UnassignedIntakeRequestsQuery.php`
+- `tests/Feature/UnassignedIntakeRequestsQueryTest.php`
+- `auto-service-landing-page-design.zip`
+- `customer-communication-interface.zip`
 
 ## Implementation Summary
 
-Ran coordinated workstreams:
+Added a `repair_order_lines` foundation for staff-authored estimate lines with supported line types: labor, part, fee, and discount.
 
-- Architect: decided not to expose `workshop_id = null` intake records through the active-workshop dashboard because no platform-admin authorization model exists.
-- Backend: implemented the safe backend foundation and tests.
-- Frontend: inspected the dashboard path; no frontend queue was implemented because backend visibility is intentionally not exposed yet.
-- Product/docs: updated product docs to reflect Central Admin Queue as the MVP routing strategy.
-- Reviewer: checked likely permission leaks and confirmed the key risk was global unassigned request visibility.
+Updated repair orders to support the milestone fields:
 
-Public intake now persists a safely extracted phone number from the extractor result into `customer_phone`, while still preserving:
+- nullable `customer_id`
+- nullable `vehicle_id`
+- nullable `problem_description`
+- `notes`
+- nullable `created_by_user_id`
+- status values: `draft`, `estimated`, `approved`, `in_progress`, `completed`, `cancelled`
 
-- `workshop_id = null`
-- `customer_id = null`
-- `vehicle_id = null`
-- `created_by_user_id = null`
-- exact `original_message`
-- `problem_description` copied from the original message
-- `status = submitted`
+Existing `open` repair orders are migrated to `draft`.
 
-Added `App\Queries\Admin\UnassignedIntakeRequestsQuery` as a backend-only foundation for a future central admin queue. It returns only `BookingRequest` records where:
+Added deterministic model-level total calculations:
 
-- `workshop_id` is `null`
-- `status` is `submitted`
+- `RepairOrderLine::subtotalCents()`
+- `RepairOrderLine::taxCents()`
+- `RepairOrderLine::totalCents()`
+- `RepairOrder::subtotalCents()`
+- `RepairOrder::taxCents()`
+- `RepairOrder::totalCents()`
 
-The query returns safe read-model fields: received time, original message, problem summary, phone, no vehicle, missing-next-field label, and `Needs review` status label.
-
-Added tests proving the query filters correctly, orders oldest first, applies a limit, preserves original message text, and uses safe missing-field labels.
-
-Added `MissingIntakeField` enum and updated missing-field rules, resolver tests, mapper tests, and `UnassignedIntakeRequestsQuery` to use enum values/labels instead of hardcoded field strings.
-
-Added a dashboard protection test proving unassigned submitted public intake requests do not appear in the normal active-workshop dashboard and no `unassignedIntakeRequests` dashboard prop is exposed.
-
-Updated product docs to describe chat-first intake, central admin queue routing, assignment as future work, and safety boundaries.
+Public intake still creates only `BookingRequest` records and does not create repair orders.
 
 ## Architecture Decisions
 
-Did not add an admin route, dashboard prop, or Vue component for unassigned requests. The existing authorization model only has workshop-scoped `owner` and `staff`, so exposing global unassigned requests would risk cross-workshop leakage.
+Kept the foundation on `RepairOrder` and `repair_order_lines` instead of introducing a separate `Estimate` aggregate. The milestone asked for repair order lines directly, and a separate estimate workflow would add lifecycle complexity before there is a UI or approval process that needs it.
 
-Kept controllers unchanged and thin. The new central queue foundation is a Query class, not inline controller SQL.
+Money is stored as integer cents in `unit_price_cents`. Totals are calculated with integer arithmetic and explicit rounding, not floats.
 
-Kept `BookingRequest` as the intake aggregate. No `Chat`, `Conversation`, `AiThread`, workflow engine, queue, CQRS, event sourcing, or microservice was introduced.
+`RepairOrderStatus::Draft` replaces the old `open` status as the initial staff-owned state. Existing complete/cancel actions remain thin use-case actions and continue to scope by active `WorkshopUser`.
 
-Kept extraction behind `IntakeExtractorInterface`. No OpenAI API call, API key, HTTP client, SDK setup, or container provider binding was added.
-
-Did not create `Customer` or `Vehicle` from unassigned public intake. Those remain future assignment/enrichment decisions.
+The dashboard repair-order detail query now includes estimate totals but does not add full CRUD UI or customer approval behavior.
 
 ## Tradeoffs
 
-Persisting the extracted phone gives the future central admin queue a useful contact hint while avoiding fake vehicle parsing or customer creation.
+Tax support is intentionally small: each line has a simple `tax_rate`, and totals are deterministic. This is not a tax engine and does not handle accounting rules.
 
-The central queue query is backend-only for now. This is less visible as a product feature, but it avoids leaking all public intake requests to normal workshop dashboards before a platform-admin permission model exists.
+Discounts are represented as line items that reduce totals. This keeps the line model simple but means discounts share the same quantity/unit-price shape as other lines.
 
-The query labels missing fields for display, but still delegates priority to `MissingNextIntakeFieldResolver`; it does not duplicate the phone-before-vehicle-before-time rule.
+Repair order lines are model-level foundation only. There are no controllers, routes, or Inertia components for editing lines yet.
 
-Missing intake field values and labels are centralized in `MissingIntakeField` to avoid string drift between rules, queries, and tests.
-
-The docs now mention central admin assignment before the role exists. This intentionally records the product direction while keeping implementation blocked until authorization is designed.
+The status enum now includes future workflow states, but this milestone only keeps the existing create/complete/cancel behavior active.
 
 ## Tests
 
-Ran:
+Run:
 
 ```txt
-php artisan test tests/Unit/IntakeExtractorTest.php
-php artisan test tests/Unit/OpenAiIntakeExtractionResultMapperTest.php
-php artisan test tests/Feature/PublicIntakeSubmissionTest.php
-php artisan test tests/Feature/DashboardTest.php
-php artisan test tests/Feature/UnassignedIntakeRequestsQueryTest.php
-php -l app/Enums/MissingIntakeField.php
-php -l app/Queries/Admin/UnassignedIntakeRequestsQuery.php
-php -l tests/Feature/UnassignedIntakeRequestsQueryTest.php
-git diff --check -- app/Actions/BookingRequests/SubmitIntakeRequestAction.php app/Enums/MissingIntakeField.php app/Support/Intake/MissingNextIntakeFieldRule.php app/Support/Intake/MissingPhoneIntakeFieldRule.php app/Support/Intake/MissingVehicleIntakeFieldRule.php app/Support/Intake/MissingPreferredTimeIntakeFieldRule.php app/Support/Intake/MissingNextIntakeFieldResolver.php app/Queries/Admin/UnassignedIntakeRequestsQuery.php tests/Feature/PublicIntakeSubmissionTest.php tests/Feature/DashboardTest.php tests/Feature/UnassignedIntakeRequestsQueryTest.php tests/Unit/IntakeExtractorTest.php tests/Unit/OpenAiIntakeExtractionResultMapperTest.php docs/product/admin-workshop-inbox.md docs/product/mvp-scope.md docs/product/business-rules.md docs/product/domain-model.md
+php artisan test
 ```
 
-Results:
+Result:
 
 ```txt
-Tests\Unit\IntakeExtractorTest: 10 passed, 30 assertions
-Tests\Unit\OpenAiIntakeExtractionResultMapperTest: 7 passed, 36 assertions
-Tests\Feature\PublicIntakeSubmissionTest: 7 passed, 66 assertions
-Tests\Feature\DashboardTest: 9 passed, 152 assertions
-Tests\Feature\UnassignedIntakeRequestsQueryTest: 3 passed, 18 assertions
-PHP syntax checks: passed
-git diff --check: passed
+121 passed, 950 assertions
 ```
+
+Added or updated coverage for:
+
+- repair order workshop relationship
+- optional booking request link
+- repair order has many lines
+- cent-based line and repair order totals
+- discount lines reducing totals
+- draft repair order existing without invoice
+- public intake not creating repair orders automatically
+- existing repair order management behavior using `draft`
 
 ## Risks
 
-There is still no platform-admin role or permission model. Until that exists, the central admin queue must remain unexposed.
+Existing frontend copy or TypeScript types may still use the word `open` if not covered by backend feature tests. No full frontend build was requested or run.
 
-Assignment from unassigned submitted intake to a workshop is not implemented. The future assignment action needs explicit authorization and status-transition rules.
-
-The older workshop-specific public booking routes still exist. They are documented as separate from the chat-first landing intake and are not linked from the landing page.
-
-The worktree still contains unrelated pre-existing changes in `.ai/lessons/autoservice.md` and unrelated untracked zip files.
+SQLite in-memory tests passed. If production uses another database, the nullable column alteration migration should be checked during deployment planning.
 
 ## Follow Ups
 
-Next recommended milestone:
-
-1. Define a platform-admin role or permission model for central queue visibility.
-2. Expose `UnassignedIntakeRequestsQuery` through an authorized admin route/page.
-3. Add a focused `AssignIntakeRequestToWorkshopAction` that routes one submitted unassigned request to one workshop and changes status to `new`.
-4. Decide when customer/vehicle records are created or linked during assignment.
-5. Add a passive frontend central queue UI only after backend authorization exists.
+- Add staff UI and Actions/FormRequests for creating and editing repair order lines.
+- Decide when a repair order should move from `draft` to `estimated`.
+- Add authorization rules for estimate-line editing once routes exist.
+- Consider a future `docs/learning/money-cents-and-rounding.md` note if the team wants a practical explanation of cent-based money handling.
+- Later milestone: invoice generation from approved or completed repair orders, after approval/payment/PDF scope is explicitly defined.

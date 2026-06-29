@@ -136,6 +136,47 @@ Store:
 - model
 - license plate
 
+## Repair Order
+
+RepairOrder is the staff-owned work record after intake review.
+
+A repair order:
+
+- belongs to one workshop
+- is created by workshop owner or staff
+- may be created from a reviewed booking request
+- may belong to a customer
+- may reference a vehicle
+- may contain staff-authored estimate lines
+
+A repair order is not:
+
+- the intake aggregate
+- an AI diagnosis
+- a customer approval portal
+- an invoice
+- a payment record
+- an accounting record
+
+## Estimate Lines
+
+Estimate lines belong to a repair order.
+
+Supported foundation line types:
+
+- labor
+- part
+- fee
+- discount
+
+Workshop staff author estimate lines manually.
+
+The system may calculate totals from line values, but must not use AI to diagnose issues, recommend repairs, or estimate prices.
+
+Money is stored as integer cents.
+
+Invoices come later, after estimate approval and/or work completion. Payment, PDF export, customer approval portal, inventory management, and accounting are out of scope.
+
 ## Booking Request Status
 
 Booking request status is an enum/value object, not a domain entity.
@@ -153,6 +194,8 @@ Owner and staff can see data for the active workshop:
 - new requests
 - confirmed requests
 - cancelled requests
+- repair order backend foundation
+- repair order estimate totals from staff-entered lines
 
 ## Public Intake
 

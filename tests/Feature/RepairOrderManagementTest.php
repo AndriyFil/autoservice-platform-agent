@@ -187,7 +187,7 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame($bookingRequest->customer_id, $repairOrder->customer_id);
         $this->assertSame($bookingRequest->vehicle_id, $repairOrder->vehicle_id);
         $this->assertSame($bookingRequest->id, $repairOrder->booking_request_id);
-        $this->assertSame(RepairOrderStatus::Open, $repairOrder->status);
+        $this->assertSame(RepairOrderStatus::Draft, $repairOrder->status);
         $this->assertSame('Brake pedal feels soft.', $repairOrder->problem_description);
         $this->assertSame('2026-06-12 10:00:00', $repairOrder->opened_at->toDateTimeString());
         $this->assertNull($repairOrder->closed_at);
@@ -237,7 +237,7 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame($customer->id, $repairOrder->customer_id);
         $this->assertSame($vehicle->id, $repairOrder->vehicle_id);
         $this->assertNull($repairOrder->booking_request_id);
-        $this->assertSame(RepairOrderStatus::Open, $repairOrder->status);
+        $this->assertSame(RepairOrderStatus::Draft, $repairOrder->status);
         $this->assertSame('Walk-in oil leak inspection.', $repairOrder->problem_description);
         $this->assertSame('2026-06-12 09:00:00', $repairOrder->opened_at->toDateTimeString());
         $this->assertNull($repairOrder->closed_at);
@@ -472,7 +472,7 @@ class RepairOrderManagementTest extends TestCase
             'customer_id' => $activeBookingRequest->customer_id,
             'vehicle_id' => null,
             'booking_request_id' => null,
-            'status' => RepairOrderStatus::Open,
+            'status' => RepairOrderStatus::Draft,
             'problem_description' => 'Manual phone-call work.',
             'opened_at' => Carbon::parse('2026-06-12 11:00:00'),
             'closed_at' => null,
@@ -491,7 +491,7 @@ class RepairOrderManagementTest extends TestCase
                 ->has('repairOrders', 2)
                 ->where('repairOrders.0.id', $manualRepairOrder->id)
                 ->where('repairOrders.0.customerName', 'Active Customer')
-                ->where('repairOrders.0.status.value', 'open')
+                ->where('repairOrders.0.status.value', 'draft')
                 ->where('repairOrders.1.id', $activeRepairOrder->id));
     }
 
@@ -538,7 +538,7 @@ class RepairOrderManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/RepairOrders/Show')
                 ->where('repairOrder.id', $repairOrder->id)
-                ->where('repairOrder.status.value', 'open')
+                ->where('repairOrder.status.value', 'draft')
                 ->where('repairOrder.customer.name', 'Jane Driver')
                 ->where('repairOrder.customer.phone', '+1 555 123 4567')
                 ->where('repairOrder.vehicle.brand', 'Honda')
@@ -563,7 +563,7 @@ class RepairOrderManagementTest extends TestCase
             'customer_id' => $customer->id,
             'vehicle_id' => null,
             'booking_request_id' => null,
-            'status' => RepairOrderStatus::Open,
+            'status' => RepairOrderStatus::Draft,
             'problem_description' => 'Manual intake.',
             'opened_at' => Carbon::parse('2026-06-12 10:00:00'),
             'closed_at' => null,
@@ -611,7 +611,7 @@ class RepairOrderManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('bookingRequest.status.value', 'confirmed')
                 ->where('bookingRequest.repairOrder.id', $repairOrder->id)
-                ->where('bookingRequest.repairOrder.status.value', 'open'));
+                ->where('bookingRequest.repairOrder.status.value', 'draft'));
     }
 
     public function test_open_repair_order_can_be_completed(): void
@@ -724,7 +724,7 @@ class RepairOrderManagementTest extends TestCase
             ->post(route('dashboard.repair-orders.cancel', $otherRepairOrder))
             ->assertNotFound();
 
-        $this->assertSame(RepairOrderStatus::Open, $otherRepairOrder->refresh()->status);
+        $this->assertSame(RepairOrderStatus::Draft, $otherRepairOrder->refresh()->status);
     }
 
     private function createMembership(
@@ -794,7 +794,7 @@ class RepairOrderManagementTest extends TestCase
             'customer_id' => $bookingRequest->customer_id,
             'vehicle_id' => $bookingRequest->vehicle_id,
             'booking_request_id' => $bookingRequest->id,
-            'status' => $overrides['status'] ?? RepairOrderStatus::Open,
+            'status' => $overrides['status'] ?? RepairOrderStatus::Draft,
             'problem_description' => $bookingRequest->problem_description,
             'opened_at' => $overrides['opened_at'] ?? Carbon::parse('2026-06-12 10:00:00'),
             'closed_at' => $overrides['closed_at'] ?? null,

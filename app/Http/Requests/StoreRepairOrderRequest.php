@@ -21,6 +21,7 @@ class StoreRepairOrderRequest extends FormRequest
             'vehicle_id' => ['nullable', 'integer'],
             'booking_request_id' => ['nullable', 'integer'],
             'problem_description' => ['required', 'string', 'max:5000'],
+            'notes' => ['nullable', 'string', 'max:10000'],
         ];
     }
 }

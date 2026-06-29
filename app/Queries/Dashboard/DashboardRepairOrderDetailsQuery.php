@@ -11,10 +11,12 @@ class DashboardRepairOrderDetailsQuery
      * @return array{
      *     id: int,
      *     status: array{value: string, label: string},
-     *     problemDescription: string,
+     *     problemDescription: string|null,
+     *     notes: string|null,
      *     openedAt: string,
      *     closedAt: string|null,
-     *     customer: array{id: int, name: string, phone: string},
+     *     estimateTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
+     *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
      *     bookingRequest: array{id: int, status: array{value: string, label: string}, preferredDate: string|null, createdAt: string}|null
      * }
@@ -22,7 +24,7 @@ class DashboardRepairOrderDetailsQuery
     public function handle(WorkshopUser $activeWorkshopUser, RepairOrder $repairOrder): array
     {
         $repairOrder = RepairOrder::query()
-            ->with(['customer', 'vehicle', 'bookingRequest'])
+            ->with(['customer', 'vehicle', 'bookingRequest', 'lines'])
             ->whereKey($repairOrder->id)
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->firstOrFail();
@@ -34,13 +36,21 @@ class DashboardRepairOrderDetailsQuery
                 'label' => $repairOrder->status->label(),
             ],
             'problemDescription' => $repairOrder->problem_description,
+            'notes' => $repairOrder->notes,
             'openedAt' => $repairOrder->opened_at->toISOString(),
             'closedAt' => $repairOrder->closed_at?->toISOString(),
-            'customer' => [
-                'id' => $repairOrder->customer->id,
-                'name' => $repairOrder->customer->name,
-                'phone' => $repairOrder->customer->phone,
+            'estimateTotals' => [
+                'subtotalCents' => $repairOrder->subtotalCents(),
+                'taxCents' => $repairOrder->taxCents(),
+                'totalCents' => $repairOrder->totalCents(),
             ],
+            'customer' => $repairOrder->customer
+                ? [
+                    'id' => $repairOrder->customer->id,
+                    'name' => $repairOrder->customer->name,
+                    'phone' => $repairOrder->customer->phone,
+                ]
+                : null,
             'vehicle' => $repairOrder->vehicle
                 ? [
                     'id' => $repairOrder->vehicle->id,
