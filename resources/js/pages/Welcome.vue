@@ -1,48 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowUp, Check, Phone, Wrench } from 'lucide-vue-next';
-import { computed, nextTick, ref } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Building2, ClipboardList, Wrench } from 'lucide-vue-next';
 
 defineProps<{
     canLogin?: boolean;
     canRegister?: boolean;
-    intakeSubmitted?: boolean;
 }>();
-
-const exampleMessages = [
-    'Opel Insignia, check engine light came on',
-    'My brakes make noise when stopping',
-    'Car shakes above 90 km/h',
-];
-
-const form = useForm({
-    message: '',
-});
-
-const messageInput = ref<HTMLTextAreaElement | null>(null);
-const canSubmit = computed(() => form.message.trim().length > 0 && !form.processing);
-
-const fillExample = async (message: string) => {
-    form.message = message;
-    form.clearErrors('message');
-
-    await nextTick();
-
-    messageInput.value?.focus();
-};
-
-const submit = () => {
-    if (!canSubmit.value) {
-        return;
-    }
-
-    form.post(route('public-intake.store'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            form.reset('message');
-        },
-    });
-};
 </script>
 
 <template>
@@ -75,86 +38,60 @@ const submit = () => {
             </nav>
         </header>
 
-        <section class="mx-auto flex w-full max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16">
-            <div class="w-full max-w-3xl text-center">
-                <p class="text-sm font-medium text-[#2f6471]">Service request</p>
-                <h1 class="mt-4 text-4xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-5xl">
-                    How can we help with your car?
+        <section class="mx-auto grid w-full max-w-5xl gap-10 px-5 pb-16 pt-12 sm:px-6 md:grid-cols-[1.2fr_0.8fr] md:items-center md:pb-24 md:pt-20">
+            <div>
+                <p class="text-sm font-medium text-[#2f6471]">Workshop intake SaaS</p>
+                <h1 class="mt-4 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-5xl">
+                    Chat-first service requests for every workshop.
                 </h1>
-                <p class="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                    Describe the problem in your own words. A service advisor will review your request and contact
-                    you to confirm details and visit time.
+                <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                    AutoService helps workshops collect customer requests from their own public page and review
+                    new intake requests in a tenant-scoped dashboard.
                 </p>
+                <div class="mt-8 flex flex-wrap gap-3">
+                    <Link
+                        v-if="canRegister"
+                        :href="route('register')"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md bg-[#2f6471] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#285864]"
+                    >
+                        Create workshop account
+                    </Link>
+                    <Link
+                        v-if="canLogin"
+                        :href="route('login')"
+                        class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white/60 px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#2f6471]/40 hover:bg-white"
+                    >
+                        Staff login
+                    </Link>
+                </div>
             </div>
 
-            <div class="mt-10 w-full max-w-3xl">
-                <section
-                    v-if="intakeSubmitted"
-                    class="rounded-lg border border-emerald-200 bg-white p-7 text-center shadow-[0_18px_60px_-32px_rgba(47,100,113,0.45)] sm:p-8"
-                    aria-live="polite"
-                >
-                    <span class="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                        <Check class="size-6" aria-hidden="true" />
+            <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-32px_rgba(47,100,113,0.55)]">
+                <div class="flex items-start gap-4">
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#2f6471]/10 text-[#2f6471]">
+                        <Building2 class="size-5" aria-hidden="true" />
                     </span>
-                    <h2 class="mt-5 text-xl font-semibold tracking-tight text-slate-950">Request received</h2>
-                    <p class="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
-                        Request received. A service advisor will contact you to confirm details and visit time.
-                    </p>
-                    <div class="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-                        <Phone class="size-4" aria-hidden="true" />
-                        <span>Staff confirmation comes before diagnosis, pricing, or scheduling.</span>
+                    <div>
+                        <h2 class="text-base font-semibold text-slate-950">Tenant public pages</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Each workshop receives requests through its own public URL, so intake belongs to the
+                            right workshop from the first message.
+                        </p>
                     </div>
-                </section>
+                </div>
 
-                <form v-else class="w-full" @submit.prevent="submit">
-                    <div
-                        class="rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_60px_-32px_rgba(47,100,113,0.55)] transition focus-within:border-[#2f6471]/50 focus-within:shadow-[0_24px_70px_-34px_rgba(47,100,113,0.65)]"
-                    >
-                        <label for="message" class="sr-only">Describe your car problem</label>
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-                            <textarea
-                                id="message"
-                                ref="messageInput"
-                                v-model="form.message"
-                                name="message"
-                                rows="5"
-                                class="min-h-36 w-full resize-none rounded-md border-0 bg-transparent px-3 py-3 text-base leading-7 text-slate-900 shadow-none outline-none placeholder:text-slate-400 focus:ring-0"
-                                placeholder="Opel Insignia, check engine light came on, maybe sensors, when can I come?"
-                                :aria-invalid="Boolean(form.errors.message)"
-                                aria-describedby="message-error"
-                            />
-
-                            <button
-                                type="submit"
-                                :disabled="!canSubmit"
-                                class="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-[#2f6471] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#285864] disabled:cursor-not-allowed disabled:opacity-45"
-                            >
-                                <ArrowUp class="size-4" aria-hidden="true" />
-                                <span>{{ form.processing ? 'Sending...' : 'Send request' }}</span>
-                            </button>
-                        </div>
+                <div class="mt-6 flex items-start gap-4">
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#2f6471]/10 text-[#2f6471]">
+                        <ClipboardList class="size-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                        <h2 class="text-base font-semibold text-slate-950">Staff review first</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Requests preserve the customer's words and wait for staff confirmation before visit time,
+                            pricing, or repair decisions.
+                        </p>
                     </div>
-
-                    <p
-                        v-if="form.errors.message"
-                        id="message-error"
-                        class="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-                    >
-                        {{ form.errors.message }}
-                    </p>
-
-                    <div class="mt-5 flex flex-wrap justify-center gap-2.5">
-                        <button
-                            v-for="example in exampleMessages"
-                            :key="example"
-                            type="button"
-                            class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-600 shadow-sm transition hover:border-[#2f6471]/40 hover:bg-white hover:text-slate-950"
-                            @click="fillExample(example)"
-                        >
-                            {{ example }}
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
         </section>
     </main>

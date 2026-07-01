@@ -14,7 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trimStrings(except: [
-            fn ($request) => $request->is('intake') && $request->isMethod('post'),
+            fn ($request) => $request->is('w/*/intake') && $request->isMethod('post'),
         ]);
 
         $middleware->web(append: [

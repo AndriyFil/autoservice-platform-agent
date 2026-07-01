@@ -65,7 +65,7 @@ class CreateRepairOrderAction
                 'status' => RepairOrderStatus::Draft,
                 'notes' => $data['notes'] ?? null,
                 'created_by_user_id' => $activeWorkshopUser->user_id,
-                'problem_description' => $data['problem_description'],
+                'problem_description' => $bookingRequest?->problem_description ?? $data['problem_description'],
                 'opened_at' => now(),
                 'closed_at' => null,
             ]);

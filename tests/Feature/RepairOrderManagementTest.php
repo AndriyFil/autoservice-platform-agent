@@ -194,6 +194,32 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->status);
     }
 
+    public function test_repair_order_from_booking_request_copies_booking_request_problem_description(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'problem_description' => 'Original safe customer problem.',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'customer_id' => $bookingRequest->customer_id,
+                'vehicle_id' => $bookingRequest->vehicle_id,
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => 'Posted replacement should not win.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $repairOrder = RepairOrder::query()->firstOrFail();
+
+        $this->assertSame('Original safe customer problem.', $repairOrder->problem_description);
+    }
+
     public function test_manual_repair_order_can_be_created_without_booking_request(): void
     {
         Carbon::setTestNow('2026-06-12 09:00:00');

@@ -61,3 +61,15 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: Missing intake field values such as phone, vehicle, and preferred time should not be hardcoded in rules, queries, or tests.
 - Lesson: Put reusable intake field values and labels in an enum and reference that enum from rules, read models, and tests to avoid drift.
 - Applies when: Implementing or reviewing missing-field detection, intake extraction, LLM schema mapping, dashboard/admin queue read models, or tests around intake fields.
+
+## 2026-06-29 - Public Intake Is Tenant Scoped
+
+- Correction: Public intake must not create unassigned `BookingRequest` records or rely on central assignment; each workshop has its own `/w/{workshop:slug}` public intake page.
+- Lesson: Public intake must receive the route `Workshop`, set `booking_requests.workshop_id` from it, and never use default/first workshop fallback, workshop cards, central admin queues, or claim workflows for routing.
+- Applies when: Implementing or reviewing public intake routes, `SubmitIntakeRequestAction`, dashboard request visibility, product docs, or tests around SaaS workshop scoping.
+
+## 2026-07-01 - Public Intake Starts As New
+
+- Correction: Public intake is always workshop-scoped, so `submitted` is redundant with `new`.
+- Lesson: Use `BookingRequestStatus::New` as the initial public intake status and do not reintroduce unassigned intake queue semantics.
+- Applies when: Implementing or reviewing booking request statuses, public intake creation, dashboard status labels, product docs, migrations, or tests around initial intake state.

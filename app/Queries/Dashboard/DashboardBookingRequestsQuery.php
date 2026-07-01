@@ -16,13 +16,14 @@ class DashboardBookingRequestsQuery
      *     preferredDate: string|null,
      *     status: array{value: string, label: string},
      *     vehicle: array{brand: string|null, model: string|null, licensePlate: string|null}|null,
+     *     repairOrder: array{id: int, status: array{value: string, label: string}}|null,
      *     createdAt: string
      * }>
      */
     public function handle(WorkshopUser $activeWorkshopUser): array
     {
         return BookingRequest::query()
-            ->with('vehicle')
+            ->with(['vehicle', 'repairOrder'])
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -42,6 +43,15 @@ class DashboardBookingRequestsQuery
                         'brand' => $bookingRequest->vehicle->brand,
                         'model' => $bookingRequest->vehicle->model,
                         'licensePlate' => $bookingRequest->vehicle->license_plate,
+                    ]
+                    : null,
+                'repairOrder' => $bookingRequest->repairOrder
+                    ? [
+                        'id' => $bookingRequest->repairOrder->id,
+                        'status' => [
+                            'value' => $bookingRequest->repairOrder->status->value,
+                            'label' => $bookingRequest->repairOrder->status->label(),
+                        ],
                     ]
                     : null,
                 'createdAt' => $bookingRequest->created_at->toISOString(),

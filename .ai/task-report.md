@@ -2,119 +2,105 @@
 
 ## Goal
 
-Implement the backend/domain foundation for Repair Orders and staff-authored estimate lines.
+Build the first usable staff repair-order estimate workflow: create repair orders from reviewed booking requests, manage repair order lines, see totals, and mark draft repair orders as estimated.
 
 ## Files Changed
 
-- `database/migrations/2026_06_29_000001_update_repair_orders_for_estimate_foundation.php`
-- `database/migrations/2026_06_29_000002_create_repair_order_lines_table.php`
-- `app/Enums/RepairOrderStatus.php`
-- `app/Enums/RepairOrderLineType.php`
-- `app/Models/RepairOrder.php`
-- `app/Models/RepairOrderLine.php`
-- `app/Models/Workshop.php`
 - `app/Actions/RepairOrders/CreateRepairOrderAction.php`
-- `app/Http/Requests/StoreRepairOrderRequest.php`
+- `app/Actions/RepairOrders/AddRepairOrderLineAction.php`
+- `app/Actions/RepairOrders/UpdateRepairOrderLineAction.php`
+- `app/Actions/RepairOrders/DeleteRepairOrderLineAction.php`
+- `app/Actions/RepairOrders/MarkRepairOrderEstimatedAction.php`
+- `app/Http/Controllers/DashboardRepairOrderLineController.php`
+- `app/Http/Controllers/EstimateDashboardRepairOrderController.php`
+- `app/Http/Requests/StoreRepairOrderLineRequest.php`
+- `app/Http/Requests/UpdateRepairOrderLineRequest.php`
+- `app/Http/Requests/MarkRepairOrderEstimatedRequest.php`
+- `app/Queries/Dashboard/DashboardBookingRequestsQuery.php`
 - `app/Queries/Dashboard/DashboardRepairOrderDetailsQuery.php`
-- `app/Queries/Dashboard/DashboardRepairOrdersQuery.php`
-- `database/factories/RepairOrderFactory.php`
-- `database/factories/RepairOrderLineFactory.php`
-- `tests/Unit/RepairOrderTotalsTest.php`
-- `tests/Feature/RepairOrderTest.php`
-- `tests/Feature/PublicIntakeSubmissionTest.php`
+- `routes/web.php`
+- `resources/js/components/dashboard/BookingRequestTable.vue`
+- `resources/js/components/dashboard/types.ts`
+- `resources/js/components/repair-orders/RepairOrderLinesSection.vue`
+- `resources/js/components/repair-orders/RepairOrderStatusActions.vue`
+- `resources/js/components/repair-orders/RepairOrderTotalsSummary.vue`
+- `resources/js/components/repair-orders/RepairOrderStatusBadge.vue`
+- `resources/js/components/repair-orders/types.ts`
+- `resources/js/components/repair-orders/utils.ts`
+- `resources/js/pages/Dashboard/BookingRequests/Show.vue`
+- `resources/js/pages/Dashboard/RepairOrders/Show.vue`
+- `tests/Feature/DashboardBookingRequestManagementTest.php`
 - `tests/Feature/RepairOrderManagementTest.php`
+- `tests/Feature/RepairOrderLineManagementTest.php`
 - `docs/product/domain-model.md`
 - `docs/product/mvp-scope.md`
 - `.ai/task-report.md`
 
-Pre-existing unrelated dirty files were left in place:
-
-- `app/Queries/Admin/UnassignedIntakeRequestsQuery.php`
-- `tests/Feature/UnassignedIntakeRequestsQueryTest.php`
-- `auto-service-landing-page-design.zip`
-- `customer-communication-interface.zip`
+Some files already had unrelated working-tree changes before this task; those changes were left intact.
 
 ## Implementation Summary
 
-Added a `repair_order_lines` foundation for staff-authored estimate lines with supported line types: labor, part, fee, and discount.
+Added focused line-management Actions, FormRequests, controllers, and dashboard routes for adding, updating, and deleting repair order lines.
 
-Updated repair orders to support the milestone fields:
+Added `MarkRepairOrderEstimatedAction` and a thin controller route for `draft -> estimated`. The action requires the repair order to belong to the active workshop, be in `draft`, and have at least one line.
 
-- nullable `customer_id`
-- nullable `vehicle_id`
-- nullable `problem_description`
-- `notes`
-- nullable `created_by_user_id`
-- status values: `draft`, `estimated`, `approved`, `in_progress`, `completed`, `cancelled`
+Expanded dashboard repair-order detail props to include lines, per-line totals, repair-order totals, available line types, source booking request text, and backend-owned status action availability.
 
-Existing `open` repair orders are migrated to `draft`.
+Updated the staff UI so repair order details show status actions, line add/edit/delete controls, and estimate totals. Dashboard booking requests now expose repair order link state and show a “Start work” action for confirmed requests without a repair order.
 
-Added deterministic model-level total calculations:
+Tightened repair-order creation from a booking request so the persisted repair order copies the booking request problem description instead of trusting posted replacement text.
 
-- `RepairOrderLine::subtotalCents()`
-- `RepairOrderLine::taxCents()`
-- `RepairOrderLine::totalCents()`
-- `RepairOrder::subtotalCents()`
-- `RepairOrder::taxCents()`
-- `RepairOrder::totalCents()`
-
-Public intake still creates only `BookingRequest` records and does not create repair orders.
+Updated product docs to record that the current estimate is represented by `RepairOrder + RepairOrderLines + estimated status`, not a separate `Estimate` entity.
 
 ## Architecture Decisions
 
-Kept the foundation on `RepairOrder` and `repair_order_lines` instead of introducing a separate `Estimate` aggregate. The milestone asked for repair order lines directly, and a separate estimate workflow would add lifecycle complexity before there is a UI or approval process that needs it.
+Controllers remain thin HTTP adapters. They receive FormRequests, call one Action, and redirect with flash or validation errors.
 
-Money is stored as integer cents in `unit_price_cents`. Totals are calculated with integer arithmetic and explicit rounding, not floats.
+Business rules live in Actions: workshop scoping, line ownership checks, duplicate-source protection through existing create flow, and estimate transition rules.
 
-`RepairOrderStatus::Draft` replaces the old `open` status as the initial staff-owned state. Existing complete/cancel actions remain thin use-case actions and continue to scope by active `WorkshopUser`.
+Totals stay on `RepairOrder` and `RepairOrderLine`, preserving the existing integer-cents domain behavior and avoiding duplicated math in Vue.
 
-The dashboard repair-order detail query now includes estimate totals but does not add full CRUD UI or customer approval behavior.
+The frontend displays backend-provided `statusActions` instead of deciding estimate transition availability itself.
+
+No Estimate model, invoice, payment, PDF, approval flow, AI pricing, or diagnosis UI was added.
 
 ## Tradeoffs
 
-Tax support is intentionally small: each line has a simple `tax_rate`, and totals are deterministic. This is not a tax engine and does not handle accounting rules.
+Line forms accept unit prices in cents to match the current database and avoid currency assumptions. A future currency/workshop-money display task can improve formatting once the product defines currency.
 
-Discounts are represented as line items that reduce totals. This keeps the line model simple but means discounts share the same quantity/unit-price shape as other lines.
+Complete/cancel actions were left in the existing repair-order workflow. This task only added the estimated transition and did not redesign the broader repair-order lifecycle.
 
-Repair order lines are model-level foundation only. There are no controllers, routes, or Inertia components for editing lines yet.
-
-The status enum now includes future workflow states, but this milestone only keeps the existing create/complete/cancel behavior active.
+The line editor is intentionally feature-local and plain. It can be split further if the table grows, but a larger abstraction is not needed yet.
 
 ## Tests
 
 Run:
 
 ```txt
+php artisan test tests/Feature/PublicIntakeSubmissionTest.php tests/Feature/DashboardTest.php
+php artisan test tests/Feature/DashboardBookingRequestManagementTest.php tests/Feature/RepairOrderManagementTest.php
+php artisan test tests/Feature/RepairOrderLineManagementTest.php tests/Unit/RepairOrderTotalsTest.php
 php artisan test
+npm run build
 ```
 
-Result:
+Results:
 
 ```txt
-121 passed, 950 assertions
+PublicIntakeSubmissionTest + DashboardTest: 19 passed, 265 assertions
+DashboardBookingRequestManagementTest + RepairOrderManagementTest: 36 passed, 359 assertions
+RepairOrderLineManagementTest + RepairOrderTotalsTest: 10 passed, 96 assertions
+Full PHP suite: 130 passed, 1090 assertions
+npm run build: failed to start because vite is not installed in node_modules
 ```
-
-Added or updated coverage for:
-
-- repair order workshop relationship
-- optional booking request link
-- repair order has many lines
-- cent-based line and repair order totals
-- discount lines reducing totals
-- draft repair order existing without invoice
-- public intake not creating repair orders automatically
-- existing repair order management behavior using `draft`
 
 ## Risks
 
-Existing frontend copy or TypeScript types may still use the word `open` if not covered by backend feature tests. No full frontend build was requested or run.
+Frontend build could not be verified in this workspace because `vite` was unavailable. The changed Vue files were statically searched for stale repair-order `open` status usage; only dialog/sidebar state usages of `open` remain.
 
-SQLite in-memory tests passed. If production uses another database, the nullable column alteration migration should be checked during deployment planning.
+Money display is currency-neutral for now. Staff enter integer cents, and the UI formats cents as decimal amounts without a currency symbol.
 
 ## Follow Ups
 
-- Add staff UI and Actions/FormRequests for creating and editing repair order lines.
-- Decide when a repair order should move from `draft` to `estimated`.
-- Add authorization rules for estimate-line editing once routes exist.
-- Consider a future `docs/learning/money-cents-and-rounding.md` note if the team wants a practical explanation of cent-based money handling.
-- Later milestone: invoice generation from approved or completed repair orders, after approval/payment/PDF scope is explicitly defined.
+- Install frontend dependencies and run `npm run build` or the project’s TypeScript check before release.
+- Consider `docs/learning/laravel-formrequest-action-query-workflow.md` to explain this Controller -> FormRequest -> Action -> Query pattern with examples from this milestone.

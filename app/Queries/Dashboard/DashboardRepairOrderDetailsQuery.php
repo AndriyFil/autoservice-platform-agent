@@ -2,7 +2,10 @@
 
 namespace App\Queries\Dashboard;
 
+use App\Enums\RepairOrderLineType;
+use App\Enums\RepairOrderStatus;
 use App\Models\RepairOrder;
+use App\Models\RepairOrderLine;
 use App\Models\WorkshopUser;
 
 class DashboardRepairOrderDetailsQuery
@@ -15,10 +18,13 @@ class DashboardRepairOrderDetailsQuery
      *     notes: string|null,
      *     openedAt: string,
      *     closedAt: string|null,
+     *     lines: array<int, array{id: int, type: array{value: string, label: string}, description: string, quantity: string, unitPriceCents: int, taxRate: string, sortOrder: int, subtotalCents: int, taxCents: int, totalCents: int}>,
      *     estimateTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
+     *     availableLineTypes: array<int, array{value: string, label: string}>,
+     *     statusActions: array{canMarkEstimated: bool, canComplete: bool, canCancel: bool},
      *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
-     *     bookingRequest: array{id: int, status: array{value: string, label: string}, preferredDate: string|null, createdAt: string}|null
+     *     bookingRequest: array{id: int, status: array{value: string, label: string}, problemDescription: string, originalMessage: string|null, preferredDate: string|null, createdAt: string}|null
      * }
      */
     public function handle(WorkshopUser $activeWorkshopUser, RepairOrder $repairOrder): array
@@ -39,10 +45,40 @@ class DashboardRepairOrderDetailsQuery
             'notes' => $repairOrder->notes,
             'openedAt' => $repairOrder->opened_at->toISOString(),
             'closedAt' => $repairOrder->closed_at?->toISOString(),
+            'lines' => $repairOrder->lines
+                ->map(fn (RepairOrderLine $line): array => [
+                    'id' => $line->id,
+                    'type' => [
+                        'value' => $line->type->value,
+                        'label' => $line->type->label(),
+                    ],
+                    'description' => $line->description,
+                    'quantity' => (string) $line->quantity,
+                    'unitPriceCents' => $line->unit_price_cents,
+                    'taxRate' => (string) $line->tax_rate,
+                    'sortOrder' => $line->sort_order,
+                    'subtotalCents' => $line->subtotalCents(),
+                    'taxCents' => $line->taxCents(),
+                    'totalCents' => $line->totalCents(),
+                ])
+                ->all(),
             'estimateTotals' => [
                 'subtotalCents' => $repairOrder->subtotalCents(),
                 'taxCents' => $repairOrder->taxCents(),
                 'totalCents' => $repairOrder->totalCents(),
+            ],
+            'availableLineTypes' => array_map(
+                fn (RepairOrderLineType $type): array => [
+                    'value' => $type->value,
+                    'label' => $type->label(),
+                ],
+                RepairOrderLineType::cases(),
+            ),
+            'statusActions' => [
+                'canMarkEstimated' => $repairOrder->status === RepairOrderStatus::Draft
+                    && $repairOrder->lines->isNotEmpty(),
+                'canComplete' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Completed),
+                'canCancel' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Cancelled),
             ],
             'customer' => $repairOrder->customer
                 ? [
@@ -66,6 +102,8 @@ class DashboardRepairOrderDetailsQuery
                         'value' => $repairOrder->bookingRequest->status->value,
                         'label' => $repairOrder->bookingRequest->status->label(),
                     ],
+                    'problemDescription' => $repairOrder->bookingRequest->problem_description,
+                    'originalMessage' => $repairOrder->bookingRequest->original_message,
                     'preferredDate' => $repairOrder->bookingRequest->preferred_date?->toDateString(),
                     'createdAt' => $repairOrder->bookingRequest->created_at->toISOString(),
                 ]

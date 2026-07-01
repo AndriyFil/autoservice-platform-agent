@@ -5,24 +5,27 @@ use App\Http\Controllers\CancelDashboardRepairOrderController;
 use App\Http\Controllers\CompleteDashboardRepairOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
+use App\Http\Controllers\DashboardRepairOrderLineController;
 use App\Http\Controllers\DashboardRepairOrderController;
+use App\Http\Controllers\EstimateDashboardRepairOrderController;
 use App\Http\Controllers\PublicIntakeController;
 use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use App\Http\Middleware\EnsureActiveWorkshop;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function (Request $request) {
+Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'intakeSubmitted' => $request->session()->get('intake_submitted', false),
     ]);
 })->name('home');
 
-Route::post('intake', [PublicIntakeController::class, 'store'])
+Route::get('w/{workshop:slug}', [PublicIntakeController::class, 'create'])
+    ->name('public-intake.create');
+
+Route::post('w/{workshop:slug}/intake', [PublicIntakeController::class, 'store'])
     ->name('public-intake.store');
 
 Route::get('dashboard', [DashboardController::class, 'show'])
@@ -55,6 +58,18 @@ Route::middleware(['auth', EnsureActiveWorkshop::class])
 
         Route::get('{repairOrder}', [DashboardRepairOrderController::class, 'show'])
             ->name('show');
+
+        Route::post('{repairOrder}/lines', [DashboardRepairOrderLineController::class, 'store'])
+            ->name('lines.store');
+
+        Route::patch('{repairOrder}/lines/{repairOrderLine}', [DashboardRepairOrderLineController::class, 'update'])
+            ->name('lines.update');
+
+        Route::delete('{repairOrder}/lines/{repairOrderLine}', [DashboardRepairOrderLineController::class, 'destroy'])
+            ->name('lines.destroy');
+
+        Route::post('{repairOrder}/estimate', [EstimateDashboardRepairOrderController::class, 'store'])
+            ->name('estimate');
 
         Route::post('{repairOrder}/complete', [CompleteDashboardRepairOrderController::class, 'store'])
             ->name('complete');

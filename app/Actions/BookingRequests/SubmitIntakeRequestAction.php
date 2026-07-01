@@ -4,6 +4,7 @@ namespace App\Actions\BookingRequests;
 
 use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
+use App\Models\Workshop;
 use App\Support\Intake\IntakeExtractorInterface;
 
 class SubmitIntakeRequestAction
@@ -12,12 +13,12 @@ class SubmitIntakeRequestAction
         private readonly IntakeExtractorInterface $intakeExtractor,
     ) {}
 
-    public function handle(string $message): BookingRequest
+    public function handle(Workshop $workshop, string $message): BookingRequest
     {
         $extractionResult = $this->intakeExtractor->extract($message);
 
         return BookingRequest::create([
-            'workshop_id' => null,
+            'workshop_id' => $workshop->id,
             'customer_id' => null,
             'vehicle_id' => null,
             'created_by_user_id' => null,
@@ -26,7 +27,7 @@ class SubmitIntakeRequestAction
             'problem_description' => $message,
             'original_message' => $message,
             'preferred_date' => null,
-            'status' => BookingRequestStatus::Submitted,
+            'status' => BookingRequestStatus::New,
         ]);
     }
 }

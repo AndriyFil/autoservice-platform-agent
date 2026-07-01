@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/vue3';
-import { Ban, Check, Eye, X } from 'lucide-vue-next';
+import { Ban, Check, ClipboardList, Eye, Wrench, X } from 'lucide-vue-next';
 import BookingRequestEmptyState from './BookingRequestEmptyState.vue';
 import BookingRequestStatusBadge from './BookingRequestStatusBadge.vue';
 import type { DashboardBookingRequest, StatusAction } from './types';
@@ -15,6 +15,9 @@ defineProps<{
 defineEmits<{
     statusAction: [bookingRequestId: number, customerName: string, status: StatusAction];
 }>();
+
+const canCreateRepairOrder = (bookingRequest: DashboardBookingRequest) =>
+    bookingRequest.status.value === 'confirmed' && bookingRequest.repairOrder === null;
 </script>
 
 <template>
@@ -100,6 +103,20 @@ defineEmits<{
                                 >
                                     <Ban class="size-4" />
                                     Cancel
+                                </Button>
+
+                                <Button v-if="canCreateRepairOrder(bookingRequest)" as-child size="sm">
+                                    <Link :href="route('dashboard.repair-orders.create', { booking_request: bookingRequest.id })">
+                                        <Wrench class="size-4" />
+                                        Start work
+                                    </Link>
+                                </Button>
+
+                                <Button v-if="bookingRequest.repairOrder" as-child size="sm" variant="outline">
+                                    <Link :href="route('dashboard.repair-orders.show', { repairOrder: bookingRequest.repairOrder.id })">
+                                        <ClipboardList class="size-4" />
+                                        Repair order
+                                    </Link>
                                 </Button>
 
                                 <Button as-child size="sm" variant="outline">

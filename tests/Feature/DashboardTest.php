@@ -238,14 +238,14 @@ class DashboardTest extends TestCase
                 ->where('bookingRequests.1.vehicle', null));
     }
 
-    public function test_dashboard_does_not_include_unassigned_submitted_public_intake_requests(): void
+    public function test_dashboard_includes_new_public_intake_requests_for_active_workshop(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
 
-        BookingRequest::create([
-            'workshop_id' => null,
+        $bookingRequest = BookingRequest::create([
+            'workshop_id' => $workshop->id,
             'customer_id' => null,
             'vehicle_id' => null,
             'created_by_user_id' => null,
@@ -254,7 +254,7 @@ class DashboardTest extends TestCase
             'problem_description' => 'Opel Insignia, check engine light came on.',
             'original_message' => 'Opel Insignia, check engine light came on.',
             'preferred_date' => null,
-            'status' => BookingRequestStatus::Submitted,
+            'status' => BookingRequestStatus::New,
         ]);
 
         $response = $this
@@ -267,8 +267,60 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->where('activeWorkshop.id', $workshop->id)
-                ->has('bookingRequests', 0)
+                ->has('bookingRequests', 1)
+                ->where('bookingRequests.0.id', $bookingRequest->id)
+                ->where('bookingRequests.0.status.value', 'new')
+                ->where('bookingRequests.0.problemDescription', 'Opel Insignia, check engine light came on.')
                 ->missing('unassignedIntakeRequests'));
+    }
+
+    public function test_dashboard_does_not_include_other_workshop_new_public_intake_requests(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        $this->createMembership($user, $otherWorkshop);
+
+        $activeBookingRequest = BookingRequest::create([
+            'workshop_id' => $activeWorkshop->id,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '380501112233',
+            'problem_description' => 'Active workshop request.',
+            'original_message' => 'Active workshop request.',
+            'preferred_date' => null,
+            'status' => BookingRequestStatus::New,
+        ]);
+
+        BookingRequest::create([
+            'workshop_id' => $otherWorkshop->id,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '380671112233',
+            'problem_description' => 'Other workshop request.',
+            'original_message' => 'Other workshop request.',
+            'preferred_date' => null,
+            'status' => BookingRequestStatus::New,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->get('/dashboard');
+
+        $response
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('activeWorkshop.id', $activeWorkshop->id)
+                ->has('bookingRequests', 1)
+                ->where('bookingRequests.0.id', $activeBookingRequest->id)
+                ->where('bookingRequests.0.problemDescription', 'Active workshop request.'));
     }
 
     private function createMembership(User $user, Workshop $workshop): WorkshopUser

@@ -93,8 +93,8 @@ Purpose:
 
 Relationships:
 
-- May be unassigned during chat-first intake.
-- Belongs to one workshop after routing or workshop-specific creation.
+- Belongs to one workshop.
+- Public chat-first intake resolves the workshop from `/w/{workshop:slug}`.
 - May have no customer during initial chat-first intake.
 - Belongs to one customer after customer resolution.
 - May reference one vehicle.
@@ -124,11 +124,15 @@ Relationships:
 
 - Belongs to one workshop.
 - May originate from one booking request.
+- Links to the source booking request when created from intake review.
+- Copies the booking request problem description when created from a booking request.
 - May belong to one customer.
 - May reference one vehicle.
 - Has many repair order lines.
 - May record the staff user who created it.
+- Represents the current MVP estimate when it has staff-authored lines and status `estimated`.
 - Does not represent customer approval, invoice, payment, PDF export, or accounting.
+- Does not require a separate `Estimate` entity for the current MVP.
 
 MVP: yes
 
@@ -150,8 +154,11 @@ Rules:
 - Lines are created or edited by workshop staff.
 - Money is stored as integer cents.
 - The system may calculate totals from staff-entered values.
+- Discount lines reduce repair order totals.
+- A draft repair order can be marked `estimated` only after it has at least one line.
 - AI must not diagnose repairs, recommend work, or generate prices.
 - Repair order lines are not invoices and do not record payment.
+- Invoice generation comes later, after approval or completion rules exist.
 
 MVP: yes
 
@@ -166,12 +173,11 @@ Purpose:
 Relationships:
 
 - Used by booking request.
-- Initial chat-first landing intake status is `submitted`.
+- Initial chat-first workshop intake status is `new`.
 - Initial workshop-scoped booking status is `new`.
 
 MVP statuses:
 
-- `submitted`: public chat-first request received, not yet routed to a workshop
 - `new`
 - `confirmed`
 - `rejected`

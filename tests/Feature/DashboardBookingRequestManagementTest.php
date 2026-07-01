@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\BookingRequestStatus;
+use App\Enums\RepairOrderStatus;
 use App\Enums\WorkshopUserRole;
 use App\Models\BookingRequest;
 use App\Models\Customer;
+use App\Models\RepairOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Workshop;
@@ -158,6 +160,43 @@ class DashboardBookingRequestManagementTest extends TestCase
                 ->where('bookingRequests.2.status.value', 'confirmed')
                 ->where('bookingRequests.3.id', $newRequest->id)
                 ->where('bookingRequests.3.status.value', 'new'));
+    }
+
+    public function test_dashboard_list_exposes_repair_order_link_state(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+
+        $withoutRepairOrder = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+        $withRepairOrder = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+        $repairOrder = RepairOrder::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $withRepairOrder->customer_id,
+            'vehicle_id' => $withRepairOrder->vehicle_id,
+            'booking_request_id' => $withRepairOrder->id,
+            'status' => RepairOrderStatus::Draft,
+            'problem_description' => $withRepairOrder->problem_description,
+            'opened_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('bookingRequests.0.id', $withRepairOrder->id)
+                ->where('bookingRequests.0.repairOrder.id', $repairOrder->id)
+                ->where('bookingRequests.0.repairOrder.status.value', 'draft')
+                ->where('bookingRequests.1.id', $withoutRepairOrder->id)
+                ->where('bookingRequests.1.repairOrder', null));
     }
 
     public function test_dashboard_list_status_actions_redirect_back_to_dashboard(): void

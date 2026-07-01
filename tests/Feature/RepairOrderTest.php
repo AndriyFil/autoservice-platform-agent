@@ -84,11 +84,18 @@ class RepairOrderTest extends TestCase
 
     public function test_public_intake_does_not_create_repair_order_automatically(): void
     {
-        $this->post('/intake', [
+        $workshop = Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        $this->post('/w/main-auto/intake', [
             'message' => 'Opel Insignia, check engine light came on, when can I come?',
         ])->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('booking_requests', 1);
+        $this->assertDatabaseHas('booking_requests', [
+            'workshop_id' => $workshop->id,
+        ]);
         $this->assertDatabaseCount('repair_orders', 0);
     }
 }

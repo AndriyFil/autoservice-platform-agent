@@ -78,9 +78,14 @@ User role is resolved from WorkshopUser for the active workshop.
 
 ## Booking Request
 
-May be unassigned during chat-first intake.
+Always belongs to one workshop.
 
-Belongs to one workshop after routing or workshop-specific creation.
+For public chat-first intake, the workshop context comes from the tenant URL:
+
+```txt
+GET  /w/{workshop:slug}
+POST /w/{workshop:slug}/intake
+```
 
 May have no customer during initial chat-first intake.
 
@@ -94,7 +99,7 @@ Required fields for workshop-specific booking:
 - customer phone
 - problem description
 
-Required fields for chat-first landing intake:
+Required fields for chat-first workshop intake:
 
 - original message
 - problem description copied from the original message
@@ -145,15 +150,19 @@ A repair order:
 - belongs to one workshop
 - is created by workshop owner or staff
 - may be created from a reviewed booking request
+- links back to the source booking request when created from intake review
+- copies the booking request problem description when created from a booking request
 - may belong to a customer
 - may reference a vehicle
 - may contain staff-authored estimate lines
+- may be marked `estimated` after at least one estimate line exists
 
 A repair order is not:
 
 - the intake aggregate
 - an AI diagnosis
 - a customer approval portal
+- a separate Estimate entity
 - an invoice
 - a payment record
 - an accounting record
@@ -161,6 +170,14 @@ A repair order is not:
 ## Estimate Lines
 
 Estimate lines belong to a repair order.
+
+For the current MVP, an estimate is represented by:
+
+```txt
+RepairOrder + RepairOrderLines + RepairOrderStatus::Estimated
+```
+
+Do not introduce a separate `Estimate` model until approval, versioning, or customer-facing estimate rules create a real responsibility that `RepairOrder` should not own.
 
 Supported foundation line types:
 
@@ -181,7 +198,6 @@ Invoices come later, after estimate approval and/or work completion. Payment, PD
 
 Booking request status is an enum/value object, not a domain entity.
 
-- submitted
 - new
 - confirmed
 - rejected
@@ -194,21 +210,27 @@ Owner and staff can see data for the active workshop:
 - new requests
 - confirmed requests
 - cancelled requests
-- repair order backend foundation
+- create repair orders from reviewed booking requests
+- add, edit, and delete repair order estimate lines
+- mark draft repair orders with lines as estimated
 - repair order estimate totals from staff-entered lines
 
 ## Public Intake
 
-MVP currently has two public intake paths:
+MVP public chat-first intake is tenant-scoped:
 
-- Chat-first landing intake creates an unassigned `BookingRequest` with `status = submitted` and `workshop_id = null`.
-- The older workshop-specific public booking form creates a workshop-scoped `BookingRequest` with `status = new`.
+- `GET /w/{workshop:slug}` renders that workshop's chat-first intake page.
+- `POST /w/{workshop:slug}/intake` creates a workshop-scoped `BookingRequest` with `status = new`.
 
-The MVP direction is the chat-first landing intake plus central admin assignment.
+The root `/` page is SaaS marketing/home, not a workshop-less intake submission endpoint.
 
-Public landing intake must not ask the customer to select a workshop. Workshop routing happens internally through the central admin queue.
+Public intake must not create `BookingRequest` records with `workshop_id = null`.
 
-During workshop-specific public booking submission:
+Public intake must not use a default workshop fallback, first workshop fallback, public workshop cards, central admin assignment queue, or claim workflow.
+
+The older workshop-specific public booking form may continue to exist separately for now and creates workshop-scoped requests with `status = new`.
+
+During older workshop-specific public booking submission:
 
 1. Find customer by `workshop_id` and normalized phone.
 2. Create customer if missing.

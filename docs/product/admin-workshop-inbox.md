@@ -14,16 +14,23 @@ The inbox should help workshop staff answer:
 
 ## Current State
 
-Public chat-first intake creates a `BookingRequest` with:
+Public chat-first intake is tenant-scoped. Each workshop has its own public page:
 
-- `status = submitted`
+```txt
+GET  /w/{workshop:slug}
+POST /w/{workshop:slug}/intake
+```
+
+Submitting that page creates a `BookingRequest` with:
+
+- `status = new`
 - `original_message` preserved
 - `problem_description` copied from the customer message
-- `workshop_id = null`
+- `workshop_id` set to the route workshop
 - `customer_id = null`
 - `vehicle_id = null`
 
-The existing dashboard booking request list is scoped to the active workshop through `WorkshopUser` and only shows requests already assigned to that workshop. Because public chat-first requests are currently unassigned, they should not be added to the workshop dashboard until the product and architecture rules for visibility and assignment are explicit.
+The dashboard booking request list is scoped to the active workshop through `WorkshopUser` and shows new requests for that active workshop only.
 
 ## Safe Inbox Direction
 
@@ -49,17 +56,19 @@ Detail view should prioritize:
 
 ## MVP Routing Decision
 
-For MVP, use a central admin queue.
+For MVP, do not use a central admin queue for public intake routing.
 
-Public chat-first intake requests are not visible in any workshop dashboard while `workshop_id = null`.
+The workshop context comes from the public URL. Public intake must never silently create unassigned `BookingRequest` records.
 
-A request becomes workshop-scoped only when an authorized central admin assigns it to a workshop. After assignment, the request appears in that workshop's regular dashboard and is processed by workshop owner or staff using the normal active-workshop rules.
+After submission, the request appears in the route workshop's regular dashboard and is processed by workshop owner or staff using the normal active-workshop rules.
 
-Rejected alternatives for MVP:
+Rejected alternatives:
 
+- Central admin assignment queue: rejected for public intake routing.
 - Workshop claim queue: deferred until explicit cross-workshop visibility and claim rules exist.
 - Public workshop selection on the landing page: rejected because it exposes routing complexity to customers and weakens the chat-first intake direction.
-- Automatic routing: deferred until a safe routing signal and review model are defined.
+- Default or first-workshop fallback: rejected because it can leak customer requests into the wrong tenant.
+- Automatic routing without URL workshop context: rejected until a safe routing signal and review model are defined.
 
 Do not reintroduce public workshop selection on the landing page as part of this decision.
 
@@ -68,27 +77,27 @@ Do not reintroduce public workshop selection on the landing page as part of this
 The current implementation supports the safe foundation for chat-first intake:
 
 - The public landing page accepts one natural-language customer message.
-- Submitting the landing intake creates a `BookingRequest` with `status = submitted`.
+- The workshop public intake page accepts one natural-language customer message.
+- Submitting workshop public intake creates a `BookingRequest` with `status = new`.
 - The intake request stores the customer's original wording in `original_message`.
 - `problem_description` is copied from the customer message for compatibility with existing request views.
 - A safely extracted phone number may be stored in `customer_phone`.
-- `workshop_id`, `customer_id`, `vehicle_id`, and `created_by_user_id` remain `null`.
+- `workshop_id` is set from the route workshop.
+- `customer_id`, `vehicle_id`, and `created_by_user_id` remain `null`.
 - Intake extraction is behind an `IntakeExtractorInterface` boundary.
 - No real OpenAI provider call is configured.
-- The workshop dashboard remains scoped by active `WorkshopUser` membership and only shows workshop-assigned requests.
-- A backend-only central admin query foundation exists for unassigned submitted intake requests.
-- No central admin route, UI, or assignment action exists yet because platform-admin authorization is not modeled.
+- The workshop dashboard remains scoped by active `WorkshopUser` membership and only shows requests for the active workshop.
+- There is no central admin route, UI, query, or assignment action for public intake routing.
 
-The older workshop-specific public booking form still exists separately. It creates workshop-scoped requests with `status = new` and should not be confused with the landing-page chat-first intake flow.
+The older workshop-specific public booking form still exists separately. It also creates workshop-scoped requests with `status = new` and should not be confused with the chat-first intake flow.
 
 ## Status Language
 
-Internal statuses may include `submitted`, `new`, `confirmed`, `rejected`, and `cancelled`.
+Internal statuses may include `new`, `confirmed`, `rejected`, and `cancelled`.
 
 Staff-facing labels should stay operational and avoid promises:
 
-- `submitted`: Needs review
-- `new`: Ready to contact
+- `new`: Needs review
 - `confirmed`: Confirmed by staff
 - `rejected`: Rejected
 - `cancelled`: Cancelled
@@ -114,45 +123,21 @@ Do not build:
 When inbox implementation is approved later:
 
 - Dashboard queries remain scoped by active `WorkshopUser` membership.
-- Unassigned `submitted` request visibility has an explicit product rule.
-- Frontend status types include `submitted` where the backend can return it.
+- New request visibility remains tenant-scoped by active workshop.
+- Frontend status types include only statuses the backend can return.
 - Staff UI shows original customer wording before extracted details.
 - Staff UI never presents LLM output as diagnosis, pricing, repair advice, or availability.
 
-## Central Admin Queue MVP Scope
-
-The MVP central admin queue should include only:
-
-- a list of unassigned `submitted` requests
-- request received time
-- original customer message
-- safe extracted intake hints, if available
-- missing required information, if known
-- assignment to one selected workshop
-- rejection or cancellation when the request should not enter a workshop workflow
-
-Assignment should be one explicit backend use case.
-
-Recommended assignment result:
-
-- set `workshop_id` to the selected workshop
-- change status from `submitted` to `new`
-- preserve `original_message`
-- preserve `problem_description`
-- create or link customer and vehicle records only when the assignment workflow has explicit rules for doing so
-
-Do not let assignment imply appointment confirmation, diagnosis, price, availability, or repair commitment.
-
 ## Safety Boundaries
 
-Central admin queue safety rules:
+Inbox safety rules:
 
-- Unassigned `submitted` requests must not appear in regular workshop dashboards.
-- Workshop owner and staff roles must not see global unassigned requests unless a future permission model explicitly allows it.
+- Public intake must require a route workshop.
+- Workshop owner and staff roles must not see requests from other workshops.
 - Workshop staff must not claim global requests in MVP.
 - Public customers must not choose a workshop from the landing-page chat-first intake.
-- The system must not automatically route requests to a workshop without an approved routing rule.
-- The central queue must show the original customer message before any extracted or summarized fields.
+- The system must not use a default workshop fallback.
+- The inbox must show the original customer message before any extracted or summarized fields.
 - Extracted intake data must be treated as assistance, not truth.
 - Staff confirmation remains the final authority for visit time, service expectations, and follow-up.
 
@@ -160,11 +145,7 @@ Central admin queue safety rules:
 
 Future implementation work:
 
-- define the central admin role or permission model
-- expose the backend central admin queue through an authorized route
-- build an assignment action for routing one submitted request to one workshop
-- decide whether assignment creates or links `Customer` and `Vehicle` records immediately or defers that to workshop staff
-- add staff-facing history for assignment, rejection, cancellation, and contact attempts
-- update dashboard frontend status types to include `submitted` only where a view can actually receive that status
+- decide whether public intake creates or links `Customer` and `Vehicle` records immediately or defers that to workshop staff
+- add staff-facing history for rejection, cancellation, confirmation, and contact attempts
 - add safe extraction display once extraction fields beyond phone are persisted
-- add tests proving unassigned requests do not leak into workshop-scoped dashboards
+- keep tests proving one workshop cannot see another workshop's new requests

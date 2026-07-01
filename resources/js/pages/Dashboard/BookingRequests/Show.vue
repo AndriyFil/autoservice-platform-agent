@@ -48,7 +48,7 @@ const props = defineProps<{
         repairOrder: {
             id: number;
             status: {
-                value: 'open' | 'completed' | 'cancelled';
+                value: 'draft' | 'estimated' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
                 label: string;
             };
         } | null;

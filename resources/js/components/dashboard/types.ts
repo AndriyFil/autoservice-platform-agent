@@ -17,6 +17,16 @@ export type DashboardBookingRequestVehicle = {
     licensePlate: string | null;
 };
 
+export type DashboardRepairOrderStatusValue = 'draft' | 'estimated' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+
+export type DashboardBookingRequestRepairOrder = {
+    id: number;
+    status: {
+        value: DashboardRepairOrderStatusValue;
+        label: string;
+    };
+};
+
 export type DashboardBookingRequest = {
     id: number;
     customerName: string;
@@ -25,6 +35,7 @@ export type DashboardBookingRequest = {
     preferredDate: string | null;
     status: DashboardBookingRequestStatus;
     vehicle: DashboardBookingRequestVehicle | null;
+    repairOrder: DashboardBookingRequestRepairOrder | null;
     createdAt: string;
 };
 

@@ -68,7 +68,7 @@ Workshop-scoped dashboard behavior must use active `WorkshopUser` membership. Do
 
 It owns the submitted intake record and links to:
 
-- workshop, when assigned
+- workshop, always for public intake through `/w/{workshop:slug}`
 - customer, when known
 - vehicle, when known
 - creating user, when staff-created
@@ -82,7 +82,7 @@ Important fields include:
 - `preferred_date`
 - `status`
 
-The public chat-first slice currently stores the original message and problem description and keeps workshop, customer, and vehicle nullable.
+The public chat-first slice stores the original message and problem description, sets `workshop_id` from the route workshop, and keeps customer and vehicle nullable.
 
 ## AI Boundaries
 
@@ -125,7 +125,7 @@ Patterns must pay rent.
 
 ## Public Intake Flow
 
-The public landing page should focus on chat-first intake:
+Each workshop public intake page should focus on chat-first intake:
 
 - header
 - hero
@@ -140,17 +140,25 @@ After submit, show:
 Request received. A service advisor will contact you to confirm details and visit time.
 ```
 
-The old workshop-specific `/book/{slug}` form may exist in code, but the product direction is chat-first public intake.
+Canonical public intake routes are:
+
+```txt
+GET  /w/{workshop:slug}
+POST /w/{workshop:slug}/intake
+```
+
+The root `/` page is SaaS marketing/home, not a workshop-less intake submission endpoint.
+
+The old workshop-specific `/book/{slug}` form may exist in code, but the product direction is chat-first public intake through `/w/{workshop:slug}`.
 
 ## Appointment Policy
 
 Appointment availability is not promised by the public UI or AI.
 
-Customers may state a preferred time. Staff must confirm the final visit time, preferably by phone. Booking request statuses can move through submitted/new, confirmed, rejected, or cancelled, but confirmation remains a staff responsibility.
+Customers may state a preferred time. Staff must confirm the final visit time, preferably by phone. Booking request statuses can move through new, confirmed, rejected, or cancelled, but confirmation remains a staff responsibility.
 
 ## Customer Account Strategy
 
 Customers do not need public accounts for MVP intake.
 
 Phone is the safest lightweight identity for matching and follow-up. Workshop staff accounts manage dashboard access through `WorkshopUser` membership.
-
