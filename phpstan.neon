@@ -1,0 +1,10 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - app
+    # Models declare casts via the casts() method with a widening
+    # @return array<string, string> docblock; parse the AST instead.
+    parseModelCastsMethod: true

@@ -61,7 +61,7 @@ class DashboardRepairOrderFormQuery
             'defaults' => [
                 'customer_id' => $sourceBookingRequest ? (string) $sourceBookingRequest->customer_id : '',
                 'vehicle_id' => $sourceBookingRequest?->vehicle_id ? (string) $sourceBookingRequest->vehicle_id : '',
-                'problem_description' => $sourceBookingRequest?->problem_description ?? '',
+                'problem_description' => $sourceBookingRequest->problem_description ?? '',
                 'booking_request_id' => $sourceBookingRequest ? (string) $sourceBookingRequest->id : '',
             ],
             'sourceBookingRequest' => $sourceBookingRequest

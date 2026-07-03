@@ -3,7 +3,8 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
-import { Ban, Check, FileText } from 'lucide-vue-next';
+import { Ban, Check, FileText, RefreshCw } from 'lucide-vue-next';
+import { computed } from 'vue';
 import type { RepairOrderStatusActions } from './types';
 
 const props = defineProps<{
@@ -16,6 +17,13 @@ const { t } = useTranslations();
 const estimateForm = useForm({});
 const completeForm = useForm({});
 const cancelForm = useForm({});
+
+const anyProcessing = () => estimateForm.processing || completeForm.processing || cancelForm.processing;
+
+const canSubmitEstimate = computed(() => props.actions.canMarkEstimated || props.actions.canRegenerateEstimate);
+const estimateLabel = computed(() =>
+    props.actions.canRegenerateEstimate ? t('repair_orders.actions.regenerate_estimate_pdf') : t('repair_orders.actions.create_estimate_pdf'),
+);
 
 const submitEstimate = () => {
     estimateForm.post(route('dashboard.repair-orders.estimate', { repairOrder: props.repairOrderId }), {
@@ -34,21 +42,22 @@ const submitCancel = () => {
         preserveScroll: true,
     });
 };
-
 </script>
 
 <template>
     <div class="space-y-2">
         <div class="flex flex-wrap gap-2">
             <Button
-                v-if="actions.canMarkEstimated"
+                v-if="canSubmitEstimate"
                 type="button"
                 size="sm"
-                :disabled="estimateForm.processing || completeForm.processing || cancelForm.processing"
+                :variant="actions.canRegenerateEstimate ? 'outline' : 'default'"
+                :disabled="anyProcessing()"
                 @click="submitEstimate"
             >
-                <FileText class="size-4" />
-                {{ t('repair_orders.actions.create_estimate_pdf') }}
+                <RefreshCw v-if="actions.canRegenerateEstimate" class="size-4" />
+                <FileText v-else class="size-4" />
+                {{ estimateLabel }}
             </Button>
 
             <Button
@@ -56,7 +65,7 @@ const submitCancel = () => {
                 type="button"
                 size="sm"
                 class="bg-green-600 text-white hover:bg-green-700"
-                :disabled="estimateForm.processing || completeForm.processing || cancelForm.processing"
+                :disabled="anyProcessing()"
                 @click="submitComplete"
             >
                 <Check class="size-4" />
@@ -68,7 +77,7 @@ const submitCancel = () => {
                 type="button"
                 size="sm"
                 class="bg-amber-600 text-white hover:bg-amber-700"
-                :disabled="estimateForm.processing || completeForm.processing || cancelForm.processing"
+                :disabled="anyProcessing()"
                 @click="submitCancel"
             >
                 <Ban class="size-4" />

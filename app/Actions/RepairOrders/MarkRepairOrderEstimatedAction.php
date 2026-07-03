@@ -17,7 +17,7 @@ class MarkRepairOrderEstimatedAction
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->firstOrFail();
 
-        if ($repairOrder->status !== RepairOrderStatus::Draft) {
+        if (! $repairOrder->status->canTransitionTo(RepairOrderStatus::Estimated)) {
             throw new DomainException('Only draft repair orders can be marked as estimated.');
         }
 

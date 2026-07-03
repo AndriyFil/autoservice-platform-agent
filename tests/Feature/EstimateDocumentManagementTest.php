@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Estimates\GenerateRepairOrderEstimateAction;
+use App\Actions\Estimates\GenerateRepairOrderEstimateResult;
+use App\Enums\DocumentStatus;
+use App\Enums\DocumentType;
 use App\Enums\RepairOrderLineType;
 use App\Enums\WorkshopUserRole;
 use App\Models\Customer;
@@ -14,6 +18,8 @@ use App\Models\Workshop;
 use App\Models\WorkshopUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
+use Mockery;
 use Tests\TestCase;
 
 class EstimateDocumentManagementTest extends TestCase
@@ -65,8 +71,10 @@ class EstimateDocumentManagementTest extends TestCase
         $this->assertSame(24000, $estimate->lines->sole()->refresh()->total_cents);
     }
 
-    public function test_creating_second_estimate_uses_next_version_without_mutating_old_estimate_lines(): void
+    public function test_posting_estimate_endpoint_again_regenerates_current_estimate_version(): void
     {
+        Storage::fake('documents_local');
+
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
@@ -83,6 +91,8 @@ class EstimateDocumentManagementTest extends TestCase
             ->withSession(['active_workshop_id' => $workshop->id])
             ->post(route('dashboard.repair-orders.estimate', $repairOrder));
 
+        $oldDocument = Document::query()->sole();
+
         $line->update([
             'description' => 'Second version line',
             'unit_price_cents' => 12000,
@@ -93,14 +103,16 @@ class EstimateDocumentManagementTest extends TestCase
             ->post(route('dashboard.repair-orders.estimate', $repairOrder));
 
         $estimates = Estimate::query()->with('lines')->orderBy('version')->get();
+        $documents = Document::query()->orderBy('id')->get();
 
-        $this->assertCount(2, $estimates);
+        $this->assertCount(1, $estimates);
         $this->assertSame(1, $estimates[0]->version);
-        $this->assertSame(2, $estimates[1]->version);
-        $this->assertSame('First version line', $estimates[0]->lines->sole()->description);
-        $this->assertSame(10000, $estimates[0]->lines->sole()->total_cents);
-        $this->assertSame('Second version line', $estimates[1]->lines->sole()->description);
-        $this->assertSame(12000, $estimates[1]->lines->sole()->total_cents);
+        $this->assertSame('Second version line', $estimates[0]->lines->sole()->description);
+        $this->assertSame(12000, $estimates[0]->lines->sole()->total_cents);
+
+        $this->assertCount(2, $documents);
+        $this->assertSame(DocumentStatus::Archived, $oldDocument->refresh()->status);
+        $this->assertSame(DocumentStatus::Generated, $documents[1]->status);
     }
 
     public function test_generated_pdf_creates_private_document_with_storage_metadata_and_workshop_scope(): void
@@ -138,6 +150,43 @@ class EstimateDocumentManagementTest extends TestCase
         $this->assertSame(64, strlen($document->checksum_sha256));
         $this->assertInstanceOf(Estimate::class, $document->documentable);
         Storage::disk('documents_local')->assertExists($document->path);
+    }
+
+    public function test_estimate_route_delegates_to_single_high_level_action(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $workshopUser = $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        $estimate = Estimate::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'status' => 'generated',
+        ]);
+        $document = Document::factory()->create([
+            'workshop_id' => $workshop->id,
+            'documentable_type' => Estimate::class,
+            'documentable_id' => $estimate->id,
+            'type' => DocumentType::EstimatePdf,
+            'status' => DocumentStatus::Generated,
+        ]);
+
+        $action = Mockery::mock(GenerateRepairOrderEstimateAction::class);
+        $action->shouldReceive('handle')
+            ->once()
+            ->withArgs(fn (WorkshopUser $activeWorkshopUser, RepairOrder $routedRepairOrder): bool => (
+                $activeWorkshopUser->is($workshopUser)
+                && $routedRepairOrder->is($repairOrder)
+            ))
+            ->andReturn(new GenerateRepairOrderEstimateResult($document, regenerated: false));
+
+        $this->instance(GenerateRepairOrderEstimateAction::class, $action);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', __('repair_orders.estimate_created'));
     }
 
     public function test_creating_estimate_uses_localized_status_flash_message(): void
@@ -198,6 +247,119 @@ class EstimateDocumentManagementTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_single_estimate_route_regenerates_old_document_and_creates_new_one(): void
+    {
+        Storage::fake('documents_local');
+
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop, [
+            'status' => 'estimated',
+        ]);
+        RepairOrderLine::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'description' => 'Current route regeneration line',
+            'quantity' => '1.00',
+            'unit_price_cents' => 17000,
+            'tax_rate' => '0.00',
+        ]);
+        $estimate = Estimate::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'status' => 'generated',
+            'subtotal_cents' => 9000,
+            'tax_cents' => 0,
+            'total_cents' => 9000,
+            'generated_at' => now()->subDay(),
+        ]);
+        $oldDocument = $estimate->documents()->create([
+            'workshop_id' => $workshop->id,
+            'type' => DocumentType::EstimatePdf,
+            'status' => DocumentStatus::Generated,
+            'disk' => 'documents_local',
+            'path' => 'workshops/'.$workshop->id.'/estimates/'.$estimate->id.'/old.pdf',
+            'filename' => 'old.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 1024,
+            'checksum_sha256' => hash('sha256', 'old'),
+            'generated_at' => now()->subDay(),
+            'created_by_user_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', __('repair_orders.estimate_regenerated'));
+
+        $this->assertSame(DocumentStatus::Archived, $oldDocument->refresh()->status);
+        $this->assertSame(1, $estimate->refresh()->generatedEstimatePdfDocuments()->count());
+        $this->assertSame('Current route regeneration line', $estimate->lines()->sole()->description);
+    }
+
+    public function test_dashboard_details_exposes_only_latest_generated_estimate_pdf(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        $estimate = Estimate::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'status' => 'generated',
+            'generated_at' => now(),
+        ]);
+        $estimate->documents()->create([
+            'workshop_id' => $workshop->id,
+            'type' => DocumentType::EstimatePdf,
+            'status' => DocumentStatus::Archived,
+            'disk' => 'documents_local',
+            'path' => 'archived.pdf',
+            'filename' => 'archived.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'checksum_sha256' => hash('sha256', 'archived'),
+            'generated_at' => now()->subMinutes(3),
+            'created_by_user_id' => null,
+        ]);
+        $estimate->documents()->create([
+            'workshop_id' => $workshop->id,
+            'type' => DocumentType::EstimatePdf,
+            'status' => DocumentStatus::Failed,
+            'disk' => 'documents_local',
+            'path' => 'failed.pdf',
+            'filename' => 'failed.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 0,
+            'checksum_sha256' => hash('sha256', 'failed'),
+            'generated_at' => now()->subMinutes(2),
+            'created_by_user_id' => null,
+        ]);
+        $generatedDocument = $estimate->documents()->create([
+            'workshop_id' => $workshop->id,
+            'type' => DocumentType::EstimatePdf,
+            'status' => DocumentStatus::Generated,
+            'disk' => 'documents_local',
+            'path' => 'generated.pdf',
+            'filename' => 'generated.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 200,
+            'checksum_sha256' => hash('sha256', 'generated'),
+            'generated_at' => now()->subMinute(),
+            'created_by_user_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('repairOrder.estimates.0.document.id', $generatedDocument->id)
+                ->where('repairOrder.estimates.0.document.filename', 'generated.pdf'));
+    }
+
     private function createMembership(
         User $user,
         Workshop $workshop,
@@ -210,7 +372,10 @@ class EstimateDocumentManagementTest extends TestCase
         ]);
     }
 
-    private function createRepairOrder(Workshop $workshop): RepairOrder
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function createRepairOrder(Workshop $workshop, array $overrides = []): RepairOrder
     {
         $customer = Customer::create([
             'workshop_id' => $workshop->id,
@@ -219,7 +384,7 @@ class EstimateDocumentManagementTest extends TestCase
             'normalized_phone' => '15551234567',
         ]);
 
-        return RepairOrder::create([
+        return RepairOrder::create(array_merge([
             'workshop_id' => $workshop->id,
             'customer_id' => $customer->id,
             'vehicle_id' => null,
@@ -228,6 +393,6 @@ class EstimateDocumentManagementTest extends TestCase
             'problem_description' => 'Brake noise on cold start.',
             'opened_at' => now(),
             'closed_at' => null,
-        ]);
+        ], $overrides));
     }
 }

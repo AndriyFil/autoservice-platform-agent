@@ -51,9 +51,11 @@ class PublicIntakeSubmissionTest extends TestCase
             'slug' => 'main-auto',
         ]);
         $message = 'Opel Insignia, check engine light came on, maybe sensors, when can I come?';
+        $phone = '+38 (050) 111-22-33';
 
         $response = $this->post('/w/main-auto/intake', [
             'message' => $message,
+            'phone' => $phone,
         ]);
 
         $response
@@ -68,9 +70,44 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertDatabaseCount('repair_orders', 0);
         $this->assertNotNull($bookingRequest);
         $this->assertSame($workshop->id, $bookingRequest->workshop_id);
+        $this->assertSame('380501112233', $bookingRequest->customer_phone);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame($message, $bookingRequest->problem_description);
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
+    }
+
+    public function test_public_intake_succeeds_with_message_and_phone_only(): void
+    {
+        Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        $this->post('/w/main-auto/intake', [
+            'message' => 'Need help with a check engine light.',
+            'phone' => '+1 (555) 123-4567',
+        ])->assertSessionHasNoErrors();
+
+        $bookingRequest = BookingRequest::sole();
+
+        $this->assertSame('Need help with a check engine light.', $bookingRequest->original_message);
+        $this->assertSame('15551234567', $bookingRequest->customer_phone);
+        $this->assertNull($bookingRequest->vehicle_id);
+        $this->assertNull($bookingRequest->preferred_date);
+    }
+
+    public function test_public_intake_fails_without_phone(): void
+    {
+        Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        $this->from('/w/main-auto')->post('/w/main-auto/intake', [
+            'message' => 'Need help with a check engine light.',
+        ])
+            ->assertSessionHasErrors('phone')
+            ->assertRedirect('/w/main-auto');
+
+        $this->assertDatabaseCount('booking_requests', 0);
     }
 
     public function test_blank_public_intake_message_is_rejected_without_creating_booking_request(): void
@@ -81,6 +118,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $response = $this->from('/w/main-auto')->post('/w/main-auto/intake', [
             'message' => '     ',
+            'phone' => '+1 (555) 123-4567',
         ]);
 
         $response
@@ -99,6 +137,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->post('/w/main-auto/intake', [
             'message' => $message,
+            'phone' => '+38 (050) 111-22-33',
         ])->assertSessionHasNoErrors();
 
         $bookingRequest = BookingRequest::first();
@@ -108,11 +147,11 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertNull($bookingRequest->customer_id);
         $this->assertSame('380501112233', $bookingRequest->customer_phone);
         $this->assertSame($message, $bookingRequest->original_message);
-        $this->assertSame($message, $bookingRequest->problem_description);
+        $this->assertSame(trim($message), $bookingRequest->problem_description);
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
     }
 
-    public function test_intake_action_persists_safe_phone_without_creating_customer_or_vehicle(): void
+    public function test_intake_action_patches_optional_summary_without_creating_customer_vehicle_or_repair_order(): void
     {
         $workshop = Workshop::factory()->create([
             'slug' => 'main-auto',
@@ -138,6 +177,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->post('/w/main-auto/intake', [
             'message' => $message,
+            'phone' => '+1 (555) 765-4321',
         ])->assertSessionHasNoErrors();
 
         $bookingRequest = BookingRequest::first();
@@ -148,9 +188,38 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertNull($bookingRequest->customer_id);
         $this->assertNull($bookingRequest->vehicle_id);
         $this->assertNull($bookingRequest->created_by_user_id);
-        $this->assertSame('15551234567', $bookingRequest->customer_phone);
-        $this->assertSame($message, $bookingRequest->problem_description);
+        $this->assertSame('15557654321', $bookingRequest->customer_phone);
+        $this->assertSame('Honda Civic makes noise.', $bookingRequest->problem_description);
         $this->assertNull($bookingRequest->preferred_date);
+        $this->assertDatabaseCount('repair_orders', 0);
+    }
+
+    public function test_public_intake_creates_booking_request_before_optional_enrichment_can_fail(): void
+    {
+        Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        $this->app->bind(IntakeExtractorInterface::class, fn () => new class implements IntakeExtractorInterface
+        {
+            public function extract(string $message): IntakeExtractionResult
+            {
+                throw new \RuntimeException('OpenAI unavailable');
+            }
+        });
+
+        $message = 'Mazda needs service next week.';
+
+        $this->post('/w/main-auto/intake', [
+            'message' => $message,
+            'phone' => '+1 (555) 123-4567',
+        ])->assertSessionHasNoErrors();
+
+        $bookingRequest = BookingRequest::sole();
+
+        $this->assertSame($message, $bookingRequest->original_message);
+        $this->assertSame($message, $bookingRequest->problem_description);
+        $this->assertSame('15551234567', $bookingRequest->customer_phone);
     }
 
     public function test_public_intake_never_creates_unassigned_booking_request(): void
@@ -161,6 +230,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->post('/w/main-auto/intake', [
             'message' => 'Toyota Corolla needs oil service next week.',
+            'phone' => '+1 (555) 123-4567',
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(0, BookingRequest::query()->whereNull('workshop_id')->count());
@@ -175,6 +245,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->post('/w/main-auto/intake', [
             'message' => 'Toyota Corolla needs oil service next week.',
+            'phone' => '+1 (555) 123-4567',
         ])->assertRedirect('/w/main-auto');
 
         $this->get('/w/main-auto')
@@ -193,6 +264,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $response = $this->from('/w/main-auto')->post('/w/main-auto/intake', [
             'message' => 'Toyota Corolla needs oil service next week.',
+            'phone' => '+1 (555) 123-4567',
             'website' => 'https://spam.example',
         ]);
 
@@ -211,6 +283,7 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->post('/w/main-auto/intake', [
             'message' => 'Toyota Corolla needs oil service next week.',
+            'phone' => '+1 (555) 123-4567',
             'website' => '',
         ])->assertSessionHasNoErrors();
 
@@ -226,11 +299,13 @@ class PublicIntakeSubmissionTest extends TestCase
         for ($attempt = 1; $attempt <= 10; $attempt++) {
             $this->post('/w/main-auto/intake', [
                 'message' => "Toyota Corolla needs oil service, attempt {$attempt}.",
+                'phone' => '+1 (555) 123-4567',
             ])->assertRedirect('/w/main-auto');
         }
 
         $this->post('/w/main-auto/intake', [
             'message' => 'Toyota Corolla needs oil service, attempt 11.',
+            'phone' => '+1 (555) 123-4567',
         ])->assertStatus(429);
 
         $this->assertDatabaseCount('booking_requests', 10);

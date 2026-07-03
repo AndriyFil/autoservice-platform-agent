@@ -2,12 +2,14 @@
 
 return [
     'estimate_created' => 'Utworzono PDF kosztorysu.',
+    'estimate_regenerated' => 'Ponownie utworzono PDF kosztorysu.',
 
     'actions' => [
         'add_line' => 'Dodaj pozycję',
         'cancel' => 'Anuluj',
         'complete' => 'Zakończ',
         'create_estimate_pdf' => 'Utwórz PDF kosztorysu',
+        'regenerate_estimate_pdf' => 'Ponów PDF kosztorysu',
         'delete' => 'Usuń',
         'download' => 'Pobierz',
         'edit' => 'Edytuj',
@@ -19,13 +21,10 @@ return [
         'missing_lines' => 'Dodaj co najmniej jedną pozycję zlecenia naprawy przed utworzeniem kosztorysu.',
     ],
 
-    'estimate_statuses' => [
-        'draft' => 'Wersja robocza',
-        'generated' => 'Wygenerowano',
-        'approved' => 'Zatwierdzono',
-        'rejected' => 'Odrzucono',
-        'superseded' => 'Zastąpiono',
-        'cancelled' => 'Anulowano',
+    'regenerate_errors' => [
+        'no_estimate' => 'Brak kosztorysu do ponownego wygenerowania dla tego zlecenia naprawy.',
+        'estimate_locked' => 'Tego kosztorysu nie można już wygenerować ponownie, ponieważ został zatwierdzony.',
+        'repair_order_locked' => 'Po zatwierdzeniu tego zlecenia naprawy nie można ponownie wygenerować kosztorysu.',
     ],
 
     'fields' => [

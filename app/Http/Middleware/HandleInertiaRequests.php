@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'translations' => [
                 'repair_orders' => __('repair_orders'),
+                'estimates' => __('estimates'),
             ],
         ]);
     }

@@ -10,9 +10,10 @@ class DashboardBookingRequestDetailsQuery
     /**
      * @return array{
      *     id: int,
-     *     customerName: string,
+     *     customerName: string|null,
      *     customerPhone: string,
      *     problemDescription: string,
+     *     originalMessage: string|null,
      *     preferredDate: string|null,
      *     status: array{value: string, label: string},
      *     vehicle: array{brand: string|null, model: string|null, licensePlate: string|null}|null,
@@ -34,6 +35,7 @@ class DashboardBookingRequestDetailsQuery
             'customerName' => $bookingRequest->customer_name,
             'customerPhone' => $bookingRequest->customer_phone,
             'problemDescription' => $bookingRequest->problem_description,
+            'originalMessage' => $bookingRequest->original_message,
             'preferredDate' => $bookingRequest->preferred_date?->toDateString(),
             'status' => [
                 'value' => $bookingRequest->status->value,

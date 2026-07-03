@@ -2,12 +2,14 @@
 
 return [
     'estimate_created' => 'Estimate PDF created.',
+    'estimate_regenerated' => 'Estimate PDF regenerated.',
 
     'actions' => [
         'add_line' => 'Add line',
         'cancel' => 'Cancel',
         'complete' => 'Complete',
         'create_estimate_pdf' => 'Create estimate PDF',
+        'regenerate_estimate_pdf' => 'Regenerate estimate PDF',
         'delete' => 'Delete',
         'download' => 'Download',
         'edit' => 'Edit',
@@ -19,13 +21,10 @@ return [
         'missing_lines' => 'Add at least one repair order line before creating an estimate.',
     ],
 
-    'estimate_statuses' => [
-        'draft' => 'Draft',
-        'generated' => 'Generated',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
-        'superseded' => 'Superseded',
-        'cancelled' => 'Cancelled',
+    'regenerate_errors' => [
+        'no_estimate' => 'There is no estimate to regenerate for this repair order.',
+        'estimate_locked' => 'This estimate can no longer be regenerated because it is already approved.',
+        'repair_order_locked' => 'This repair order can no longer have its estimate regenerated after approval.',
     ],
 
     'fields' => [

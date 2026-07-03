@@ -33,8 +33,8 @@ class CustomerListQuery
                 'phone' => $customer->phone,
                 'vehiclesCount' => $customer->vehicles_count,
                 'bookingRequestsCount' => $customer->booking_requests_count,
-                'latestBookingRequestDate' => $customer->booking_requests_max_created_at
-                    ? Carbon::parse($customer->booking_requests_max_created_at)->toISOString()
+                'latestBookingRequestDate' => $customer->getAttribute('booking_requests_max_created_at')
+                    ? Carbon::parse($customer->getAttribute('booking_requests_max_created_at'))->toISOString()
                     : null,
             ])
             ->all();

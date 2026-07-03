@@ -110,6 +110,7 @@ export type RepairOrderEstimate = {
 
 export type RepairOrderStatusActions = {
     canMarkEstimated: boolean;
+    canRegenerateEstimate: boolean;
     canComplete: boolean;
     canCancel: boolean;
 };

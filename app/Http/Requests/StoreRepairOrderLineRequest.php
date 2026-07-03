@@ -3,16 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Enums\RepairOrderLineType;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreRepairOrderLineRequest extends FormRequest
+class StoreRepairOrderLineRequest extends DashboardFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, array<int, mixed>>
      */

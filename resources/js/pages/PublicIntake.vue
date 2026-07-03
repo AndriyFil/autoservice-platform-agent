@@ -11,19 +11,16 @@ const props = defineProps<{
     intakeSubmitted?: boolean;
 }>();
 
-const exampleMessages = [
-    'Opel Insignia, check engine light came on',
-    'My brakes make noise when stopping',
-    'Car shakes above 90 km/h',
-];
+const exampleMessages = ['Opel Insignia, check engine light came on', 'My brakes make noise when stopping', 'Car shakes above 90 km/h'];
 
 const form = useForm({
     message: '',
+    phone: '',
     website: '',
 });
 
 const messageInput = ref<HTMLTextAreaElement | null>(null);
-const canSubmit = computed(() => form.message.trim().length > 0 && !form.processing);
+const canSubmit = computed(() => form.message.trim().length > 0 && form.phone.trim().length > 0 && !form.processing);
 
 const fillExample = async (message: string) => {
     form.message = message;
@@ -42,7 +39,7 @@ const submit = () => {
     form.post(route('public-intake.store', props.workshop.slug), {
         preserveScroll: true,
         onSuccess: () => {
-            form.reset('message');
+            form.reset('message', 'phone');
         },
     });
 };
@@ -64,12 +61,10 @@ const submit = () => {
         <section class="mx-auto flex w-full max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16">
             <div class="w-full max-w-3xl text-center">
                 <p class="text-sm font-medium text-[#2f6471]">{{ workshop.name }}</p>
-                <h1 class="mt-4 text-4xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-5xl">
-                    How can we help with your car?
-                </h1>
+                <h1 class="mt-4 text-4xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-5xl">How can we help with your car?</h1>
                 <p class="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                    Describe the problem in your own words. A service advisor will review your request and contact
-                    you to confirm details and visit time.
+                    Describe the problem in your own words. A service advisor will review your request and contact you to confirm details and visit
+                    time.
                 </p>
             </div>
 
@@ -86,6 +81,9 @@ const submit = () => {
                     <p class="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
                         Request received. A service advisor will contact you to confirm details and visit time.
                     </p>
+                    <p class="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
+                        Заявку отримано. Якщо хочете, можете додати авто або бажаний час. Якщо ні — менеджер уточнить телефоном.
+                    </p>
                     <div class="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
                         <Phone class="size-4" aria-hidden="true" />
                         <span>Staff confirmation comes before diagnosis, pricing, or scheduling.</span>
@@ -93,31 +91,40 @@ const submit = () => {
                 </section>
 
                 <form v-else class="w-full" @submit.prevent="submit">
-                    <input
-                        v-model="form.website"
-                        type="text"
-                        name="website"
-                        tabindex="-1"
-                        autocomplete="off"
-                        aria-hidden="true"
-                        class="hidden"
-                    />
+                    <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden" />
                     <div
                         class="rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_60px_-32px_rgba(47,100,113,0.55)] transition focus-within:border-[#2f6471]/50 focus-within:shadow-[0_24px_70px_-34px_rgba(47,100,113,0.65)]"
                     >
                         <label for="message" class="sr-only">Describe your car problem</label>
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-                            <textarea
-                                id="message"
-                                ref="messageInput"
-                                v-model="form.message"
-                                name="message"
-                                rows="5"
-                                class="min-h-36 w-full resize-none rounded-md border-0 bg-transparent px-3 py-3 text-base leading-7 text-slate-900 shadow-none outline-none placeholder:text-slate-400 focus:ring-0"
-                                placeholder="Opel Insignia, check engine light came on, maybe sensors, when can I come?"
-                                :aria-invalid="Boolean(form.errors.message)"
-                                aria-describedby="message-error"
-                            />
+                            <div class="flex w-full flex-col gap-3">
+                                <textarea
+                                    id="message"
+                                    ref="messageInput"
+                                    v-model="form.message"
+                                    name="message"
+                                    rows="5"
+                                    class="min-h-36 w-full resize-none rounded-md border-0 bg-transparent px-3 py-3 text-base leading-7 text-slate-900 shadow-none outline-none placeholder:text-slate-400 focus:ring-0"
+                                    placeholder="Opel Insignia, check engine light came on, maybe sensors, when can I come?"
+                                    :aria-invalid="Boolean(form.errors.message)"
+                                    aria-describedby="message-error"
+                                />
+
+                                <div class="border-t border-slate-100 px-3 pt-3">
+                                    <label for="phone" class="sr-only">Phone number</label>
+                                    <input
+                                        id="phone"
+                                        v-model="form.phone"
+                                        name="phone"
+                                        type="tel"
+                                        class="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2f6471]/60 focus:ring-2 focus:ring-[#2f6471]/10"
+                                        placeholder="Phone number"
+                                        autocomplete="tel"
+                                        :aria-invalid="Boolean(form.errors.phone)"
+                                        aria-describedby="phone-error"
+                                    />
+                                </div>
+                            </div>
 
                             <button
                                 type="submit"
@@ -136,6 +143,14 @@ const submit = () => {
                         class="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                     >
                         {{ form.errors.message }}
+                    </p>
+
+                    <p
+                        v-if="form.errors.phone"
+                        id="phone-error"
+                        class="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                    >
+                        {{ form.errors.phone }}
                     </p>
 
                     <div class="mt-5 flex flex-wrap justify-center gap-2.5">

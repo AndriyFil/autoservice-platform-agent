@@ -2,7 +2,7 @@
 
 namespace App\Queries\Dashboard;
 
-use App\Enums\DocumentType;
+use App\Enums\EstimateStatus;
 use App\Enums\RepairOrderLineType;
 use App\Enums\RepairOrderStatus;
 use App\Models\Estimate;
@@ -25,7 +25,7 @@ class DashboardRepairOrderDetailsQuery
      *     estimateTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
      *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string}|null}>,
      *     availableLineTypes: array<int, array{value: string, label: string}>,
-     *     statusActions: array{canMarkEstimated: bool, canComplete: bool, canCancel: bool},
+     *     statusActions: array{canMarkEstimated: bool, canRegenerateEstimate: bool, canComplete: bool, canCancel: bool},
      *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
      *     bookingRequest: array{id: int, status: array{value: string, label: string}, problemDescription: string, originalMessage: string|null, preferredDate: string|null, createdAt: string}|null
@@ -39,7 +39,7 @@ class DashboardRepairOrderDetailsQuery
                 'vehicle',
                 'bookingRequest',
                 'lines',
-                'estimates.documents',
+                'estimates.generatedEstimatePdfDocuments',
             ])
             ->whereKey($repairOrder->id)
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
@@ -84,8 +84,7 @@ class DashboardRepairOrderDetailsQuery
             ],
             'estimates' => $repairOrder->estimates
                 ->map(function (Estimate $estimate): array {
-                    $document = $estimate->documents
-                        ->where('type', DocumentType::EstimatePdf)
+                    $document = $estimate->generatedEstimatePdfDocuments
                         ->sortByDesc('id')
                         ->first();
 
@@ -120,7 +119,11 @@ class DashboardRepairOrderDetailsQuery
                 RepairOrderLineType::cases(),
             ),
             'statusActions' => [
-                'canMarkEstimated' => ! in_array($repairOrder->status, [RepairOrderStatus::Completed, RepairOrderStatus::Cancelled], true)
+                'canMarkEstimated' => $repairOrder->estimates->first() === null
+                    && in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true)
+                    && $repairOrder->lines->isNotEmpty(),
+                'canRegenerateEstimate' => $repairOrder->estimates->first()?->status === EstimateStatus::Generated
+                    && in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true)
                     && $repairOrder->lines->isNotEmpty(),
                 'canComplete' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Completed),
                 'canCancel' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Cancelled),

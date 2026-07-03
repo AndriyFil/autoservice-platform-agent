@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\WorkshopUserRole;
+use Database\Factories\WorkshopUserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkshopUser extends Model
 {
-    /** @use HasFactory<\Database\Factories\WorkshopUserFactory> */
+    /** @use HasFactory<WorkshopUserFactory> */
     use HasFactory;
 
     /**
@@ -35,11 +36,13 @@ class WorkshopUser extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Workshop, $this> */
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);

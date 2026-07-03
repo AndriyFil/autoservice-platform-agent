@@ -73,3 +73,9 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: Public intake is always workshop-scoped, so `submitted` is redundant with `new`.
 - Lesson: Use `BookingRequestStatus::New` as the initial public intake status and do not reintroduce unassigned intake queue semantics.
 - Applies when: Implementing or reviewing booking request statuses, public intake creation, dashboard status labels, product docs, migrations, or tests around initial intake state.
+
+## 2026-07-03 - Separate Estimate Snapshot From PDF Rendering
+
+- Correction: Do not put estimate creation/regeneration and PDF generation/storage in the same class.
+- Lesson: Keep estimate snapshot lifecycle rules in one focused action, then pass the prepared `Estimate` object into a separate PDF generation action that only renders/stores the document.
+- Applies when: Implementing or reviewing estimate creation, estimate regeneration, document archiving, PDF generation, or action responsibility boundaries.

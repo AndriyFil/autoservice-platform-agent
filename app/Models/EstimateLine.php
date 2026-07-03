@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\RepairOrderLineType;
+use Database\Factories\EstimateLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EstimateLine extends Model
 {
-    /** @use HasFactory<\Database\Factories\EstimateLineFactory> */
+    /** @use HasFactory<EstimateLineFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -39,6 +40,7 @@ class EstimateLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Estimate, $this> */
     public function estimate(): BelongsTo
     {
         return $this->belongsTo(Estimate::class);

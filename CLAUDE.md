@@ -27,9 +27,12 @@ php artisan test
 php artisan test --filter=TestClassName
 php artisan test tests/Feature/EstimateDocumentManagementTest.php
 vendor/bin/pint          # PHP code style (Laravel Pint)
+
+# PHP static analysis (larastan, level 5, see phpstan.neon)
+vendor/bin/phpstan analyse --memory-limit=1G
 ```
 
-No dedicated PHP static analysis tool configured. Frontend has no separate test runner configured; type-check via `vue-tsc` (used internally by `vite build`).
+Frontend has no separate test runner configured; type-check via `vue-tsc` (used internally by `vite build`).
 
 Agents must NOT run Docker, composer/npm install-update, migrations, or service startup unless the user explicitly asks — see Workflow Rules below.
 

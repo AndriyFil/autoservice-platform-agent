@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RepairOrderStatus;
+use Database\Factories\RepairOrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RepairOrder extends Model
 {
-    /** @use HasFactory<\Database\Factories\RepairOrderFactory> */
+    /** @use HasFactory<RepairOrderFactory> */
     use HasFactory;
 
     /**
@@ -45,36 +46,43 @@ class RepairOrder extends Model
         ];
     }
 
+    /** @return BelongsTo<Workshop, $this> */
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<Vehicle, $this> */
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
+    /** @return BelongsTo<BookingRequest, $this> */
     public function bookingRequest(): BelongsTo
     {
         return $this->belongsTo(BookingRequest::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
+    /** @return HasMany<RepairOrderLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(RepairOrderLine::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /** @return HasMany<Estimate, $this> */
     public function estimates(): HasMany
     {
         return $this->hasMany(Estimate::class)->orderByDesc('version');

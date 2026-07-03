@@ -156,6 +156,27 @@ class RepairOrderLineManagementTest extends TestCase
         $this->assertSame('Other workshop line', $otherLine->refresh()->description);
     }
 
+    public function test_cross_workshop_request_returns_not_found_before_validation(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        $otherRepairOrder = $this->createRepairOrder($otherWorkshop);
+
+        // Invalid payload must not surface validation errors for a foreign
+        // resource: authorization (404) has to win over validation (422).
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->post(route('dashboard.repair-orders.lines.store', $otherRepairOrder), [
+                'type' => 'not-a-type',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('repair_order_lines', 0);
+    }
+
     public function test_invalid_repair_order_line_payload_is_rejected(): void
     {
         $user = User::factory()->create();
@@ -280,7 +301,7 @@ class RepairOrderLineManagementTest extends TestCase
         $this->assertSame(RepairOrderStatus::Draft, $repairOrder->refresh()->status);
     }
 
-    public function test_non_draft_repair_order_can_create_another_estimate_version(): void
+    public function test_estimated_repair_order_without_current_estimate_can_create_first_estimate_pdf(): void
     {
         Storage::fake('documents_local');
 

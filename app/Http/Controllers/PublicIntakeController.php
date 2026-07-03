@@ -27,7 +27,7 @@ class PublicIntakeController extends Controller
         Workshop $workshop,
         SubmitIntakeRequestAction $submitIntakeRequest,
     ): RedirectResponse {
-        $submitIntakeRequest->handle($workshop, $request->message());
+        $submitIntakeRequest->handle($workshop, $request->message(), $request->phone());
 
         return to_route('public-intake.create', $workshop)->with('intake_submitted', true);
     }

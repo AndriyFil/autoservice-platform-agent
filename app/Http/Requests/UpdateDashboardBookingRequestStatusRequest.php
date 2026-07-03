@@ -3,16 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Enums\BookingRequestStatus;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateDashboardBookingRequestStatusRequest extends FormRequest
+class UpdateDashboardBookingRequestStatusRequest extends DashboardFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, array<int, mixed>>
      */

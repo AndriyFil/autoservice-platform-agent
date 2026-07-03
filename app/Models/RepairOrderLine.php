@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\RepairOrderLineType;
+use Database\Factories\RepairOrderLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RepairOrderLine extends Model
 {
-    /** @use HasFactory<\Database\Factories\RepairOrderLineFactory> */
+    /** @use HasFactory<RepairOrderLineFactory> */
     use HasFactory;
 
     /**
@@ -43,9 +44,30 @@ class RepairOrderLine extends Model
         ];
     }
 
+    /** @return BelongsTo<RepairOrder, $this> */
     public function repairOrder(): BelongsTo
     {
         return $this->belongsTo(RepairOrder::class);
+    }
+
+    /**
+     * Attributes for an EstimateLine built from this repair order line.
+     *
+     * @return array<string, mixed>
+     */
+    public function toEstimateLineAttributes(): array
+    {
+        return [
+            'type' => $this->type,
+            'description' => $this->description,
+            'quantity' => $this->quantity,
+            'unit_price_cents' => $this->unit_price_cents,
+            'tax_rate' => $this->tax_rate,
+            'subtotal_cents' => $this->subtotalCents(),
+            'tax_cents' => $this->taxCents(),
+            'total_cents' => $this->totalCents(),
+            'sort_order' => $this->sort_order,
+        ];
     }
 
     public function subtotalCents(): int

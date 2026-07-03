@@ -4,7 +4,6 @@ namespace App\Actions\Estimates;
 
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
-use App\Enums\EstimateStatus;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Support\Documents\WorkshopDocumentStorage;
@@ -19,10 +18,20 @@ class GenerateEstimatePdfAction
     public function handle(Estimate $estimate): Document
     {
         $estimate = Estimate::query()
-            ->with(['lines', 'repairOrder.customer', 'repairOrder.vehicle', 'repairOrder.workshop'])
+            ->with([
+                'lines',
+                'repairOrder.customer',
+                'repairOrder.vehicle',
+                'repairOrder.workshop',
+            ])
             ->whereKey($estimate->id)
             ->firstOrFail();
 
+        return $this->renderAndStore($estimate);
+    }
+
+    private function renderAndStore(Estimate $estimate): Document
+    {
         $filename = sprintf('estimate-%d-v%d.pdf', $estimate->repair_order_id, $estimate->version);
         $path = sprintf(
             'workshops/%d/estimates/%d/%s-%s',
@@ -32,16 +41,13 @@ class GenerateEstimatePdfAction
             $filename,
         );
 
+        // Rendered from $estimate->lines (EstimateLines snapshot), never from
+        // the live RepairOrderLines.
         $contents = Pdf::loadView('pdf.estimates.show', [
             'estimate' => $estimate,
         ])->output();
 
         $storedDocument = $this->documentStorage->put($path, $contents);
-
-        $estimate->update([
-            'status' => EstimateStatus::Generated,
-            'generated_at' => now(),
-        ]);
 
         return $estimate->documents()->create([
             'workshop_id' => $estimate->repairOrder->workshop_id,

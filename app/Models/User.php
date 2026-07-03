@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -48,11 +49,13 @@ class User extends Authenticatable
         ];
     }
 
+    /** @return HasMany<WorkshopUser, $this> */
     public function workshopUsers(): HasMany
     {
         return $this->hasMany(WorkshopUser::class);
     }
 
+    /** @return BelongsToMany<Workshop, $this> */
     public function workshops(): BelongsToMany
     {
         return $this->belongsToMany(Workshop::class, 'workshop_users')

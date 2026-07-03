@@ -6,6 +6,7 @@ use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
 use App\Support\Intake\IntakeExtractorInterface;
+use Throwable;
 
 class SubmitIntakeRequestAction
 {
@@ -13,21 +14,37 @@ class SubmitIntakeRequestAction
         private readonly IntakeExtractorInterface $intakeExtractor,
     ) {}
 
-    public function handle(Workshop $workshop, string $message): BookingRequest
+    public function handle(Workshop $workshop, string $message, string $phone): BookingRequest
     {
-        $extractionResult = $this->intakeExtractor->extract($message);
-
-        return BookingRequest::create([
+        $bookingRequest = BookingRequest::create([
             'workshop_id' => $workshop->id,
             'customer_id' => null,
             'vehicle_id' => null,
             'created_by_user_id' => null,
             'customer_name' => null,
-            'customer_phone' => $extractionResult->phone,
+            'customer_phone' => $phone,
             'problem_description' => $message,
             'original_message' => $message,
             'preferred_date' => null,
             'status' => BookingRequestStatus::New,
         ]);
+
+        try {
+            $extractionResult = $this->intakeExtractor->extract($message);
+        } catch (Throwable) {
+            return $bookingRequest;
+        }
+
+        $problemSummary = is_string($extractionResult->problemSummary)
+            ? trim($extractionResult->problemSummary)
+            : '';
+
+        if ($problemSummary !== '') {
+            $bookingRequest->update([
+                'problem_description' => $problemSummary,
+            ]);
+        }
+
+        return $bookingRequest->refresh();
     }
 }

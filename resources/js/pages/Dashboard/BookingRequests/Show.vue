@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -32,9 +24,10 @@ const props = defineProps<{
     };
     bookingRequest: {
         id: number;
-        customerName: string;
+        customerName: string | null;
         customerPhone: string;
         problemDescription: string;
+        originalMessage: string | null;
         preferredDate: string | null;
         status: {
             value: 'new' | 'confirmed' | 'rejected' | 'cancelled';
@@ -66,7 +59,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/dashboard',
     },
     {
-        title: props.bookingRequest.customerName,
+        title: props.bookingRequest.customerName ?? 'Public request',
         href: route('dashboard.booking-requests.show', { bookingRequest: props.bookingRequest.id }),
     },
 ];
@@ -91,7 +84,8 @@ const statusActionDetails = (status: StatusAction) =>
     ({
         confirmed: {
             label: 'Confirm and start work',
-            description: 'This confirms the request and opens a prefilled repair order form. The repair order is created only after you save that form.',
+            description:
+                'This confirms the request and opens a prefilled repair order form. The repair order is created only after you save that form.',
             confirmButtonClass: 'bg-green-600 text-white hover:bg-green-700',
         },
         rejected: {
@@ -115,6 +109,9 @@ const vehicleSummary = (vehicle: { brand: string | null; model: string | null; l
 
     return parts.length > 0 ? parts.join(' ') : 'No vehicle';
 };
+
+const hasSeparateSummary = () =>
+    Boolean(props.bookingRequest.originalMessage) && props.bookingRequest.originalMessage !== props.bookingRequest.problemDescription;
 
 const formatDate = (date: string | null): string => {
     if (!date) {
@@ -165,11 +162,10 @@ const submitPendingStatus = () => {
     statusDialogOpen.value = false;
     pendingStatusChange.value = null;
 };
-
 </script>
 
 <template>
-    <Head :title="bookingRequest.customerName" />
+    <Head :title="bookingRequest.customerName ?? 'Public request'" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
@@ -182,7 +178,7 @@ const submitPendingStatus = () => {
 
                     <div>
                         <div class="text-sm font-medium text-muted-foreground">{{ activeWorkshop.name }}</div>
-                        <h1 class="text-xl font-semibold text-foreground">{{ bookingRequest.customerName }}</h1>
+                        <h1 class="text-xl font-semibold text-foreground">{{ bookingRequest.customerName ?? 'Public request' }}</h1>
                     </div>
                 </div>
 
@@ -249,7 +245,9 @@ const submitPendingStatus = () => {
                 <section class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border">
                         <h2 class="text-base font-semibold text-foreground">Request details</h2>
-                        <span class="inline-flex rounded-md border border-sidebar-border/70 px-2 py-1 text-xs font-medium text-foreground dark:border-sidebar-border">
+                        <span
+                            class="inline-flex rounded-md border border-sidebar-border/70 px-2 py-1 text-xs font-medium text-foreground dark:border-sidebar-border"
+                        >
                             {{ bookingRequest.status.label }}
                         </span>
                     </div>
@@ -257,7 +255,7 @@ const submitPendingStatus = () => {
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <div class="text-xs font-medium uppercase text-muted-foreground">Customer</div>
-                            <div class="mt-1 text-sm text-foreground">{{ bookingRequest.customerName }}</div>
+                            <div class="mt-1 text-sm text-foreground">{{ bookingRequest.customerName ?? 'Not linked yet' }}</div>
                             <div class="text-sm text-muted-foreground">{{ bookingRequest.customerPhone }}</div>
                         </div>
 
@@ -273,8 +271,15 @@ const submitPendingStatus = () => {
                     </div>
 
                     <div>
-                        <div class="text-xs font-medium uppercase text-muted-foreground">Problem</div>
+                        <div class="text-xs font-medium uppercase text-muted-foreground">
+                            {{ hasSeparateSummary() ? 'Extracted summary' : 'Problem' }}
+                        </div>
                         <p class="mt-1 whitespace-pre-line text-sm leading-6 text-foreground">{{ bookingRequest.problemDescription }}</p>
+                    </div>
+
+                    <div v-if="bookingRequest.originalMessage">
+                        <div class="text-xs font-medium uppercase text-muted-foreground">Raw customer message</div>
+                        <p class="mt-1 whitespace-pre-line text-sm leading-6 text-foreground">{{ bookingRequest.originalMessage }}</p>
                     </div>
                 </section>
 
@@ -305,7 +310,7 @@ const submitPendingStatus = () => {
                     </DialogHeader>
 
                     <div class="rounded-md border border-sidebar-border/70 bg-muted/40 px-3 py-2 text-sm text-foreground">
-                        {{ bookingRequest.customerName }}
+                        {{ bookingRequest.customerName ?? bookingRequest.customerPhone }}
                     </div>
 
                     <DialogFooter>

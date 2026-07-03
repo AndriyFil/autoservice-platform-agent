@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Document extends Model
 {
-    /** @use HasFactory<\Database\Factories\DocumentFactory> */
+    /** @use HasFactory<DocumentFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -40,16 +41,19 @@ class Document extends Model
         ];
     }
 
+    /** @return BelongsTo<Workshop, $this> */
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
     }
 
+    /** @return MorphTo<Model, $this> */
     public function documentable(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');

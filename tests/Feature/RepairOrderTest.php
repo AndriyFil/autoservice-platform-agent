@@ -90,6 +90,7 @@ class RepairOrderTest extends TestCase
 
         $this->post('/w/main-auto/intake', [
             'message' => 'Opel Insignia, check engine light came on, when can I come?',
+            'phone' => '+38 (050) 111-22-33',
         ])->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('booking_requests', 1);
