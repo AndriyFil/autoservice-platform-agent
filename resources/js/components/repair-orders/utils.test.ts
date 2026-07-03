@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { RepairOrderVehicle } from './types';
-import { canCancelRepairOrder, canCompleteRepairOrder, formatCents, formatDate, formatDateTime, vehicleSummary } from './utils';
+import {
+    canCancelRepairOrder,
+    canCompleteRepairOrder,
+    centsToDecimalInput,
+    decimalInputToCents,
+    formatCents,
+    formatDate,
+    formatDateTime,
+    vehicleSummary,
+} from './utils';
 
 describe('canCompleteRepairOrder', () => {
     it('allows only draft and in_progress', () => {
@@ -36,6 +45,19 @@ describe('formatCents', () => {
     it('rounds fractional cents to two decimals', () => {
         // 1 cent / 100 = 0.01; sub-cent inputs still clamp to two decimals.
         expect(formatCents(1)).toBe('0.01');
+    });
+});
+
+describe('money input conversion', () => {
+    it('shows stored cents as decimal money input text', () => {
+        expect(centsToDecimalInput(0)).toBe('0.00');
+        expect(centsToDecimalInput(12345)).toBe('123.45');
+    });
+
+    it('converts decimal money input to integer cents for submission', () => {
+        expect(decimalInputToCents('123.45')).toBe(12345);
+        expect(decimalInputToCents('123')).toBe(12300);
+        expect(decimalInputToCents('')).toBe(0);
     });
 });
 

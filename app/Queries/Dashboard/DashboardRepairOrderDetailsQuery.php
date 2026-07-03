@@ -2,9 +2,10 @@
 
 namespace App\Queries\Dashboard;
 
-use App\Enums\EstimateStatus;
+use App\Enums\DocumentStatus;
 use App\Enums\RepairOrderLineType;
 use App\Enums\RepairOrderStatus;
+use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
 use App\Models\RepairOrderLine;
@@ -24,8 +25,9 @@ class DashboardRepairOrderDetailsQuery
      *     workingTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
      *     estimateTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
      *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string}|null}>,
+     *     documents: array<int, array{id: int, filename: string, type: array{value: string, label: string}, status: array{value: string, label: string}, generatedAt: string|null, downloadUrl: string|null}>,
      *     availableLineTypes: array<int, array{value: string, label: string}>,
-     *     statusActions: array{canMarkEstimated: bool, canRegenerateEstimate: bool, canComplete: bool, canCancel: bool},
+     *     statusActions: array{canMarkEstimated: bool, canComplete: bool, canCancel: bool},
      *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
      *     bookingRequest: array{id: int, status: array{value: string, label: string}, problemDescription: string, originalMessage: string|null, preferredDate: string|null, createdAt: string}|null
@@ -39,6 +41,7 @@ class DashboardRepairOrderDetailsQuery
                 'vehicle',
                 'bookingRequest',
                 'lines',
+                'estimates.documents',
                 'estimates.generatedEstimatePdfDocuments',
             ])
             ->whereKey($repairOrder->id)
@@ -111,6 +114,27 @@ class DashboardRepairOrderDetailsQuery
                 })
                 ->values()
                 ->all(),
+            'documents' => $repairOrder->estimates
+                ->flatMap(fn (Estimate $estimate) => $estimate->documents)
+                ->sortByDesc(fn (Document $document): int => $document->id)
+                ->map(fn (Document $document): array => [
+                    'id' => $document->id,
+                    'filename' => $document->filename,
+                    'type' => [
+                        'value' => $document->type->value,
+                        'label' => $document->type->label(),
+                    ],
+                    'status' => [
+                        'value' => $document->status->value,
+                        'label' => $document->status->label(),
+                    ],
+                    'generatedAt' => $document->generated_at?->toISOString(),
+                    'downloadUrl' => $document->status === DocumentStatus::Generated
+                        ? route('dashboard.documents.download', $document)
+                        : null,
+                ])
+                ->values()
+                ->all(),
             'availableLineTypes' => array_map(
                 fn (RepairOrderLineType $type): array => [
                     'value' => $type->value,
@@ -119,11 +143,7 @@ class DashboardRepairOrderDetailsQuery
                 RepairOrderLineType::cases(),
             ),
             'statusActions' => [
-                'canMarkEstimated' => $repairOrder->estimates->first() === null
-                    && in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true)
-                    && $repairOrder->lines->isNotEmpty(),
-                'canRegenerateEstimate' => $repairOrder->estimates->first()?->status === EstimateStatus::Generated
-                    && in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true)
+                'canMarkEstimated' => in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true)
                     && $repairOrder->lines->isNotEmpty(),
                 'canComplete' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Completed),
                 'canCancel' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Cancelled),

@@ -93,6 +93,21 @@ export type RepairOrderEstimateDocument = {
     downloadUrl: string;
 };
 
+export type RepairOrderDocument = {
+    id: number;
+    filename: string;
+    type: {
+        value: string;
+        label: string;
+    };
+    status: {
+        value: 'generated' | 'failed' | 'archived';
+        label: string;
+    };
+    generatedAt: string | null;
+    downloadUrl: string | null;
+};
+
 export type RepairOrderEstimate = {
     id: number;
     version: number;
@@ -110,7 +125,6 @@ export type RepairOrderEstimate = {
 
 export type RepairOrderStatusActions = {
     canMarkEstimated: boolean;
-    canRegenerateEstimate: boolean;
     canComplete: boolean;
     canCancel: boolean;
 };
@@ -126,6 +140,7 @@ export type RepairOrderDetails = {
     workingTotals: RepairOrderEstimateTotals;
     estimateTotals: RepairOrderEstimateTotals;
     estimates: RepairOrderEstimate[];
+    documents: RepairOrderDocument[];
     availableLineTypes: RepairOrderLineTypeOption[];
     statusActions: RepairOrderStatusActions;
     customer: RepairOrderCustomer;

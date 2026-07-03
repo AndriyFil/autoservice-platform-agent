@@ -41,13 +41,12 @@ class PrepareEstimateForPdfActionTest extends TestCase
         $this->assertSame(9000, $estimate->total_cents);
     }
 
-    public function test_generated_current_estimate_is_rebuilt_before_approval(): void
+    public function test_existing_estimate_does_not_get_rebuilt_when_generating_next_version(): void
     {
         Storage::fake('documents_local');
 
         [$workshopUser, $repairOrder, $estimate, $oldDocument] = $this->buildRegenerableEstimate();
         Storage::disk('documents_local')->put($oldDocument->path, 'old pdf contents');
-        $generatedAt = $estimate->generated_at;
 
         $repairOrder->lines()->delete();
         RepairOrderLine::factory()->create([
@@ -60,29 +59,30 @@ class PrepareEstimateForPdfActionTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $preparedEstimate = app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
+        $nextEstimate = app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
 
-        $oldDocument->refresh();
-
-        $this->assertSame($estimate->id, $preparedEstimate->id);
-        $this->assertSame(DocumentStatus::Archived, $oldDocument->status);
+        $this->assertNotSame($estimate->id, $nextEstimate->id);
+        $this->assertSame(1, $estimate->version);
+        $this->assertSame(2, $nextEstimate->version);
+        $this->assertSame(DocumentStatus::Generated, $oldDocument->refresh()->status);
         $this->assertTrue(Document::query()->whereKey($oldDocument->id)->exists());
         Storage::disk('documents_local')->assertExists($oldDocument->path);
-        $this->assertSame(0, $estimate->refresh()->generatedEstimatePdfDocuments()->count());
+        $this->assertSame(1, $estimate->refresh()->generatedEstimatePdfDocuments()->count());
+        $this->assertSame('Old snapshot line', $estimate->lines()->sole()->description);
 
-        $line = $preparedEstimate->lines->sole();
+        $line = $nextEstimate->lines->sole();
         $this->assertSame('Current repair order line', $line->description);
         $this->assertSame(40000, $line->subtotal_cents);
         $this->assertSame(40000, $line->total_cents);
 
-        $this->assertSame(40000, $preparedEstimate->subtotal_cents);
-        $this->assertSame(0, $preparedEstimate->tax_cents);
-        $this->assertSame(40000, $preparedEstimate->total_cents);
-        $this->assertSame(EstimateStatus::Generated, $preparedEstimate->status);
-        $this->assertTrue($preparedEstimate->generated_at->greaterThan($generatedAt));
+        $this->assertSame(40000, $nextEstimate->subtotal_cents);
+        $this->assertSame(0, $nextEstimate->tax_cents);
+        $this->assertSame(40000, $nextEstimate->total_cents);
+        $this->assertSame(EstimateStatus::Generated, $nextEstimate->status);
+        $this->assertNotNull($nextEstimate->generated_at);
     }
 
-    public function test_failed_documents_are_kept_failed_when_regenerating(): void
+    public function test_failed_documents_are_kept_failed_when_generating_next_version(): void
     {
         [$workshopUser, $repairOrder, $estimate] = $this->buildRegenerableEstimate();
         $failedDocument = $estimate->documents()->create([
@@ -104,7 +104,7 @@ class PrepareEstimateForPdfActionTest extends TestCase
         $this->assertSame(DocumentStatus::Failed, $failedDocument->refresh()->status);
     }
 
-    public function test_approved_estimate_cannot_be_prepared_for_regeneration(): void
+    public function test_approved_estimate_does_not_block_generating_next_version(): void
     {
         [$workshopUser, $repairOrder, $estimate] = $this->buildRegenerableEstimate(
             estimateStatus: EstimateStatus::Approved,
@@ -112,18 +112,16 @@ class PrepareEstimateForPdfActionTest extends TestCase
 
         $documentsBefore = Document::query()->count();
 
-        try {
-            app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
-            $this->fail('Expected DomainException for approved estimate.');
-        } catch (DomainException) {
-            // expected
-        }
+        $nextEstimate = app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
 
         $this->assertSame($documentsBefore, Document::query()->count());
         $this->assertSame(EstimateStatus::Approved, $estimate->refresh()->status);
+        $this->assertNotSame($estimate->id, $nextEstimate->id);
+        $this->assertSame(2, $nextEstimate->version);
+        $this->assertSame(EstimateStatus::Generated, $nextEstimate->status);
     }
 
-    public function test_approved_repair_order_cannot_be_prepared_for_regeneration(): void
+    public function test_approved_repair_order_cannot_generate_next_estimate_version(): void
     {
         [$workshopUser, $repairOrder] = $this->buildRegenerableEstimate(
             repairOrderStatus: RepairOrderStatus::Approved,

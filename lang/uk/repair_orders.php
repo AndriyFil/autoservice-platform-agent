@@ -2,14 +2,12 @@
 
 return [
     'estimate_created' => 'Кошторис PDF створено.',
-    'estimate_regenerated' => 'Кошторис PDF створено повторно.',
 
     'actions' => [
         'add_line' => 'Додати позицію',
         'cancel' => 'Скасувати',
         'complete' => 'Завершити',
         'create_estimate_pdf' => 'Створити PDF кошторису',
-        'regenerate_estimate_pdf' => 'Повторити PDF кошторису',
         'delete' => 'Видалити',
         'download' => 'Завантажити',
         'edit' => 'Редагувати',
@@ -19,12 +17,7 @@ return [
 
     'estimate_errors' => [
         'missing_lines' => 'Додайте щонайменше одну позицію замовлення на ремонт перед створенням кошторису.',
-    ],
-
-    'regenerate_errors' => [
-        'no_estimate' => 'Немає кошторису для повторного створення для цього замовлення на ремонт.',
-        'estimate_locked' => 'Цей кошторис більше не можна створити повторно, оскільки його вже затверджено.',
-        'repair_order_locked' => 'Після затвердження замовлення на ремонт кошторис не можна створити повторно.',
+        'repair_order_locked' => 'Після затвердження замовлення на ремонт PDF кошторису більше не можна створити.',
     ],
 
     'fields' => [
@@ -32,6 +25,7 @@ return [
         'closed' => 'Закрито',
         'customer' => 'Клієнт',
         'description' => 'Опис',
+        'filename' => 'Назва файлу',
         'generated' => 'Створено',
         'opened' => 'Відкрито',
         'order' => 'Порядок',
@@ -47,7 +41,7 @@ return [
         'total' => 'Разом',
         'type' => 'Тип',
         'unit' => 'Ціна',
-        'unit_cents' => 'Ціна в центах',
+        'unit_price' => 'Ціна',
         'vehicle' => 'Авто',
         'version' => 'Версія',
     ],
@@ -60,8 +54,11 @@ return [
     ],
 
     'messages' => [
+        'booking_request_source' => 'Заявка',
         'manual_repair_order' => 'Ручне замовлення на ремонт',
+        'no_documents' => 'Документів ще немає.',
         'no_estimate_pdfs' => 'PDF кошторису ще не створено.',
+        'no_estimate_summary' => 'Кошторис ще не створено.',
         'no_vehicle' => 'Авто не вказано',
         'no_working_lines' => 'Робочих позицій ще немає.',
     ],
@@ -103,10 +100,19 @@ return [
 
     'sections' => [
         'estimates' => 'Кошториси',
+        'latest_estimate' => 'Останній кошторис',
         'timeline' => 'Хронологія',
         'work_document' => 'Робочий документ',
         'working_lines' => 'Робочі позиції замовлення на ремонт',
         'working_totals' => 'Робочий підсумок',
+    ],
+
+    'tabs' => [
+        'documents' => 'Документи',
+        'estimates' => 'Кошториси',
+        'lines' => 'Позиції',
+        'overview' => 'Огляд',
+        'timeline' => 'Хронологія',
     ],
 
     'totals' => [
@@ -116,6 +122,8 @@ return [
     ],
 
     'units' => [
+        'document_singular' => 'документ',
+        'document_plural' => 'документів',
         'line_singular' => 'позиція',
         'line_plural' => 'позицій',
         'version_singular' => 'версія',

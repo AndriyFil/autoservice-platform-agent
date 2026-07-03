@@ -2,14 +2,12 @@
 
 return [
     'estimate_created' => 'Utworzono PDF kosztorysu.',
-    'estimate_regenerated' => 'Ponownie utworzono PDF kosztorysu.',
 
     'actions' => [
         'add_line' => 'Dodaj pozycję',
         'cancel' => 'Anuluj',
         'complete' => 'Zakończ',
         'create_estimate_pdf' => 'Utwórz PDF kosztorysu',
-        'regenerate_estimate_pdf' => 'Ponów PDF kosztorysu',
         'delete' => 'Usuń',
         'download' => 'Pobierz',
         'edit' => 'Edytuj',
@@ -19,12 +17,7 @@ return [
 
     'estimate_errors' => [
         'missing_lines' => 'Dodaj co najmniej jedną pozycję zlecenia naprawy przed utworzeniem kosztorysu.',
-    ],
-
-    'regenerate_errors' => [
-        'no_estimate' => 'Brak kosztorysu do ponownego wygenerowania dla tego zlecenia naprawy.',
-        'estimate_locked' => 'Tego kosztorysu nie można już wygenerować ponownie, ponieważ został zatwierdzony.',
-        'repair_order_locked' => 'Po zatwierdzeniu tego zlecenia naprawy nie można ponownie wygenerować kosztorysu.',
+        'repair_order_locked' => 'Po zatwierdzeniu tego zlecenia naprawy nie można już wygenerować PDF kosztorysu.',
     ],
 
     'fields' => [
@@ -32,6 +25,7 @@ return [
         'closed' => 'Zamknięto',
         'customer' => 'Klient',
         'description' => 'Opis',
+        'filename' => 'Nazwa pliku',
         'generated' => 'Wygenerowano',
         'opened' => 'Otwarto',
         'order' => 'Kolejność',
@@ -47,7 +41,7 @@ return [
         'total' => 'Razem',
         'type' => 'Typ',
         'unit' => 'Cena jedn.',
-        'unit_cents' => 'Cena jedn. w centach',
+        'unit_price' => 'Cena jedn.',
         'vehicle' => 'Pojazd',
         'version' => 'Wersja',
     ],
@@ -60,8 +54,11 @@ return [
     ],
 
     'messages' => [
+        'booking_request_source' => 'Zgłoszenie',
         'manual_repair_order' => 'Ręczne zlecenie naprawy',
+        'no_documents' => 'Brak dostępnych dokumentów.',
         'no_estimate_pdfs' => 'Nie utworzono jeszcze PDF-ów kosztorysu.',
+        'no_estimate_summary' => 'Nie utworzono jeszcze kosztorysu.',
         'no_vehicle' => 'Brak pojazdu',
         'no_working_lines' => 'Brak pozycji roboczych.',
     ],
@@ -103,10 +100,19 @@ return [
 
     'sections' => [
         'estimates' => 'Kosztorysy',
+        'latest_estimate' => 'Najnowszy kosztorys',
         'timeline' => 'Oś czasu',
         'work_document' => 'Dokument roboczy',
         'working_lines' => 'Robocze pozycje zlecenia naprawy',
         'working_totals' => 'Suma robocza',
+    ],
+
+    'tabs' => [
+        'documents' => 'Dokumenty',
+        'estimates' => 'Kosztorysy',
+        'lines' => 'Pozycje',
+        'overview' => 'Przegląd',
+        'timeline' => 'Oś czasu',
     ],
 
     'totals' => [
@@ -116,6 +122,8 @@ return [
     ],
 
     'units' => [
+        'document_singular' => 'dokument',
+        'document_plural' => 'dokumentów',
         'line_singular' => 'pozycja',
         'line_plural' => 'pozycji',
         'version_singular' => 'wersja',

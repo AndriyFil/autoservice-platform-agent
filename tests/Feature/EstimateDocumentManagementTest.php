@@ -71,7 +71,7 @@ class EstimateDocumentManagementTest extends TestCase
         $this->assertSame(24000, $estimate->lines->sole()->refresh()->total_cents);
     }
 
-    public function test_posting_estimate_endpoint_again_regenerates_current_estimate_version(): void
+    public function test_posting_estimate_endpoint_again_creates_next_estimate_version(): void
     {
         Storage::fake('documents_local');
 
@@ -105,13 +105,16 @@ class EstimateDocumentManagementTest extends TestCase
         $estimates = Estimate::query()->with('lines')->orderBy('version')->get();
         $documents = Document::query()->orderBy('id')->get();
 
-        $this->assertCount(1, $estimates);
+        $this->assertCount(2, $estimates);
         $this->assertSame(1, $estimates[0]->version);
-        $this->assertSame('Second version line', $estimates[0]->lines->sole()->description);
-        $this->assertSame(12000, $estimates[0]->lines->sole()->total_cents);
+        $this->assertSame(2, $estimates[1]->version);
+        $this->assertSame('First version line', $estimates[0]->lines->sole()->description);
+        $this->assertSame(10000, $estimates[0]->lines->sole()->total_cents);
+        $this->assertSame('Second version line', $estimates[1]->lines->sole()->description);
+        $this->assertSame(12000, $estimates[1]->lines->sole()->total_cents);
 
         $this->assertCount(2, $documents);
-        $this->assertSame(DocumentStatus::Archived, $oldDocument->refresh()->status);
+        $this->assertSame(DocumentStatus::Generated, $oldDocument->refresh()->status);
         $this->assertSame(DocumentStatus::Generated, $documents[1]->status);
     }
 
@@ -177,7 +180,7 @@ class EstimateDocumentManagementTest extends TestCase
                 $activeWorkshopUser->is($workshopUser)
                 && $routedRepairOrder->is($repairOrder)
             ))
-            ->andReturn(new GenerateRepairOrderEstimateResult($document, regenerated: false));
+            ->andReturn(new GenerateRepairOrderEstimateResult($document));
 
         $this->instance(GenerateRepairOrderEstimateAction::class, $action);
 
@@ -247,7 +250,7 @@ class EstimateDocumentManagementTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_single_estimate_route_regenerates_old_document_and_creates_new_one(): void
+    public function test_single_estimate_route_keeps_old_document_and_creates_next_version(): void
     {
         Storage::fake('documents_local');
 
@@ -259,7 +262,7 @@ class EstimateDocumentManagementTest extends TestCase
         ]);
         RepairOrderLine::factory()->create([
             'repair_order_id' => $repairOrder->id,
-            'description' => 'Current route regeneration line',
+            'description' => 'Current route second version line',
             'quantity' => '1.00',
             'unit_price_cents' => 17000,
             'tax_rate' => '0.00',
@@ -292,11 +295,16 @@ class EstimateDocumentManagementTest extends TestCase
             ->from(route('dashboard.repair-orders.show', $repairOrder))
             ->post(route('dashboard.repair-orders.estimate', $repairOrder))
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHas('status', __('repair_orders.estimate_regenerated'));
+            ->assertSessionHas('status', __('repair_orders.estimate_created'));
 
-        $this->assertSame(DocumentStatus::Archived, $oldDocument->refresh()->status);
+        $estimates = Estimate::query()->with('lines')->orderBy('version')->get();
+
+        $this->assertSame(DocumentStatus::Generated, $oldDocument->refresh()->status);
         $this->assertSame(1, $estimate->refresh()->generatedEstimatePdfDocuments()->count());
-        $this->assertSame('Current route regeneration line', $estimate->lines()->sole()->description);
+        $this->assertCount(2, $estimates);
+        $this->assertSame(1, $estimates[0]->version);
+        $this->assertSame(2, $estimates[1]->version);
+        $this->assertSame('Current route second version line', $estimates[1]->lines()->sole()->description);
     }
 
     public function test_dashboard_details_exposes_only_latest_generated_estimate_pdf(): void

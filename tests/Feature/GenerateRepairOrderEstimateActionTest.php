@@ -34,7 +34,6 @@ class GenerateRepairOrderEstimateActionTest extends TestCase
 
         $estimate = Estimate::query()->with('lines')->sole();
 
-        $this->assertFalse($result->regenerated);
         $this->assertSame($estimate->id, $result->document->documentable_id);
         $this->assertSame('Generated estimate line', $estimate->lines->sole()->description);
         $this->assertSame(13000, $estimate->total_cents);
@@ -43,7 +42,7 @@ class GenerateRepairOrderEstimateActionTest extends TestCase
         Storage::disk('documents_local')->assertExists($result->document->path);
     }
 
-    public function test_it_regenerates_current_estimate_and_replaces_active_pdf_document(): void
+    public function test_it_creates_next_estimate_version_without_mutating_previous_pdf_document(): void
     {
         Storage::fake('documents_local');
 
@@ -86,7 +85,7 @@ class GenerateRepairOrderEstimateActionTest extends TestCase
         RepairOrderLine::factory()->create([
             'repair_order_id' => $repairOrder->id,
             'type' => RepairOrderLineType::Labor,
-            'description' => 'Regenerated estimate line',
+            'description' => 'Second version estimate line',
             'quantity' => '2.00',
             'unit_price_cents' => 15000,
             'tax_rate' => '0.00',
@@ -94,16 +93,21 @@ class GenerateRepairOrderEstimateActionTest extends TestCase
 
         $result = app(GenerateRepairOrderEstimateAction::class)->handle($workshopUser, $repairOrder);
 
+        $estimates = Estimate::query()->with('lines')->orderBy('version')->get();
         $documents = Document::query()->orderBy('id')->get();
 
-        $this->assertTrue($result->regenerated);
-        $this->assertSame(DocumentStatus::Archived, $oldDocument->refresh()->status);
+        $this->assertSame(DocumentStatus::Generated, $oldDocument->refresh()->status);
+        $this->assertCount(2, $estimates);
+        $this->assertSame(1, $estimates[0]->version);
+        $this->assertSame(2, $estimates[1]->version);
         $this->assertCount(2, $documents);
         $this->assertSame(DocumentStatus::Generated, $result->document->status);
         $this->assertSame($documents->last()->id, $result->document->id);
         $this->assertSame(1, $estimate->refresh()->generatedEstimatePdfDocuments()->count());
-        $this->assertSame('Regenerated estimate line', $estimate->lines()->sole()->description);
-        $this->assertSame(30000, $estimate->total_cents);
+        $this->assertSame('Old estimate line', $estimates[0]->lines->sole()->description);
+        $this->assertSame('Second version estimate line', $estimates[1]->lines->sole()->description);
+        $this->assertSame(5000, $estimates[0]->total_cents);
+        $this->assertSame(30000, $estimates[1]->total_cents);
     }
 
     /**

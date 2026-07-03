@@ -3,10 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\BookingRequestStatus;
+use App\Enums\DocumentStatus;
+use App\Enums\DocumentType;
+use App\Enums\EstimateStatus;
 use App\Enums\RepairOrderStatus;
 use App\Enums\WorkshopUserRole;
 use App\Models\BookingRequest;
 use App\Models\Customer;
+use App\Models\Estimate;
 use App\Models\RepairOrder;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -571,6 +575,47 @@ class RepairOrderManagementTest extends TestCase
                 ->where('repairOrder.bookingRequest.id', $bookingRequest->id)
                 ->where('repairOrder.bookingRequest.status.value', 'confirmed')
                 ->where('repairOrder.bookingRequest.preferredDate', '2026-06-20'));
+    }
+
+    public function test_repair_order_show_exposes_document_list_for_documents_tab(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop);
+        $repairOrder = $this->createRepairOrder($bookingRequest);
+        $estimate = Estimate::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'version' => 1,
+            'status' => EstimateStatus::Generated,
+            'generated_at' => Carbon::parse('2026-07-03 09:30:00'),
+        ]);
+        $document = $estimate->documents()->create([
+            'workshop_id' => $workshop->id,
+            'type' => DocumentType::EstimatePdf,
+            'status' => DocumentStatus::Generated,
+            'disk' => 'documents_local',
+            'path' => 'workshops/'.$workshop->id.'/estimates/'.$estimate->id.'/estimate-v1.pdf',
+            'filename' => 'estimate-v1.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 1024,
+            'checksum_sha256' => hash('sha256', 'estimate-v1'),
+            'generated_at' => Carbon::parse('2026-07-03 09:31:00'),
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/RepairOrders/Show')
+                ->where('repairOrder.documents.0.id', $document->id)
+                ->where('repairOrder.documents.0.filename', 'estimate-v1.pdf')
+                ->where('repairOrder.documents.0.type.value', 'estimate_pdf')
+                ->where('repairOrder.documents.0.status.value', 'generated')
+                ->where('repairOrder.documents.0.generatedAt', '2026-07-03T09:31:00.000000Z')
+                ->where('repairOrder.documents.0.downloadUrl', route('dashboard.documents.download', $document)));
     }
 
     public function test_manual_repair_order_show_exposes_nullable_booking_request(): void

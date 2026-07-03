@@ -2,7 +2,6 @@
 
 namespace App\Actions\Estimates;
 
-use App\Enums\DocumentStatus;
 use App\Enums\EstimateStatus;
 use App\Enums\RepairOrderStatus;
 use App\Models\Estimate;
@@ -25,7 +24,7 @@ class PrepareEstimateForPdfAction
                 ->firstOrFail();
 
             if (! $this->repairOrderAllowsEstimateGeneration($repairOrder->status)) {
-                throw new DomainException(__('repair_orders.regenerate_errors.repair_order_locked'));
+                throw new DomainException(__('repair_orders.estimate_errors.repair_order_locked'));
             }
 
             if ($repairOrder->lines->isEmpty()) {
@@ -38,19 +37,13 @@ class PrepareEstimateForPdfAction
                 ->lockForUpdate()
                 ->first();
 
-            if ($estimate === null) {
-                $estimate = $this->createEstimate($activeWorkshopUser, $repairOrder);
-            } elseif ($estimate->status === EstimateStatus::Generated) {
-                $this->rebuildEstimateSnapshot($estimate, $repairOrder);
-                $this->archiveGeneratedDocuments($estimate);
-            } else {
-                throw new DomainException(__('repair_orders.regenerate_errors.estimate_locked'));
-            }
+            $nextVersion = $estimate instanceof Estimate ? $estimate->version + 1 : 1;
 
-            $estimate->update([
-                'status' => EstimateStatus::Generated,
-                'generated_at' => now(),
-            ]);
+            $estimate = $this->createEstimate(
+                activeWorkshopUser: $activeWorkshopUser,
+                repairOrder: $repairOrder,
+                version: $nextVersion,
+            );
 
             if ($repairOrder->status === RepairOrderStatus::Draft) {
                 $repairOrder->update([
@@ -72,17 +65,18 @@ class PrepareEstimateForPdfAction
         return in_array($status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true);
     }
 
-    private function createEstimate(WorkshopUser $activeWorkshopUser, RepairOrder $repairOrder): Estimate
+    private function createEstimate(WorkshopUser $activeWorkshopUser, RepairOrder $repairOrder, int $version): Estimate
     {
         $estimate = Estimate::create([
             'repair_order_id' => $repairOrder->id,
-            'version' => 1,
-            'status' => EstimateStatus::Draft,
+            'version' => $version,
+            'status' => EstimateStatus::Generated,
             'subtotal_cents' => $repairOrder->subtotalCents(),
             'tax_cents' => $repairOrder->taxCents(),
             'total_cents' => $repairOrder->totalCents(),
             'currency' => config('app.currency', 'USD'),
             'created_by_user_id' => $activeWorkshopUser->user_id,
+            'generated_at' => now(),
         ]);
 
         $this->createEstimateLines($estimate, $repairOrder);
@@ -90,29 +84,10 @@ class PrepareEstimateForPdfAction
         return $estimate;
     }
 
-    private function rebuildEstimateSnapshot(Estimate $estimate, RepairOrder $repairOrder): void
-    {
-        $estimate->lines()->delete();
-        $this->createEstimateLines($estimate, $repairOrder);
-
-        $estimate->update([
-            'subtotal_cents' => $repairOrder->subtotalCents(),
-            'tax_cents' => $repairOrder->taxCents(),
-            'total_cents' => $repairOrder->totalCents(),
-        ]);
-    }
-
     private function createEstimateLines(Estimate $estimate, RepairOrder $repairOrder): void
     {
         $repairOrder->lines->each(function (RepairOrderLine $line) use ($estimate): void {
             $estimate->lines()->create($line->toEstimateLineAttributes());
         });
-    }
-
-    private function archiveGeneratedDocuments(Estimate $estimate): void
-    {
-        $estimate->generatedEstimatePdfDocuments()->update([
-            'status' => DocumentStatus::Archived,
-        ]);
     }
 }

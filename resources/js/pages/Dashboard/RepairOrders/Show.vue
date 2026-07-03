@@ -1,21 +1,33 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import RepairOrderEstimatesSection from '@/components/repair-orders/RepairOrderEstimatesSection.vue';
-import RepairOrderLinesSection from '@/components/repair-orders/RepairOrderLinesSection.vue';
-import RepairOrderStatusBadge from '@/components/repair-orders/RepairOrderStatusBadge.vue';
+import RepairOrderDocumentsTab from '@/components/repair-orders/RepairOrderDocumentsTab.vue';
+import RepairOrderEstimatesTab from '@/components/repair-orders/RepairOrderEstimatesTab.vue';
+import RepairOrderLinesTab from '@/components/repair-orders/RepairOrderLinesTab.vue';
+import RepairOrderOverviewTab from '@/components/repair-orders/RepairOrderOverviewTab.vue';
 import RepairOrderStatusActions from '@/components/repair-orders/RepairOrderStatusActions.vue';
-import RepairOrderTotalsSummary from '@/components/repair-orders/RepairOrderTotalsSummary.vue';
+import RepairOrderTimelineTab from '@/components/repair-orders/RepairOrderTimelineTab.vue';
 import type { RepairOrderShowProps } from '@/components/repair-orders/types';
-import { formatDate, formatDateTime, vehicleSummary } from '@/components/repair-orders/utils';
-import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/composables/useTranslations';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, ClipboardList } from 'lucide-vue-next';
+import { ArrowLeft } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 const props = defineProps<RepairOrderShowProps>();
 const { t } = useTranslations();
+
+type RepairOrderTab = 'overview' | 'lines' | 'estimates' | 'documents' | 'timeline';
+
+const activeTab = ref<RepairOrderTab>('overview');
+
+const tabs = computed(() => [
+    { value: 'overview' as const, label: t('repair_orders.tabs.overview') },
+    { value: 'lines' as const, label: t('repair_orders.tabs.lines') },
+    { value: 'estimates' as const, label: t('repair_orders.tabs.estimates') },
+    { value: 'documents' as const, label: t('repair_orders.tabs.documents') },
+    { value: 'timeline' as const, label: t('repair_orders.tabs.timeline') },
+]);
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -27,7 +39,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: route('dashboard.repair-orders.show', { repairOrder: props.repairOrder.id }),
     },
 ];
-
 </script>
 
 <template>
@@ -37,7 +48,10 @@ const breadcrumbs: BreadcrumbItem[] = [
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div class="space-y-2">
-                    <Link :href="route('dashboard.repair-orders.index')" class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                    <Link
+                        :href="route('dashboard.repair-orders.index')"
+                        class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                    >
                         <ArrowLeft class="size-4" />
                         {{ t('repair_orders.navigation.repair_orders') }}
                     </Link>
@@ -48,11 +62,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <RepairOrderStatusActions
-                    :repair-order-id="repairOrder.id"
-                    :actions="repairOrder.statusActions"
-                    :status-error="errors?.status"
-                />
+                <RepairOrderStatusActions :repair-order-id="repairOrder.id" :actions="repairOrder.statusActions" :status-error="errors?.status" />
             </div>
 
             <div v-if="flash?.status" class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
@@ -61,85 +71,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 
             <InputError :message="errors?.repair_order_line" />
 
-            <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-                <section class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border">
-                        <h2 class="text-base font-semibold text-foreground">{{ t('repair_orders.sections.work_document') }}</h2>
-                        <RepairOrderStatusBadge :status="repairOrder.status" />
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.customer') }}</div>
-                            <div class="mt-1 text-sm text-foreground">{{ repairOrder.customer.name }}</div>
-                            <div class="text-sm text-muted-foreground">{{ repairOrder.customer.phone }}</div>
-                        </div>
-
-                        <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.vehicle') }}</div>
-                            <div class="mt-1 text-sm text-foreground">{{ vehicleSummary(repairOrder.vehicle, t('repair_orders.messages.no_vehicle')) }}</div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.problem') }}</div>
-                        <p class="mt-1 whitespace-pre-line text-sm leading-6 text-foreground">{{ repairOrder.problemDescription }}</p>
-                    </div>
-                </section>
-
-                <aside class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                    <h2 class="text-base font-semibold text-foreground">{{ t('repair_orders.sections.timeline') }}</h2>
-
-                    <div class="space-y-3 text-sm">
-                        <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.opened') }}</div>
-                            <div class="mt-1 text-foreground">{{ formatDateTime(repairOrder.openedAt) }}</div>
-                        </div>
-
-                        <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.closed') }}</div>
-                            <div class="mt-1 text-foreground">{{ formatDateTime(repairOrder.closedAt) }}</div>
-                        </div>
-
-                        <div v-if="repairOrder.bookingRequest">
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.source_request') }}</div>
-                            <Button as-child size="sm" variant="outline" class="mt-1">
-                                <Link :href="route('dashboard.booking-requests.show', { bookingRequest: repairOrder.bookingRequest.id })">
-                                    <ClipboardList class="size-4" />
-                                    {{ t('repair_orders.actions.view_booking_request') }}
-                                </Link>
-                            </Button>
-                        </div>
-
-                        <div v-if="repairOrder.bookingRequest?.originalMessage">
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.original_message') }}</div>
-                            <p class="mt-1 whitespace-pre-line text-foreground">{{ repairOrder.bookingRequest.originalMessage }}</p>
-                        </div>
-
-                        <div v-if="repairOrder.bookingRequest">
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.preferred_date') }}</div>
-                            <div class="mt-1 text-foreground">{{ formatDate(repairOrder.bookingRequest.preferredDate) }}</div>
-                        </div>
-
-                        <div v-else>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.source') }}</div>
-                            <div class="mt-1 text-foreground">{{ t('repair_orders.messages.manual_repair_order') }}</div>
-                        </div>
-                    </div>
-                </aside>
+            <div class="overflow-x-auto border-b border-sidebar-border/70 dark:border-sidebar-border">
+                <div class="flex min-w-max gap-2">
+                    <button
+                        v-for="tab in tabs"
+                        :key="tab.value"
+                        type="button"
+                        class="border-b-2 px-3 py-2 text-sm font-medium transition-colors"
+                        :class="
+                            activeTab === tab.value
+                                ? 'border-foreground text-foreground'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                        "
+                        @click="activeTab = tab.value"
+                    >
+                        {{ tab.label }}
+                    </button>
+                </div>
             </div>
 
-            <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-                <RepairOrderLinesSection
-                    :repair-order-id="repairOrder.id"
-                    :lines="repairOrder.lines"
-                    :available-line-types="repairOrder.availableLineTypes"
-                />
-
-                <RepairOrderTotalsSummary :totals="repairOrder.workingTotals" />
-            </div>
-
-            <RepairOrderEstimatesSection :estimates="repairOrder.estimates" />
+            <RepairOrderOverviewTab v-if="activeTab === 'overview'" :repair-order="repairOrder" />
+            <RepairOrderLinesTab v-else-if="activeTab === 'lines'" :repair-order="repairOrder" />
+            <RepairOrderEstimatesTab v-else-if="activeTab === 'estimates'" :repair-order="repairOrder" :status-error="errors?.status" />
+            <RepairOrderDocumentsTab v-else-if="activeTab === 'documents'" :documents="repairOrder.documents" />
+            <RepairOrderTimelineTab v-else :repair-order="repairOrder" />
         </div>
     </AppLayout>
 </template>

@@ -2,14 +2,12 @@
 
 return [
     'estimate_created' => 'Estimate PDF created.',
-    'estimate_regenerated' => 'Estimate PDF regenerated.',
 
     'actions' => [
         'add_line' => 'Add line',
         'cancel' => 'Cancel',
         'complete' => 'Complete',
         'create_estimate_pdf' => 'Create estimate PDF',
-        'regenerate_estimate_pdf' => 'Regenerate estimate PDF',
         'delete' => 'Delete',
         'download' => 'Download',
         'edit' => 'Edit',
@@ -19,12 +17,7 @@ return [
 
     'estimate_errors' => [
         'missing_lines' => 'Add at least one repair order line before creating an estimate.',
-    ],
-
-    'regenerate_errors' => [
-        'no_estimate' => 'There is no estimate to regenerate for this repair order.',
-        'estimate_locked' => 'This estimate can no longer be regenerated because it is already approved.',
-        'repair_order_locked' => 'This repair order can no longer have its estimate regenerated after approval.',
+        'repair_order_locked' => 'This repair order can no longer generate estimate PDFs after approval.',
     ],
 
     'fields' => [
@@ -32,6 +25,7 @@ return [
         'closed' => 'Closed',
         'customer' => 'Customer',
         'description' => 'Description',
+        'filename' => 'Filename',
         'generated' => 'Generated',
         'opened' => 'Opened',
         'order' => 'Order',
@@ -47,7 +41,7 @@ return [
         'total' => 'Total',
         'type' => 'Type',
         'unit' => 'Unit',
-        'unit_cents' => 'Unit cents',
+        'unit_price' => 'Unit price',
         'vehicle' => 'Vehicle',
         'version' => 'Version',
     ],
@@ -60,8 +54,11 @@ return [
     ],
 
     'messages' => [
+        'booking_request_source' => 'Booking request',
         'manual_repair_order' => 'Manual repair order',
+        'no_documents' => 'No documents available yet.',
         'no_estimate_pdfs' => 'No estimate PDFs created yet.',
+        'no_estimate_summary' => 'No estimate created yet.',
         'no_vehicle' => 'No vehicle',
         'no_working_lines' => 'No working lines yet.',
     ],
@@ -103,10 +100,19 @@ return [
 
     'sections' => [
         'estimates' => 'Estimates',
+        'latest_estimate' => 'Latest estimate',
         'timeline' => 'Timeline',
         'work_document' => 'Work document',
         'working_lines' => 'Working repair order lines',
         'working_totals' => 'Working totals',
+    ],
+
+    'tabs' => [
+        'documents' => 'Documents',
+        'estimates' => 'Estimates',
+        'lines' => 'Lines',
+        'overview' => 'Overview',
+        'timeline' => 'Timeline',
     ],
 
     'totals' => [
@@ -116,6 +122,8 @@ return [
     ],
 
     'units' => [
+        'document_singular' => 'document',
+        'document_plural' => 'documents',
         'line_singular' => 'line',
         'line_plural' => 'lines',
         'version_singular' => 'version',

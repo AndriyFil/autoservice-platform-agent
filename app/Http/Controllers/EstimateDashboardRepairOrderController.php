@@ -16,7 +16,7 @@ class EstimateDashboardRepairOrderController extends Controller
         GenerateRepairOrderEstimateAction $generateRepairOrderEstimate,
     ): RedirectResponse {
         try {
-            $result = $generateRepairOrderEstimate->handle(
+            $generateRepairOrderEstimate->handle(
                 $request->attributes->get('activeWorkshopUser'),
                 $repairOrder,
             );
@@ -27,8 +27,6 @@ class EstimateDashboardRepairOrderController extends Controller
         }
 
         return to_route('dashboard.repair-orders.show', $repairOrder)
-            ->with('status', $result->regenerated
-                ? __('repair_orders.estimate_regenerated')
-                : __('repair_orders.estimate_created'));
+            ->with('status', __('repair_orders.estimate_created'));
     }
 }

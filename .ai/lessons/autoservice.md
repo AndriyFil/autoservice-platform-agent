@@ -76,6 +76,12 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 
 ## 2026-07-03 - Separate Estimate Snapshot From PDF Rendering
 
-- Correction: Do not put estimate creation/regeneration and PDF generation/storage in the same class.
-- Lesson: Keep estimate snapshot lifecycle rules in one focused action, then pass the prepared `Estimate` object into a separate PDF generation action that only renders/stores the document.
-- Applies when: Implementing or reviewing estimate creation, estimate regeneration, document archiving, PDF generation, or action responsibility boundaries.
+- Correction: Do not put estimate snapshot lifecycle and PDF generation/storage in the same class.
+- Lesson: Keep estimate snapshot versioning rules in one focused action, then pass the prepared `Estimate` object into a separate PDF generation action that only renders/stores the document.
+- Applies when: Implementing or reviewing estimate creation, estimate versioning, document history, PDF generation, or action responsibility boundaries.
+
+## 2026-07-03 - Estimate Generation Creates Versions
+
+- Correction: Staff may generate estimate PDFs repeatedly; repeated generation must create a new estimate version, not rebuild the latest generated estimate.
+- Lesson: Treat each allowed estimate generation as a new immutable `Estimate` snapshot with the next version and its own PDF document. Do not archive, overwrite, or mutate previous generated estimate versions just because staff generated again.
+- Applies when: Implementing or reviewing estimate PDF generation, estimate versioning, document history, dashboard estimate lists, or tests around repeated estimate generation.

@@ -1,16 +1,26 @@
 import type { RepairOrderStatusValue, RepairOrderVehicle } from './types';
 
-export const canCompleteRepairOrder = (status: RepairOrderStatusValue) =>
-    ['draft', 'in_progress'].includes(status);
+export const canCompleteRepairOrder = (status: RepairOrderStatusValue) => ['draft', 'in_progress'].includes(status);
 
-export const canCancelRepairOrder = (status: RepairOrderStatusValue) =>
-    ['draft', 'estimated', 'approved', 'in_progress'].includes(status);
+export const canCancelRepairOrder = (status: RepairOrderStatusValue) => ['draft', 'estimated', 'approved', 'in_progress'].includes(status);
 
 export const formatCents = (cents: number): string =>
     new Intl.NumberFormat(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(cents / 100);
+
+export const centsToDecimalInput = (cents: number): string => (cents / 100).toFixed(2);
+
+export const decimalInputToCents = (value: string): number => {
+    const amount = Number.parseFloat(value);
+
+    if (Number.isNaN(amount)) {
+        return 0;
+    }
+
+    return Math.round(amount * 100);
+};
 
 export const vehicleSummary = (vehicle: RepairOrderVehicle | null, emptyLabel = 'No vehicle'): string => {
     if (!vehicle) {

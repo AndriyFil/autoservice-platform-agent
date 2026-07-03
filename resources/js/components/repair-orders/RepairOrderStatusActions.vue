@@ -3,8 +3,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
-import { Ban, Check, FileText, RefreshCw } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Ban, Check, FileText } from 'lucide-vue-next';
 import type { RepairOrderStatusActions } from './types';
 
 const props = defineProps<{
@@ -19,11 +18,6 @@ const completeForm = useForm({});
 const cancelForm = useForm({});
 
 const anyProcessing = () => estimateForm.processing || completeForm.processing || cancelForm.processing;
-
-const canSubmitEstimate = computed(() => props.actions.canMarkEstimated || props.actions.canRegenerateEstimate);
-const estimateLabel = computed(() =>
-    props.actions.canRegenerateEstimate ? t('repair_orders.actions.regenerate_estimate_pdf') : t('repair_orders.actions.create_estimate_pdf'),
-);
 
 const submitEstimate = () => {
     estimateForm.post(route('dashboard.repair-orders.estimate', { repairOrder: props.repairOrderId }), {
@@ -47,17 +41,9 @@ const submitCancel = () => {
 <template>
     <div class="space-y-2">
         <div class="flex flex-wrap gap-2">
-            <Button
-                v-if="canSubmitEstimate"
-                type="button"
-                size="sm"
-                :variant="actions.canRegenerateEstimate ? 'outline' : 'default'"
-                :disabled="anyProcessing()"
-                @click="submitEstimate"
-            >
-                <RefreshCw v-if="actions.canRegenerateEstimate" class="size-4" />
-                <FileText v-else class="size-4" />
-                {{ estimateLabel }}
+            <Button v-if="actions.canMarkEstimated" type="button" size="sm" :disabled="anyProcessing()" @click="submitEstimate">
+                <FileText class="size-4" />
+                {{ t('repair_orders.actions.create_estimate_pdf') }}
             </Button>
 
             <Button
