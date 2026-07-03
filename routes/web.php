@@ -5,6 +5,7 @@ use App\Http\Controllers\CancelDashboardRepairOrderController;
 use App\Http\Controllers\CompleteDashboardRepairOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
+use App\Http\Controllers\DashboardDocumentDownloadController;
 use App\Http\Controllers\DashboardRepairOrderLineController;
 use App\Http\Controllers\DashboardRepairOrderController;
 use App\Http\Controllers\EstimateDashboardRepairOrderController;
@@ -26,6 +27,7 @@ Route::get('w/{workshop:slug}', [PublicIntakeController::class, 'create'])
     ->name('public-intake.create');
 
 Route::post('w/{workshop:slug}/intake', [PublicIntakeController::class, 'store'])
+    ->middleware('throttle:10,1')
     ->name('public-intake.store');
 
 Route::get('dashboard', [DashboardController::class, 'show'])
@@ -79,6 +81,14 @@ Route::middleware(['auth', EnsureActiveWorkshop::class])
     });
 
 Route::middleware(['auth', EnsureActiveWorkshop::class])
+    ->prefix('dashboard/documents')
+    ->name('dashboard.documents.')
+    ->group(function () {
+        Route::get('{document}/download', [DashboardDocumentDownloadController::class, 'show'])
+            ->name('download');
+    });
+
+Route::middleware(['auth', EnsureActiveWorkshop::class])
     ->prefix('customers')
     ->name('customers.')
     ->group(function () {
@@ -93,6 +103,7 @@ Route::get('book/{workshop:slug}', [PublicBookingRequestController::class, 'crea
     ->name('public-booking-requests.create');
 
 Route::post('book/{workshop:slug}', [PublicBookingRequestController::class, 'store'])
+    ->middleware('throttle:10,1')
     ->name('public-booking-requests.store');
 
 Route::get('book/{workshop:slug}/success', [PublicBookingRequestController::class, 'success'])

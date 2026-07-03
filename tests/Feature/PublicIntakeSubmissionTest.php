@@ -185,6 +185,57 @@ class PublicIntakeSubmissionTest extends TestCase
                 ->where('intakeSubmitted', true));
     }
 
+    public function test_filled_honeypot_field_rejects_submission_without_creating_booking_request(): void
+    {
+        Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        $response = $this->from('/w/main-auto')->post('/w/main-auto/intake', [
+            'message' => 'Toyota Corolla needs oil service next week.',
+            'website' => 'https://spam.example',
+        ]);
+
+        $response
+            ->assertSessionHasErrors('website')
+            ->assertRedirect('/w/main-auto');
+
+        $this->assertDatabaseCount('booking_requests', 0);
+    }
+
+    public function test_empty_honeypot_field_does_not_block_submission(): void
+    {
+        Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        $this->post('/w/main-auto/intake', [
+            'message' => 'Toyota Corolla needs oil service next week.',
+            'website' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('booking_requests', 1);
+    }
+
+    public function test_public_intake_submission_is_rate_limited(): void
+    {
+        Workshop::factory()->create([
+            'slug' => 'main-auto',
+        ]);
+
+        for ($attempt = 1; $attempt <= 10; $attempt++) {
+            $this->post('/w/main-auto/intake', [
+                'message' => "Toyota Corolla needs oil service, attempt {$attempt}.",
+            ])->assertRedirect('/w/main-auto');
+        }
+
+        $this->post('/w/main-auto/intake', [
+            'message' => 'Toyota Corolla needs oil service, attempt 11.',
+        ])->assertStatus(429);
+
+        $this->assertDatabaseCount('booking_requests', 10);
+    }
+
     public function test_booking_requests_do_not_store_diagnosis_or_recommendation_fields(): void
     {
         $columns = Schema::getColumnListing('booking_requests');

@@ -28,6 +28,8 @@ class StorePublicIntakeRequest extends FormRequest
                     }
                 },
             ],
+            // Honeypot: hidden field real customers never fill; bots do.
+            'website' => ['prohibited'],
         ];
     }
 

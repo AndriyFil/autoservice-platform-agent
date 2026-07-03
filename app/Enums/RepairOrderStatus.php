@@ -13,14 +13,7 @@ enum RepairOrderStatus: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Draft => 'Draft',
-            self::Estimated => 'Estimated',
-            self::Approved => 'Approved',
-            self::InProgress => 'In Progress',
-            self::Completed => 'Completed',
-            self::Cancelled => 'Cancelled',
-        };
+        return __("repair_orders.repair_order_statuses.{$this->value}");
     }
 
     public function canTransitionTo(self $status): bool

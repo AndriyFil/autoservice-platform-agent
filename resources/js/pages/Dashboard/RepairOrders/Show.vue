@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
+import RepairOrderEstimatesSection from '@/components/repair-orders/RepairOrderEstimatesSection.vue';
 import RepairOrderLinesSection from '@/components/repair-orders/RepairOrderLinesSection.vue';
 import RepairOrderStatusBadge from '@/components/repair-orders/RepairOrderStatusBadge.vue';
 import RepairOrderStatusActions from '@/components/repair-orders/RepairOrderStatusActions.vue';
@@ -7,16 +8,18 @@ import RepairOrderTotalsSummary from '@/components/repair-orders/RepairOrderTota
 import type { RepairOrderShowProps } from '@/components/repair-orders/types';
 import { formatDate, formatDateTime, vehicleSummary } from '@/components/repair-orders/utils';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/composables/useTranslations';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, ClipboardList } from 'lucide-vue-next';
 
 const props = defineProps<RepairOrderShowProps>();
+const { t } = useTranslations();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Repair orders',
+        title: t('repair_orders.navigation.repair_orders'),
         href: route('dashboard.repair-orders.index'),
     },
     {
@@ -36,7 +39,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <div class="space-y-2">
                     <Link :href="route('dashboard.repair-orders.index')" class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft class="size-4" />
-                        Repair orders
+                        {{ t('repair_orders.navigation.repair_orders') }}
                     </Link>
 
                     <div>
@@ -61,66 +64,66 @@ const breadcrumbs: BreadcrumbItem[] = [
             <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
                 <section class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-sidebar-border/70 pb-4 dark:border-sidebar-border">
-                        <h2 class="text-base font-semibold text-foreground">Work document</h2>
+                        <h2 class="text-base font-semibold text-foreground">{{ t('repair_orders.sections.work_document') }}</h2>
                         <RepairOrderStatusBadge :status="repairOrder.status" />
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Customer</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.customer') }}</div>
                             <div class="mt-1 text-sm text-foreground">{{ repairOrder.customer.name }}</div>
                             <div class="text-sm text-muted-foreground">{{ repairOrder.customer.phone }}</div>
                         </div>
 
                         <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Vehicle</div>
-                            <div class="mt-1 text-sm text-foreground">{{ vehicleSummary(repairOrder.vehicle) }}</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.vehicle') }}</div>
+                            <div class="mt-1 text-sm text-foreground">{{ vehicleSummary(repairOrder.vehicle, t('repair_orders.messages.no_vehicle')) }}</div>
                         </div>
                     </div>
 
                     <div>
-                        <div class="text-xs font-medium uppercase text-muted-foreground">Problem</div>
+                        <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.problem') }}</div>
                         <p class="mt-1 whitespace-pre-line text-sm leading-6 text-foreground">{{ repairOrder.problemDescription }}</p>
                     </div>
                 </section>
 
                 <aside class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                    <h2 class="text-base font-semibold text-foreground">Timeline</h2>
+                    <h2 class="text-base font-semibold text-foreground">{{ t('repair_orders.sections.timeline') }}</h2>
 
                     <div class="space-y-3 text-sm">
                         <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Opened</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.opened') }}</div>
                             <div class="mt-1 text-foreground">{{ formatDateTime(repairOrder.openedAt) }}</div>
                         </div>
 
                         <div>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Closed</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.closed') }}</div>
                             <div class="mt-1 text-foreground">{{ formatDateTime(repairOrder.closedAt) }}</div>
                         </div>
 
                         <div v-if="repairOrder.bookingRequest">
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Source request</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.source_request') }}</div>
                             <Button as-child size="sm" variant="outline" class="mt-1">
                                 <Link :href="route('dashboard.booking-requests.show', { bookingRequest: repairOrder.bookingRequest.id })">
                                     <ClipboardList class="size-4" />
-                                    View booking request
+                                    {{ t('repair_orders.actions.view_booking_request') }}
                                 </Link>
                             </Button>
                         </div>
 
                         <div v-if="repairOrder.bookingRequest?.originalMessage">
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Original message</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.original_message') }}</div>
                             <p class="mt-1 whitespace-pre-line text-foreground">{{ repairOrder.bookingRequest.originalMessage }}</p>
                         </div>
 
                         <div v-if="repairOrder.bookingRequest">
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Preferred date</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.preferred_date') }}</div>
                             <div class="mt-1 text-foreground">{{ formatDate(repairOrder.bookingRequest.preferredDate) }}</div>
                         </div>
 
                         <div v-else>
-                            <div class="text-xs font-medium uppercase text-muted-foreground">Source</div>
-                            <div class="mt-1 text-foreground">Manual repair order</div>
+                            <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.source') }}</div>
+                            <div class="mt-1 text-foreground">{{ t('repair_orders.messages.manual_repair_order') }}</div>
                         </div>
                     </div>
                 </aside>
@@ -133,8 +136,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     :available-line-types="repairOrder.availableLineTypes"
                 />
 
-                <RepairOrderTotalsSummary :totals="repairOrder.estimateTotals" />
+                <RepairOrderTotalsSummary :totals="repairOrder.workingTotals" />
             </div>
+
+            <RepairOrderEstimatesSection :estimates="repairOrder.estimates" />
         </div>
     </AppLayout>
 </template>

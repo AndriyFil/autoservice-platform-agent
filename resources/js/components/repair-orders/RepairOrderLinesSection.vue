@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Save, Trash2, X } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -21,6 +22,7 @@ const props = defineProps<{
     lines: RepairOrderLine[];
     availableLineTypes: RepairOrderLineTypeOption[];
 }>();
+const { t } = useTranslations();
 
 const editingLineId = ref<number | null>(null);
 
@@ -96,14 +98,16 @@ const deleteLine = (line: RepairOrderLine) => {
 <template>
     <section class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-foreground">Estimate lines</h2>
-            <div class="text-sm text-muted-foreground">{{ lines.length }} line{{ lines.length === 1 ? '' : 's' }}</div>
+            <h2 class="text-base font-semibold text-foreground">{{ t('repair_orders.sections.working_lines') }}</h2>
+            <div class="text-sm text-muted-foreground">
+                {{ lines.length }} {{ t(lines.length === 1 ? 'repair_orders.units.line_singular' : 'repair_orders.units.line_plural') }}
+            </div>
         </div>
 
         <form class="grid gap-3 rounded-md border border-sidebar-border/70 bg-muted/30 p-3 dark:border-sidebar-border" @submit.prevent="submitAddLine">
             <div class="grid gap-3 lg:grid-cols-[8rem_minmax(0,1fr)_7rem_9rem_7rem_6rem]">
                 <label class="space-y-1 text-sm">
-                    <span class="font-medium text-foreground">Type</span>
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.type') }}</span>
                     <select v-model="addForm.type" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                         <option v-for="type in availableLineTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                     </select>
@@ -111,31 +115,31 @@ const deleteLine = (line: RepairOrderLine) => {
                 </label>
 
                 <label class="space-y-1 text-sm">
-                    <span class="font-medium text-foreground">Description</span>
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.description') }}</span>
                     <input v-model="addForm.description" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="text" />
                     <InputError :message="addForm.errors.description" />
                 </label>
 
                 <label class="space-y-1 text-sm">
-                    <span class="font-medium text-foreground">Qty</span>
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.quantity') }}</span>
                     <input v-model="addForm.quantity" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="number" min="0.01" step="0.01" />
                     <InputError :message="addForm.errors.quantity" />
                 </label>
 
                 <label class="space-y-1 text-sm">
-                    <span class="font-medium text-foreground">Unit cents</span>
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.unit_cents') }}</span>
                     <input v-model.number="addForm.unit_price_cents" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="number" min="0" step="1" />
                     <InputError :message="addForm.errors.unit_price_cents" />
                 </label>
 
                 <label class="space-y-1 text-sm">
-                    <span class="font-medium text-foreground">Tax %</span>
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.tax') }} %</span>
                     <input v-model="addForm.tax_rate" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="number" min="0" max="100" step="0.01" />
                     <InputError :message="addForm.errors.tax_rate" />
                 </label>
 
                 <label class="space-y-1 text-sm">
-                    <span class="font-medium text-foreground">Order</span>
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.order') }}</span>
                     <input v-model.number="addForm.sort_order" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="number" min="0" step="1" />
                     <InputError :message="addForm.errors.sort_order" />
                 </label>
@@ -144,26 +148,26 @@ const deleteLine = (line: RepairOrderLine) => {
             <div class="flex justify-end">
                 <Button type="submit" size="sm" :disabled="addForm.processing">
                     <Plus class="size-4" />
-                    Add line
+                    {{ t('repair_orders.actions.add_line') }}
                 </Button>
             </div>
         </form>
 
         <div v-if="lines.length === 0" class="rounded-md border border-dashed border-sidebar-border/70 p-6 text-center text-sm text-muted-foreground dark:border-sidebar-border">
-            No estimate lines yet.
+            {{ t('repair_orders.messages.no_working_lines') }}
         </div>
 
         <div v-else class="overflow-x-auto rounded-md border border-sidebar-border/70 dark:border-sidebar-border">
             <table class="w-full text-left text-sm">
                 <thead class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border">
                     <tr>
-                        <th class="px-3 py-2">Type</th>
-                        <th class="px-3 py-2">Description</th>
-                        <th class="px-3 py-2 text-right">Qty</th>
-                        <th class="px-3 py-2 text-right">Unit</th>
-                        <th class="px-3 py-2 text-right">Tax</th>
-                        <th class="px-3 py-2 text-right">Total</th>
-                        <th class="px-3 py-2 text-right">Actions</th>
+                        <th class="px-3 py-2">{{ t('repair_orders.fields.type') }}</th>
+                        <th class="px-3 py-2">{{ t('repair_orders.fields.description') }}</th>
+                        <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.quantity') }}</th>
+                        <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.unit') }}</th>
+                        <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.tax') }}</th>
+                        <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.total') }}</th>
+                        <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
@@ -195,11 +199,11 @@ const deleteLine = (line: RepairOrderLine) => {
                                 <div class="flex justify-end gap-2">
                                     <Button type="button" size="sm" :disabled="editForm.processing" @click="submitEditLine(line)">
                                         <Save class="size-4" />
-                                        Save
+                                        {{ t('repair_orders.actions.save') }}
                                     </Button>
                                     <Button type="button" size="sm" variant="outline" :disabled="editForm.processing" @click="cancelEditing">
                                         <X class="size-4" />
-                                        Cancel
+                                        {{ t('repair_orders.actions.cancel') }}
                                     </Button>
                                 </div>
                             </td>
@@ -216,11 +220,11 @@ const deleteLine = (line: RepairOrderLine) => {
                                 <div class="flex justify-end gap-2">
                                     <Button type="button" size="sm" variant="outline" :disabled="deleteForm.processing" @click="startEditing(line)">
                                         <Pencil class="size-4" />
-                                        Edit
+                                        {{ t('repair_orders.actions.edit') }}
                                     </Button>
                                     <Button type="button" size="sm" variant="destructive" :disabled="deleteForm.processing" @click="deleteLine(line)">
                                         <Trash2 class="size-4" />
-                                        Delete
+                                        {{ t('repair_orders.actions.delete') }}
                                     </Button>
                                 </div>
                             </td>

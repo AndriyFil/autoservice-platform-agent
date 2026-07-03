@@ -75,6 +75,11 @@ class RepairOrder extends Model
         return $this->hasMany(RepairOrderLine::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function estimates(): HasMany
+    {
+        return $this->hasMany(Estimate::class)->orderByDesc('version');
+    }
+
     public function subtotalCents(): int
     {
         return $this->lines->sum(fn (RepairOrderLine $line): int => $line->subtotalCents());

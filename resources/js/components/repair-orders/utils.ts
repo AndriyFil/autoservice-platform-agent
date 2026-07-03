@@ -12,14 +12,14 @@ export const formatCents = (cents: number): string =>
         maximumFractionDigits: 2,
     }).format(cents / 100);
 
-export const vehicleSummary = (vehicle: RepairOrderVehicle | null): string => {
+export const vehicleSummary = (vehicle: RepairOrderVehicle | null, emptyLabel = 'No vehicle'): string => {
     if (!vehicle) {
-        return 'No vehicle';
+        return emptyLabel;
     }
 
     const parts = [vehicle.brand, vehicle.model, vehicle.licensePlate].filter(Boolean);
 
-    return parts.length > 0 ? parts.join(' ') : 'No vehicle';
+    return parts.length > 0 ? parts.join(' ') : emptyLabel;
 };
 
 export const formatDate = (date: string | null): string => {

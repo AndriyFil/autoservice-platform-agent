@@ -87,6 +87,27 @@ export type RepairOrderEstimateTotals = {
     totalCents: number;
 };
 
+export type RepairOrderEstimateDocument = {
+    id: number;
+    filename: string;
+    downloadUrl: string;
+};
+
+export type RepairOrderEstimate = {
+    id: number;
+    version: number;
+    status: {
+        value: 'draft' | 'generated' | 'approved' | 'rejected' | 'superseded' | 'cancelled';
+        label: string;
+    };
+    subtotalCents: number;
+    taxCents: number;
+    totalCents: number;
+    currency: string;
+    generatedAt: string | null;
+    document: RepairOrderEstimateDocument | null;
+};
+
 export type RepairOrderStatusActions = {
     canMarkEstimated: boolean;
     canComplete: boolean;
@@ -101,7 +122,9 @@ export type RepairOrderDetails = {
     openedAt: string;
     closedAt: string | null;
     lines: RepairOrderLine[];
+    workingTotals: RepairOrderEstimateTotals;
     estimateTotals: RepairOrderEstimateTotals;
+    estimates: RepairOrderEstimate[];
     availableLineTypes: RepairOrderLineTypeOption[];
     statusActions: RepairOrderStatusActions;
     customer: RepairOrderCustomer;

@@ -2,10 +2,15 @@
 
 namespace App\Support\Intake;
 
-use LogicException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+use Throwable;
 
 class LlmIntakeExtractor implements IntakeExtractorInterface
 {
+    public const MAX_MESSAGE_CHARACTERS = 4000;
+
     public const PROMPT_SPEC = <<<'PROMPT'
 You extract structured intake data for an auto service advisor.
 
@@ -31,8 +36,53 @@ Rules:
 - Do not claim a confirmed cause.
 PROMPT;
 
+    public function __construct(
+        private readonly OpenAiIntakeExtractionResultMapper $resultMapper,
+        private readonly ManualFallbackIntakeExtractor $fallbackExtractor,
+        private readonly string $apiKey,
+        private readonly string $model,
+        private readonly string $baseUrl,
+        private readonly int $timeoutSeconds,
+    ) {}
+
     public function extract(string $message): IntakeExtractionResult
     {
-        throw new LogicException('LLM intake extraction is not configured yet.');
+        try {
+            return $this->resultMapper->map($this->requestExtraction($message));
+        } catch (Throwable $exception) {
+            Log::warning('LLM intake extraction failed, using manual fallback.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $this->fallbackExtractor->extract($message);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function requestExtraction(string $message): array
+    {
+        $response = Http::withToken($this->apiKey)
+            ->timeout($this->timeoutSeconds)
+            ->post("{$this->baseUrl}/chat/completions", [
+                'model' => $this->model,
+                'temperature' => 0,
+                'response_format' => ['type' => 'json_object'],
+                'messages' => [
+                    ['role' => 'system', 'content' => self::PROMPT_SPEC],
+                    ['role' => 'user', 'content' => mb_substr($message, 0, self::MAX_MESSAGE_CHARACTERS)],
+                ],
+            ])
+            ->throw();
+
+        $content = $response->json('choices.0.message.content');
+        $data = is_string($content) ? json_decode($content, true) : null;
+
+        if (! is_array($data)) {
+            throw new RuntimeException('OpenAI intake extraction returned invalid JSON.');
+        }
+
+        return $data;
     }
 }

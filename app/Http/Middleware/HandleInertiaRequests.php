@@ -48,6 +48,9 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'status' => $request->session()->get('status'),
             ],
+            'translations' => [
+                'repair_orders' => __('repair_orders'),
+            ],
         ]);
     }
 }

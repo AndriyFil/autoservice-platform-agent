@@ -11,11 +11,6 @@ enum RepairOrderLineType: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Labor => 'Labor',
-            self::Part => 'Part',
-            self::Fee => 'Fee',
-            self::Discount => 'Discount',
-        };
+        return __("repair_orders.line_types.{$this->value}");
     }
 }

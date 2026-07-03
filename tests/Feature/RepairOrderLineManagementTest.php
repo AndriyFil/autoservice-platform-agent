@@ -6,12 +6,14 @@ use App\Enums\RepairOrderLineType;
 use App\Enums\RepairOrderStatus;
 use App\Enums\WorkshopUserRole;
 use App\Models\Customer;
+use App\Models\Estimate;
 use App\Models\RepairOrder;
 use App\Models\RepairOrderLine;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -222,13 +224,17 @@ class RepairOrderLineManagementTest extends TestCase
                 ->where('repairOrder.estimateTotals.totalCents', 21500)
                 ->where('repairOrder.availableLineTypes.0.value', 'labor')
                 ->where('repairOrder.availableLineTypes.3.value', 'discount')
+                ->where('translations.repair_orders.sections.estimates', __('repair_orders.sections.estimates'))
+                ->where('translations.repair_orders.actions.create_estimate_pdf', __('repair_orders.actions.create_estimate_pdf'))
                 ->where('repairOrder.statusActions.canMarkEstimated', true)
                 ->where('repairOrder.statusActions.canComplete', true)
                 ->where('repairOrder.statusActions.canCancel', true));
     }
 
-    public function test_draft_repair_order_with_lines_can_be_marked_estimated(): void
+    public function test_draft_repair_order_with_lines_can_create_estimate_pdf_and_become_estimated(): void
     {
+        Storage::fake('documents_local');
+
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
@@ -243,9 +249,17 @@ class RepairOrderLineManagementTest extends TestCase
             ->from(route('dashboard.repair-orders.show', $repairOrder))
             ->post(route('dashboard.repair-orders.estimate', $repairOrder))
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHas('status', 'Repair order marked as estimated.');
+            ->assertSessionHas('status', __('repair_orders.estimate_created'));
 
         $this->assertSame(RepairOrderStatus::Estimated, $repairOrder->refresh()->status);
+        $this->assertDatabaseHas('estimates', [
+            'repair_order_id' => $repairOrder->id,
+            'version' => 1,
+        ]);
+        $this->assertDatabaseHas('documents', [
+            'type' => 'estimate_pdf',
+            'documentable_type' => Estimate::class,
+        ]);
     }
 
     public function test_draft_repair_order_without_lines_cannot_be_marked_estimated(): void
@@ -266,8 +280,10 @@ class RepairOrderLineManagementTest extends TestCase
         $this->assertSame(RepairOrderStatus::Draft, $repairOrder->refresh()->status);
     }
 
-    public function test_non_draft_repair_order_cannot_be_marked_estimated_again(): void
+    public function test_non_draft_repair_order_can_create_another_estimate_version(): void
     {
+        Storage::fake('documents_local');
+
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
@@ -284,9 +300,13 @@ class RepairOrderLineManagementTest extends TestCase
             ->from(route('dashboard.repair-orders.show', $repairOrder))
             ->post(route('dashboard.repair-orders.estimate', $repairOrder))
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
+            ->assertSessionHas('status', __('repair_orders.estimate_created'));
 
         $this->assertSame(RepairOrderStatus::Estimated, $repairOrder->refresh()->status);
+        $this->assertDatabaseHas('estimates', [
+            'repair_order_id' => $repairOrder->id,
+            'version' => 1,
+        ]);
     }
 
     private function createMembership(

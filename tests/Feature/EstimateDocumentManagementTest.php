@@ -1,0 +1,233 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\RepairOrderLineType;
+use App\Enums\WorkshopUserRole;
+use App\Models\Customer;
+use App\Models\Document;
+use App\Models\Estimate;
+use App\Models\RepairOrder;
+use App\Models\RepairOrderLine;
+use App\Models\User;
+use App\Models\Workshop;
+use App\Models\WorkshopUser;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class EstimateDocumentManagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_creating_estimate_copies_current_repair_order_lines_into_immutable_snapshot(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        $line = RepairOrderLine::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'type' => RepairOrderLineType::Labor,
+            'description' => 'Initial diagnostic labor',
+            'quantity' => '2.00',
+            'unit_price_cents' => 10000,
+            'tax_rate' => '20.00',
+            'sort_order' => 1,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', __('repair_orders.estimate_created'));
+
+        $estimate = Estimate::query()->with('lines')->sole();
+
+        $this->assertSame(1, $estimate->version);
+        $this->assertSame(20000, $estimate->subtotal_cents);
+        $this->assertSame(4000, $estimate->tax_cents);
+        $this->assertSame(24000, $estimate->total_cents);
+        $this->assertSame('Initial diagnostic labor', $estimate->lines->sole()->description);
+        $this->assertSame(20000, $estimate->lines->sole()->subtotal_cents);
+        $this->assertSame(4000, $estimate->lines->sole()->tax_cents);
+        $this->assertSame(24000, $estimate->lines->sole()->total_cents);
+
+        $line->update([
+            'description' => 'Changed working line',
+            'quantity' => '1.00',
+            'unit_price_cents' => 5000,
+        ]);
+
+        $this->assertSame('Initial diagnostic labor', $estimate->lines->sole()->refresh()->description);
+        $this->assertSame(24000, $estimate->lines->sole()->refresh()->total_cents);
+    }
+
+    public function test_creating_second_estimate_uses_next_version_without_mutating_old_estimate_lines(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        $line = RepairOrderLine::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'description' => 'First version line',
+            'quantity' => '1.00',
+            'unit_price_cents' => 10000,
+            'tax_rate' => '0.00',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder));
+
+        $line->update([
+            'description' => 'Second version line',
+            'unit_price_cents' => 12000,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder));
+
+        $estimates = Estimate::query()->with('lines')->orderBy('version')->get();
+
+        $this->assertCount(2, $estimates);
+        $this->assertSame(1, $estimates[0]->version);
+        $this->assertSame(2, $estimates[1]->version);
+        $this->assertSame('First version line', $estimates[0]->lines->sole()->description);
+        $this->assertSame(10000, $estimates[0]->lines->sole()->total_cents);
+        $this->assertSame('Second version line', $estimates[1]->lines->sole()->description);
+        $this->assertSame(12000, $estimates[1]->lines->sole()->total_cents);
+    }
+
+    public function test_generated_pdf_creates_private_document_with_storage_metadata_and_workshop_scope(): void
+    {
+        Storage::fake('documents_local');
+
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        RepairOrderLine::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'description' => 'Estimate PDF line',
+            'quantity' => '1.00',
+            'unit_price_cents' => 15000,
+            'tax_rate' => '10.00',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasNoErrors();
+
+        $document = Document::query()->sole();
+
+        $this->assertSame('estimate_pdf', $document->type->value);
+        $this->assertSame($workshop->id, $document->workshop_id);
+        $this->assertSame('documents_local', $document->disk);
+        $this->assertSame('application/pdf', $document->mime_type);
+        $this->assertNotNull($document->size_bytes);
+        $this->assertGreaterThan(0, $document->size_bytes);
+        $this->assertNotNull($document->checksum_sha256);
+        $this->assertSame(64, strlen($document->checksum_sha256));
+        $this->assertInstanceOf(Estimate::class, $document->documentable);
+        Storage::disk('documents_local')->assertExists($document->path);
+    }
+
+    public function test_creating_estimate_uses_localized_status_flash_message(): void
+    {
+        app()->setLocale('uk');
+
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        RepairOrderLine::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'description' => 'Localized estimate line',
+            'unit_price_cents' => 15000,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', __('repair_orders.estimate_created'));
+    }
+
+    public function test_same_workshop_can_download_document_and_another_workshop_cannot(): void
+    {
+        Storage::fake('documents_local');
+
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $this->createMembership($user, $otherWorkshop);
+        $repairOrder = $this->createRepairOrder($workshop);
+        RepairOrderLine::factory()->create([
+            'repair_order_id' => $repairOrder->id,
+            'description' => 'Downloadable estimate line',
+            'unit_price_cents' => 15000,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.estimate', $repairOrder));
+
+        $document = Document::query()->sole();
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.documents.download', $document))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $otherWorkshop->id])
+            ->get(route('dashboard.documents.download', $document))
+            ->assertNotFound();
+    }
+
+    private function createMembership(
+        User $user,
+        Workshop $workshop,
+        WorkshopUserRole $role = WorkshopUserRole::Owner,
+    ): WorkshopUser {
+        return WorkshopUser::create([
+            'user_id' => $user->id,
+            'workshop_id' => $workshop->id,
+            'role' => $role,
+        ]);
+    }
+
+    private function createRepairOrder(Workshop $workshop): RepairOrder
+    {
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Jane Driver',
+            'phone' => '+1 555 123 4567',
+            'normalized_phone' => '15551234567',
+        ]);
+
+        return RepairOrder::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'vehicle_id' => null,
+            'booking_request_id' => null,
+            'status' => 'draft',
+            'problem_description' => 'Brake noise on cold start.',
+            'opened_at' => now(),
+            'closed_at' => null,
+        ]);
+    }
+}

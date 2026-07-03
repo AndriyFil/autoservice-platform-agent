@@ -55,6 +55,11 @@ class Workshop extends Model
         return $this->hasMany(RepairOrder::class);
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
     public function repairOrderLines(): HasManyThrough
     {
         return $this->hasManyThrough(RepairOrderLine::class, RepairOrder::class);

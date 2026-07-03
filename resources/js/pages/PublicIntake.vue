@@ -19,6 +19,7 @@ const exampleMessages = [
 
 const form = useForm({
     message: '',
+    website: '',
 });
 
 const messageInput = ref<HTMLTextAreaElement | null>(null);
@@ -92,6 +93,15 @@ const submit = () => {
                 </section>
 
                 <form v-else class="w-full" @submit.prevent="submit">
+                    <input
+                        v-model="form.website"
+                        type="text"
+                        name="website"
+                        tabindex="-1"
+                        autocomplete="off"
+                        aria-hidden="true"
+                        class="hidden"
+                    />
                     <div
                         class="rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_60px_-32px_rgba(47,100,113,0.55)] transition focus-within:border-[#2f6471]/50 focus-within:shadow-[0_24px_70px_-34px_rgba(47,100,113,0.65)]"
                     >

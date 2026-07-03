@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
-import { Ban, Check, ClipboardCheck } from 'lucide-vue-next';
+import { Ban, Check, FileText } from 'lucide-vue-next';
 import type { RepairOrderStatusActions } from './types';
 
 const props = defineProps<{
@@ -10,6 +11,7 @@ const props = defineProps<{
     actions: RepairOrderStatusActions;
     statusError?: string;
 }>();
+const { t } = useTranslations();
 
 const estimateForm = useForm({});
 const completeForm = useForm({});
@@ -45,8 +47,8 @@ const submitCancel = () => {
                 :disabled="estimateForm.processing || completeForm.processing || cancelForm.processing"
                 @click="submitEstimate"
             >
-                <ClipboardCheck class="size-4" />
-                Mark as estimated
+                <FileText class="size-4" />
+                {{ t('repair_orders.actions.create_estimate_pdf') }}
             </Button>
 
             <Button
@@ -58,7 +60,7 @@ const submitCancel = () => {
                 @click="submitComplete"
             >
                 <Check class="size-4" />
-                Complete
+                {{ t('repair_orders.actions.complete') }}
             </Button>
 
             <Button
@@ -70,7 +72,7 @@ const submitCancel = () => {
                 @click="submitCancel"
             >
                 <Ban class="size-4" />
-                Cancel
+                {{ t('repair_orders.actions.cancel') }}
             </Button>
         </div>
 
