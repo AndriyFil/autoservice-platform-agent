@@ -12,12 +12,14 @@ return [
         'download' => 'Завантажити',
         'edit' => 'Редагувати',
         'save' => 'Зберегти',
+        'regenerate_estimate_pdf' => 'Повторно створити PDF кошторису',
+        'start_work' => 'Почати роботу',
         'view_booking_request' => 'Переглянути заявку',
     ],
 
     'estimate_errors' => [
         'missing_lines' => 'Додайте щонайменше одну позицію замовлення на ремонт перед створенням кошторису.',
-        'repair_order_locked' => 'Після затвердження замовлення на ремонт PDF кошторису більше не можна створити.',
+        'repair_order_locked' => 'PDF кошторису більше не можна створити для цього замовлення на ремонт.',
     ],
 
     'fields' => [
@@ -92,7 +94,6 @@ return [
     'repair_order_statuses' => [
         'draft' => 'Чернетка',
         'estimated' => 'Оцінено',
-        'approved' => 'Схвалено',
         'in_progress' => 'У роботі',
         'completed' => 'Завершено',
         'cancelled' => 'Скасовано',

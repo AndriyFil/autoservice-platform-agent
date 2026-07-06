@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Phone;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,8 +23,27 @@ class Customer extends Model
         'workshop_id',
         'name',
         'phone',
+        'phone_normalized',
         'normalized_phone',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Customer $customer): void {
+            if (! $customer->isDirty('phone') && filled($customer->phone_normalized)) {
+                return;
+            }
+
+            $phone = (string) $customer->phone;
+            $phoneValue = new Phone($phone);
+
+            $customer->phone_normalized = $phoneValue->normalize();
+
+            if (! filled($customer->normalized_phone)) {
+                $customer->normalized_phone = $phoneValue->normalizeLegacyDigits();
+            }
+        });
+    }
 
     /** @return BelongsTo<Workshop, $this> */
     public function workshop(): BelongsTo

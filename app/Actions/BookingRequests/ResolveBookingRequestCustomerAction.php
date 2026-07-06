@@ -4,14 +4,10 @@ namespace App\Actions\BookingRequests;
 
 use App\Models\Customer;
 use App\Models\Workshop;
-use App\Support\PhoneNormalizer;
+use App\Support\Phone;
 
 class ResolveBookingRequestCustomerAction
 {
-    public function __construct(
-        private readonly PhoneNormalizer $phoneNormalizer,
-    ) {}
-
     public function handle(Workshop $workshop, string $name, string $phone, ?int $customerId = null): Customer
     {
         if ($customerId !== null) {
@@ -24,11 +20,12 @@ class ResolveBookingRequestCustomerAction
         return Customer::firstOrCreate(
             [
                 'workshop_id' => $workshop->id,
-                'normalized_phone' => $this->phoneNormalizer->normalize($phone),
+                'phone_normalized' => (new Phone($phone))->normalize(),
             ],
             [
                 'name' => $name,
                 'phone' => $phone,
+                'normalized_phone' => (new Phone($phone))->normalizeLegacyDigits(),
             ],
         );
     }

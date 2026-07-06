@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Support\PhoneNormalizer;
+use App\Support\Phone;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -38,7 +38,7 @@ class StorePublicIntakeRequest extends FormRequest
                         return;
                     }
 
-                    $normalizedPhone = app(PhoneNormalizer::class)->normalize($value);
+                    $normalizedPhone = (new Phone($value))->normalize();
 
                     if (strlen($normalizedPhone) < 7) {
                         $fail('Please provide a phone number so a service advisor can contact you.');
@@ -57,6 +57,6 @@ class StorePublicIntakeRequest extends FormRequest
 
     public function phone(): string
     {
-        return app(PhoneNormalizer::class)->normalize($this->validated('phone'));
+        return trim((string) $this->validated('phone'));
     }
 }

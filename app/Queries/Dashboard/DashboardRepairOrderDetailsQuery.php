@@ -27,7 +27,7 @@ class DashboardRepairOrderDetailsQuery
      *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string}|null}>,
      *     documents: array<int, array{id: int, filename: string, type: array{value: string, label: string}, status: array{value: string, label: string}, generatedAt: string|null, downloadUrl: string|null}>,
      *     availableLineTypes: array<int, array{value: string, label: string}>,
-     *     statusActions: array{canMarkEstimated: bool, canComplete: bool, canCancel: bool},
+     *     statusActions: array{canMarkEstimated: bool, canStart: bool, canComplete: bool, canCancel: bool, hasEstimate: bool},
      *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
      *     bookingRequest: array{id: int, status: array{value: string, label: string}, problemDescription: string, originalMessage: string|null, preferredDate: string|null, createdAt: string}|null
@@ -142,12 +142,7 @@ class DashboardRepairOrderDetailsQuery
                 ],
                 RepairOrderLineType::cases(),
             ),
-            'statusActions' => [
-                'canMarkEstimated' => in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true)
-                    && $repairOrder->lines->isNotEmpty(),
-                'canComplete' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Completed),
-                'canCancel' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Cancelled),
-            ],
+            'statusActions' => $this->statusActions($repairOrder),
             'customer' => $repairOrder->customer
                 ? [
                     'id' => $repairOrder->customer->id,
@@ -176,6 +171,23 @@ class DashboardRepairOrderDetailsQuery
                     'createdAt' => $repairOrder->bookingRequest->created_at->toISOString(),
                 ]
                 : null,
+        ];
+    }
+
+    /**
+     * @return array{canMarkEstimated: bool, canStart: bool, canComplete: bool, canCancel: bool, hasEstimate: bool}
+     */
+    private function statusActions(RepairOrder $repairOrder): array
+    {
+        $hasEstimate = $repairOrder->estimates->isNotEmpty();
+
+        return [
+            'canMarkEstimated' => in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress], true)
+                && $repairOrder->lines->isNotEmpty(),
+            'canStart' => $repairOrder->status->canTransitionTo(RepairOrderStatus::InProgress),
+            'canComplete' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Completed),
+            'canCancel' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Cancelled),
+            'hasEstimate' => $hasEstimate,
         ];
     }
 }

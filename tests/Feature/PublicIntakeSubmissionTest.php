@@ -67,10 +67,12 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->assertGuest();
         $this->assertDatabaseCount('booking_requests', 1);
+        $this->assertDatabaseCount('vehicles', 0);
         $this->assertDatabaseCount('repair_orders', 0);
         $this->assertNotNull($bookingRequest);
         $this->assertSame($workshop->id, $bookingRequest->workshop_id);
-        $this->assertSame('380501112233', $bookingRequest->customer_phone);
+        $this->assertSame($phone, $bookingRequest->customer_phone);
+        $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame($message, $bookingRequest->problem_description);
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
@@ -90,7 +92,9 @@ class PublicIntakeSubmissionTest extends TestCase
         $bookingRequest = BookingRequest::sole();
 
         $this->assertSame('Need help with a check engine light.', $bookingRequest->original_message);
-        $this->assertSame('15551234567', $bookingRequest->customer_phone);
+        $this->assertSame('+1 (555) 123-4567', $bookingRequest->customer_phone);
+        $this->assertSame('+15551234567', $bookingRequest->customer_phone_normalized);
+        $this->assertNull($bookingRequest->customer_name);
         $this->assertNull($bookingRequest->vehicle_id);
         $this->assertNull($bookingRequest->preferred_date);
     }
@@ -145,7 +149,8 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertNotNull($bookingRequest);
         $this->assertSame($workshop->id, $bookingRequest->workshop_id);
         $this->assertNull($bookingRequest->customer_id);
-        $this->assertSame('380501112233', $bookingRequest->customer_phone);
+        $this->assertSame('+38 (050) 111-22-33', $bookingRequest->customer_phone);
+        $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame(trim($message), $bookingRequest->problem_description);
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
@@ -188,10 +193,12 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertNull($bookingRequest->customer_id);
         $this->assertNull($bookingRequest->vehicle_id);
         $this->assertNull($bookingRequest->created_by_user_id);
-        $this->assertSame('15557654321', $bookingRequest->customer_phone);
+        $this->assertSame('+1 (555) 765-4321', $bookingRequest->customer_phone);
+        $this->assertSame('+15557654321', $bookingRequest->customer_phone_normalized);
         $this->assertSame('Honda Civic makes noise.', $bookingRequest->problem_description);
         $this->assertNull($bookingRequest->preferred_date);
         $this->assertDatabaseCount('repair_orders', 0);
+        $this->assertDatabaseCount('vehicles', 0);
     }
 
     public function test_public_intake_creates_booking_request_before_optional_enrichment_can_fail(): void
@@ -219,7 +226,8 @@ class PublicIntakeSubmissionTest extends TestCase
 
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame($message, $bookingRequest->problem_description);
-        $this->assertSame('15551234567', $bookingRequest->customer_phone);
+        $this->assertSame('+1 (555) 123-4567', $bookingRequest->customer_phone);
+        $this->assertSame('+15551234567', $bookingRequest->customer_phone_normalized);
     }
 
     public function test_public_intake_never_creates_unassigned_booking_request(): void
@@ -254,6 +262,19 @@ class PublicIntakeSubmissionTest extends TestCase
                 ->component('PublicIntake')
                 ->where('workshop.name', 'Main Auto')
                 ->where('intakeSubmitted', true));
+    }
+
+    public function test_public_intake_success_screen_uses_neutral_confirmation_message(): void
+    {
+        $pageSource = file_get_contents(resource_path('js/pages/PublicIntake.vue'));
+
+        $this->assertIsString($pageSource);
+        $this->assertStringContainsString(
+            'Заявку отримано. Менеджер звʼяжеться з вами, щоб уточнити деталі та домовитись про час візиту.',
+            $pageSource,
+        );
+        $this->assertStringNotContainsString('додати авто', $pageSource);
+        $this->assertStringNotContainsString('бажаний час', $pageSource);
     }
 
     public function test_filled_honeypot_field_rejects_submission_without_creating_booking_request(): void

@@ -52,14 +52,14 @@ class OpenAiIntakeExtractionResultMapperTest extends TestCase
         $result = $this->mapper()->map([
             'phone' => '380501112233',
             'vehicle' => 'Opel Insignia',
-            'missing_next_field' => MissingIntakeField::Vehicle->value,
+            'missing_next_field' => 'vehicle',
         ]);
 
         $this->assertSame('380501112233', $result->phone);
         $this->assertNull($result->vehicleMake);
         $this->assertNull($result->vehicleModel);
         $this->assertNull($result->vehiclePlate);
-        $this->assertSame(MissingIntakeField::Vehicle->value, $result->missingNextField);
+        $this->assertNull($result->missingNextField);
     }
 
     public function test_missing_next_field_is_resolved_from_mapped_fields_not_model_output(): void
@@ -138,6 +138,6 @@ class OpenAiIntakeExtractionResultMapperTest extends TestCase
 
     private function mapper(): OpenAiIntakeExtractionResultMapper
     {
-        return new OpenAiIntakeExtractionResultMapper();
+        return new OpenAiIntakeExtractionResultMapper;
     }
 }

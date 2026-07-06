@@ -248,8 +248,10 @@ class RepairOrderLineManagementTest extends TestCase
                 ->where('translations.repair_orders.sections.estimates', __('repair_orders.sections.estimates'))
                 ->where('translations.repair_orders.actions.create_estimate_pdf', __('repair_orders.actions.create_estimate_pdf'))
                 ->where('repairOrder.statusActions.canMarkEstimated', true)
-                ->where('repairOrder.statusActions.canComplete', true)
-                ->where('repairOrder.statusActions.canCancel', true));
+                ->where('repairOrder.statusActions.canStart', true)
+                ->where('repairOrder.statusActions.canComplete', false)
+                ->where('repairOrder.statusActions.canCancel', true)
+                ->where('repairOrder.statusActions.hasEstimate', false));
     }
 
     public function test_draft_repair_order_with_lines_can_create_estimate_pdf_and_become_estimated(): void

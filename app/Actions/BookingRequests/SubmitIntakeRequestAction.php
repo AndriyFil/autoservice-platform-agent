@@ -6,6 +6,7 @@ use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
 use App\Support\Intake\IntakeExtractorInterface;
+use App\Support\Phone;
 use Throwable;
 
 class SubmitIntakeRequestAction
@@ -23,6 +24,7 @@ class SubmitIntakeRequestAction
             'created_by_user_id' => null,
             'customer_name' => null,
             'customer_phone' => $phone,
+            'customer_phone_normalized' => (new Phone($phone))->normalize(),
             'problem_description' => $message,
             'original_message' => $message,
             'preferred_date' => null,

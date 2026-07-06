@@ -79,10 +79,7 @@ const submit = () => {
                     </span>
                     <h2 class="mt-5 text-xl font-semibold tracking-tight text-slate-950">Request received</h2>
                     <p class="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
-                        Request received. A service advisor will contact you to confirm details and visit time.
-                    </p>
-                    <p class="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
-                        Заявку отримано. Якщо хочете, можете додати авто або бажаний час. Якщо ні — менеджер уточнить телефоном.
+                        Заявку отримано. Менеджер звʼяжеться з вами, щоб уточнити деталі та домовитись про час візиту.
                     </p>
                     <div class="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
                         <Phone class="size-4" aria-hidden="true" />

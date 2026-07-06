@@ -62,7 +62,7 @@ class PrepareEstimateForPdfAction
 
     private function repairOrderAllowsEstimateGeneration(RepairOrderStatus $status): bool
     {
-        return in_array($status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated], true);
+        return in_array($status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress], true);
     }
 
     private function createEstimate(WorkshopUser $activeWorkshopUser, RepairOrder $repairOrder, int $version): Estimate

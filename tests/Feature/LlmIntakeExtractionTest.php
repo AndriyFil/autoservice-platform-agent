@@ -82,7 +82,7 @@ class LlmIntakeExtractionTest extends TestCase
         $message = 'Honda Civic makes noise. Call +1 (555) 123-4567.';
         $result = $this->app->make(IntakeExtractorInterface::class)->extract($message);
 
-        $this->assertSame('15551234567', $result->phone);
+        $this->assertSame('+15551234567', $result->phone);
         $this->assertNull($result->vehicleMake);
         $this->assertSame($message, $result->problemSummary);
         $this->assertSame(0.2, $result->confidence);

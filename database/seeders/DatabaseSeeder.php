@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Workshop;
 use App\Models\WorkshopUser;
+use App\Support\Phone;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -72,11 +73,12 @@ class DatabaseSeeder extends Seeder
             $customer['normalized_phone'] => Customer::updateOrCreate(
                 [
                     'workshop_id' => $workshop->id,
-                    'normalized_phone' => $customer['normalized_phone'],
+                    'phone_normalized' => (new Phone($customer['phone']))->normalize(),
                 ],
                 [
                     'name' => $customer['name'],
                     'phone' => $customer['phone'],
+                    'normalized_phone' => $customer['normalized_phone'],
                 ],
             ),
         ]);

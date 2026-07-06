@@ -82,15 +82,28 @@ class RepairOrderManagementTest extends TestCase
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Jane Driver',
+            'phone' => '+1 555 123 4567',
+            'normalized_phone' => '15551234567',
+        ]);
+        $vehicle = Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'Honda',
+            'model' => 'Civic',
+            'year' => 2021,
+            'license_plate' => 'AA1234BB',
+        ]);
         $bookingRequest = $this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => 'Jane Driver',
+            'customer_phone' => '+1 555 123 4567',
             'problem_description' => 'Brake pedal feels soft.',
             'preferred_date' => '2026-06-20',
-            'vehicle' => [
-                'brand' => 'Honda',
-                'model' => 'Civic',
-                'license_plate' => 'AA1234BB',
-            ],
         ]);
 
         $this
@@ -102,13 +115,52 @@ class RepairOrderManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/RepairOrders/Create')
-                ->where('defaults.customer_id', (string) $bookingRequest->customer_id)
-                ->where('defaults.vehicle_id', (string) $bookingRequest->vehicle_id)
+                ->where('defaults.customer_id', (string) $customer->id)
+                ->where('defaults.vehicle_id', (string) $vehicle->id)
                 ->where('defaults.booking_request_id', (string) $bookingRequest->id)
                 ->where('defaults.problem_description', 'Brake pedal feels soft.')
+                ->where('defaults.customer_phone', '+1 555 123 4567')
                 ->where('sourceBookingRequest.id', $bookingRequest->id)
                 ->where('sourceBookingRequest.customerName', 'Jane Driver')
+                ->where('sourceBookingRequest.customerPhone', '+1 555 123 4567')
+                ->where('sourceBookingRequest.existingCustomer.id', $customer->id)
                 ->where('sourceBookingRequest.preferredDate', '2026-06-20'));
+    }
+
+    public function test_repair_order_create_page_shows_new_customer_when_booking_phone_is_not_in_active_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        Customer::create([
+            'workshop_id' => $otherWorkshop->id,
+            'name' => 'Other Workshop Customer',
+            'phone' => '+1 555 777 0000',
+            'normalized_phone' => '15557770000',
+        ]);
+        $bookingRequest = $this->createBookingRequest($activeWorkshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '+1 555 777 0000',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/RepairOrders/Create')
+                ->where('defaults.customer_id', '')
+                ->where('defaults.vehicle_id', '')
+                ->where('defaults.customer_name', '')
+                ->where('defaults.customer_phone', '+1 555 777 0000')
+                ->where('sourceBookingRequest.existingCustomer', null));
     }
 
     public function test_cross_workshop_booking_request_cannot_prefill_repair_order_create_page(): void
@@ -149,29 +201,43 @@ class RepairOrderManagementTest extends TestCase
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder));
     }
 
-    public function test_confirmed_booking_request_can_create_repair_order_from_form_submit(): void
+    public function test_confirmed_booking_request_reuses_existing_customer_by_phone_in_active_workshop(): void
     {
         Carbon::setTestNow('2026-06-12 10:00:00');
 
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Jane Driver',
+            'phone' => '+1 555 123 4567',
+            'normalized_phone' => '15551234567',
+        ]);
+        $vehicle = Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'Honda',
+            'model' => 'Civic',
+            'year' => 2021,
+            'license_plate' => 'AA1234BB',
+        ]);
         $bookingRequest = $this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => 'Jane Driver',
+            'customer_phone' => '+1 555 123 4567',
             'problem_description' => 'Brake pedal feels soft.',
-            'vehicle' => [
-                'brand' => 'Honda',
-                'model' => 'Civic',
-                'license_plate' => 'AA1234BB',
-            ],
         ]);
+        $usersBefore = User::query()->count();
 
         $response = $this
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
             ->post(route('dashboard.repair-orders.store'), [
-                'customer_id' => $bookingRequest->customer_id,
-                'vehicle_id' => $bookingRequest->vehicle_id,
+                'customer_id' => $customer->id,
+                'vehicle_id' => $vehicle->id,
                 'booking_request_id' => $bookingRequest->id,
                 'problem_description' => 'Brake pedal feels soft.',
             ]);
@@ -187,15 +253,289 @@ class RepairOrderManagementTest extends TestCase
         $bookingRequest->refresh();
 
         $this->assertDatabaseCount('repair_orders', 1);
+        $this->assertDatabaseCount('customers', 1);
+        $this->assertSame($usersBefore, User::query()->count());
         $this->assertSame($workshop->id, $repairOrder->workshop_id);
-        $this->assertSame($bookingRequest->customer_id, $repairOrder->customer_id);
-        $this->assertSame($bookingRequest->vehicle_id, $repairOrder->vehicle_id);
+        $this->assertSame($customer->id, $repairOrder->customer_id);
+        $this->assertSame($vehicle->id, $repairOrder->vehicle_id);
         $this->assertSame($bookingRequest->id, $repairOrder->booking_request_id);
+        $this->assertSame($user->id, $repairOrder->created_by_user_id);
         $this->assertSame(RepairOrderStatus::Draft, $repairOrder->status);
         $this->assertSame('Brake pedal feels soft.', $repairOrder->problem_description);
         $this->assertSame('2026-06-12 10:00:00', $repairOrder->opened_at->toDateTimeString());
         $this->assertNull($repairOrder->closed_at);
         $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->status);
+    }
+
+    public function test_confirmed_booking_request_reuses_existing_customer_by_phone_normalized(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Jane Driver',
+            'phone' => '+380685620040',
+            'normalized_phone' => '380685620040',
+        ]);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => 'Jane Driver',
+            'customer_phone' => '068 562 00 40',
+            'problem_description' => 'Check engine light.',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => 'Check engine light.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $repairOrder = RepairOrder::query()->firstOrFail();
+
+        $this->assertDatabaseCount('customers', 1);
+        $this->assertSame('+380685620040', $customer->refresh()->phone_normalized);
+        $this->assertSame('+380685620040', $bookingRequest->refresh()->customer_phone_normalized);
+        $this->assertSame($customer->id, $repairOrder->customer_id);
+    }
+
+    public function test_confirmed_booking_request_creates_customer_if_phone_does_not_exist_in_active_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        Customer::create([
+            'workshop_id' => $otherWorkshop->id,
+            'name' => 'Other Workshop Customer',
+            'phone' => '+1 555 123 4567',
+            'normalized_phone' => '15551234567',
+        ]);
+        $bookingRequest = $this->createBookingRequest($activeWorkshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '+1 555 123 4567',
+            'problem_description' => 'Check engine light.',
+        ]);
+        $usersBefore = User::query()->count();
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => 'Check engine light.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $repairOrder = RepairOrder::query()->firstOrFail();
+        $customer = Customer::query()
+            ->where('workshop_id', $activeWorkshop->id)
+            ->where('normalized_phone', '15551234567')
+            ->firstOrFail();
+
+        $this->assertDatabaseCount('customers', 2);
+        $this->assertSame($usersBefore, User::query()->count());
+        $this->assertNull($customer->name);
+        $this->assertSame('+1 555 123 4567', $customer->phone);
+        $this->assertSame($customer->id, $repairOrder->customer_id);
+        $this->assertNull($repairOrder->vehicle_id);
+    }
+
+    public function test_confirmed_booking_request_customer_name_is_optional_when_creating_customer(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '+1 555 555 1212',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'customer_name' => '',
+                'problem_description' => $bookingRequest->problem_description,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $customer = Customer::query()->where('normalized_phone', '15555551212')->firstOrFail();
+        $repairOrder = RepairOrder::query()->firstOrFail();
+
+        $this->assertNull($customer->name);
+        $this->assertSame($customer->id, $repairOrder->customer_id);
+    }
+
+    public function test_confirmed_booking_request_can_create_repair_order_with_null_vehicle(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_phone' => '+1 555 111 2222',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => $bookingRequest->problem_description,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $repairOrder = RepairOrder::query()->firstOrFail();
+
+        $this->assertNull($repairOrder->vehicle_id);
+    }
+
+    public function test_confirmed_booking_request_can_create_vehicle_from_make_model_and_year(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_phone' => '+1 555 222 3333',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => $bookingRequest->problem_description,
+                'new_vehicle' => [
+                    'make' => 'Opel',
+                    'model' => 'Insignia',
+                    'year' => 2018,
+                    'plate' => 'AA5555BB',
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $vehicle = Vehicle::query()->firstOrFail();
+        $repairOrder = RepairOrder::query()->firstOrFail();
+
+        $this->assertSame('Opel', $vehicle->brand);
+        $this->assertSame('Insignia', $vehicle->model);
+        $this->assertSame(2018, $vehicle->year);
+        $this->assertSame('AA5555BB', $vehicle->license_plate);
+        $this->assertSame($vehicle->id, $repairOrder->vehicle_id);
+        $this->assertSame($repairOrder->customer_id, $vehicle->customer_id);
+    }
+
+    public function test_confirmed_booking_request_cannot_use_vehicle_from_another_customer(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Booking Customer',
+            'phone' => '+1 555 333 4444',
+            'normalized_phone' => '15553334444',
+        ]);
+        $otherCustomer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Other Customer',
+            'phone' => '+1 555 444 5555',
+            'normalized_phone' => '15554445555',
+        ]);
+        $otherVehicle = Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $otherCustomer->id,
+            'brand' => 'Ford',
+            'model' => 'Focus',
+            'year' => 2020,
+            'license_plate' => 'OTHER',
+        ]);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_phone' => $customer->phone,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.create', ['booking_request' => $bookingRequest->id]))
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'vehicle_id' => $otherVehicle->id,
+                'problem_description' => $bookingRequest->problem_description,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.create', ['booking_request' => $bookingRequest->id]))
+            ->assertSessionHasErrors('repair_order');
+
+        $this->assertDatabaseCount('repair_orders', 0);
+    }
+
+    public function test_confirmed_booking_request_cannot_use_vehicle_from_another_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        Customer::create([
+            'workshop_id' => $activeWorkshop->id,
+            'name' => 'Booking Customer',
+            'phone' => '+1 555 666 7777',
+            'normalized_phone' => '15556667777',
+        ]);
+        $otherCustomer = Customer::create([
+            'workshop_id' => $otherWorkshop->id,
+            'name' => 'Other Customer',
+            'phone' => '+1 555 777 8888',
+            'normalized_phone' => '15557778888',
+        ]);
+        $otherVehicle = Vehicle::create([
+            'workshop_id' => $otherWorkshop->id,
+            'customer_id' => $otherCustomer->id,
+            'brand' => 'Skoda',
+            'model' => 'Octavia',
+            'year' => 2019,
+            'license_plate' => 'CROSS',
+        ]);
+        $bookingRequest = $this->createBookingRequest($activeWorkshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_phone' => '+1 555 666 7777',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->from(route('dashboard.repair-orders.create', ['booking_request' => $bookingRequest->id]))
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'vehicle_id' => $otherVehicle->id,
+                'problem_description' => $bookingRequest->problem_description,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.create', ['booking_request' => $bookingRequest->id]))
+            ->assertSessionHasErrors('repair_order');
+
+        $this->assertDatabaseCount('repair_orders', 0);
     }
 
     public function test_repair_order_from_booking_request_copies_booking_request_problem_description(): void
@@ -574,7 +914,101 @@ class RepairOrderManagementTest extends TestCase
                 ->where('repairOrder.vehicle.brand', 'Honda')
                 ->where('repairOrder.bookingRequest.id', $bookingRequest->id)
                 ->where('repairOrder.bookingRequest.status.value', 'confirmed')
-                ->where('repairOrder.bookingRequest.preferredDate', '2026-06-20'));
+                ->where('repairOrder.bookingRequest.preferredDate', '2026-06-20')
+                ->where('repairOrder.statusActions.canMarkEstimated', false)
+                ->where('repairOrder.statusActions.canStart', true)
+                ->where('repairOrder.statusActions.canComplete', false)
+                ->where('repairOrder.statusActions.canCancel', true)
+                ->where('repairOrder.statusActions.hasEstimate', false));
+    }
+
+    public function test_repair_order_show_action_availability_flags_match_statuses(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+
+        $expectations = [
+            RepairOrderStatus::Draft->value => [
+                'status' => RepairOrderStatus::Draft,
+                'canMarkEstimated' => true,
+                'canStart' => true,
+                'canComplete' => false,
+                'canCancel' => true,
+                'hasEstimate' => false,
+            ],
+            RepairOrderStatus::Estimated->value => [
+                'status' => RepairOrderStatus::Estimated,
+                'canMarkEstimated' => true,
+                'canStart' => true,
+                'canComplete' => false,
+                'canCancel' => true,
+                'hasEstimate' => true,
+            ],
+            RepairOrderStatus::InProgress->value => [
+                'status' => RepairOrderStatus::InProgress,
+                'canMarkEstimated' => true,
+                'canStart' => false,
+                'canComplete' => true,
+                'canCancel' => true,
+                'hasEstimate' => true,
+            ],
+            RepairOrderStatus::Completed->value => [
+                'status' => RepairOrderStatus::Completed,
+                'canMarkEstimated' => false,
+                'canStart' => false,
+                'canComplete' => false,
+                'canCancel' => false,
+                'hasEstimate' => true,
+            ],
+            RepairOrderStatus::Cancelled->value => [
+                'status' => RepairOrderStatus::Cancelled,
+                'canMarkEstimated' => false,
+                'canStart' => false,
+                'canComplete' => false,
+                'canCancel' => false,
+                'hasEstimate' => true,
+            ],
+        ];
+
+        foreach ($expectations as $statusValue => $expectation) {
+            $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+                'status' => BookingRequestStatus::Confirmed,
+            ]), [
+                'status' => $expectation['status'],
+            ]);
+
+            $repairOrder->lines()->create([
+                'type' => 'labor',
+                'description' => 'Inspection',
+                'quantity' => 1,
+                'unit_price_cents' => 10000,
+                'tax_rate' => 20,
+                'sort_order' => 1,
+            ]);
+
+            if ($expectation['hasEstimate']) {
+                Estimate::factory()->create([
+                    'repair_order_id' => $repairOrder->id,
+                    'version' => 1,
+                    'status' => EstimateStatus::Generated,
+                    'generated_at' => Carbon::parse('2026-07-03 09:30:00'),
+                ]);
+            }
+
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->get(route('dashboard.repair-orders.show', $repairOrder))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('repairOrder.status.value', $statusValue)
+                    ->where('repairOrder.statusActions.canMarkEstimated', $expectation['canMarkEstimated'])
+                    ->where('repairOrder.statusActions.canStart', $expectation['canStart'])
+                    ->where('repairOrder.statusActions.canComplete', $expectation['canComplete'])
+                    ->where('repairOrder.statusActions.canCancel', $expectation['canCancel'])
+                    ->where('repairOrder.statusActions.hasEstimate', $expectation['hasEstimate']));
+        }
     }
 
     public function test_repair_order_show_exposes_document_list_for_documents_tab(): void
@@ -685,7 +1119,76 @@ class RepairOrderManagementTest extends TestCase
                 ->where('bookingRequest.repairOrder.status.value', 'draft'));
     }
 
-    public function test_open_repair_order_can_be_completed(): void
+    public function test_estimated_repair_order_cannot_complete_directly(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'status' => RepairOrderStatus::Estimated,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.complete', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame(RepairOrderStatus::Estimated, $repairOrder->refresh()->status);
+        $this->assertNull($repairOrder->closed_at);
+    }
+
+    public function test_draft_repair_order_can_start_work(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'status' => RepairOrderStatus::Draft,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.start', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', 'Repair order started.');
+
+        $this->assertSame(RepairOrderStatus::InProgress, $repairOrder->refresh()->status);
+        $this->assertNull($repairOrder->closed_at);
+    }
+
+    public function test_estimated_repair_order_can_start_work(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'status' => RepairOrderStatus::Estimated,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.start', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', 'Repair order started.');
+
+        $this->assertSame(RepairOrderStatus::InProgress, $repairOrder->refresh()->status);
+        $this->assertNull($repairOrder->closed_at);
+    }
+
+    public function test_in_progress_repair_order_can_be_completed(): void
     {
         Carbon::setTestNow('2026-06-12 11:00:00');
 
@@ -694,7 +1197,9 @@ class RepairOrderManagementTest extends TestCase
         $this->createMembership($user, $workshop);
         $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
-        ]));
+        ]), [
+            'status' => RepairOrderStatus::InProgress,
+        ]);
 
         $this
             ->actingAs($user)
@@ -735,18 +1240,54 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame('2026-06-12 12:00:00', $repairOrder->closed_at->toDateTimeString());
     }
 
-    public function test_closed_repair_order_cannot_be_completed_or_cancelled_again(): void
+    public function test_completed_repair_order_cannot_mutate(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
-        $completedRepairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
         ]), [
             'status' => RepairOrderStatus::Completed,
             'closed_at' => Carbon::parse('2026-06-12 11:00:00'),
         ]);
-        $cancelledRepairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.start', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('status');
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.complete', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('status');
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.cancel', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('status');
+
+        $repairOrder->refresh();
+
+        $this->assertSame(RepairOrderStatus::Completed, $repairOrder->status);
+        $this->assertSame('2026-06-12 11:00:00', $repairOrder->closed_at->toDateTimeString());
+    }
+
+    public function test_cancelled_repair_order_cannot_mutate(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
         ]), [
             'status' => RepairOrderStatus::Cancelled,
@@ -756,21 +1297,31 @@ class RepairOrderManagementTest extends TestCase
         $this
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $completedRepairOrder))
-            ->post(route('dashboard.repair-orders.complete', $completedRepairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $completedRepairOrder))
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.start', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHasErrors('status');
 
         $this
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $cancelledRepairOrder))
-            ->post(route('dashboard.repair-orders.cancel', $cancelledRepairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $cancelledRepairOrder))
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.complete', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHasErrors('status');
 
-        $this->assertSame(RepairOrderStatus::Completed, $completedRepairOrder->refresh()->status);
-        $this->assertSame(RepairOrderStatus::Cancelled, $cancelledRepairOrder->refresh()->status);
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->post(route('dashboard.repair-orders.cancel', $repairOrder))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('status');
+
+        $repairOrder->refresh();
+
+        $this->assertSame(RepairOrderStatus::Cancelled, $repairOrder->status);
+        $this->assertSame('2026-06-12 12:00:00', $repairOrder->closed_at->toDateTimeString());
     }
 
     public function test_cross_workshop_repair_order_status_actions_are_not_accessible(): void
@@ -782,6 +1333,12 @@ class RepairOrderManagementTest extends TestCase
         $otherRepairOrder = $this->createRepairOrder($this->createBookingRequest($otherWorkshop, [
             'status' => BookingRequestStatus::Confirmed,
         ]));
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->post(route('dashboard.repair-orders.start', $otherRepairOrder))
+            ->assertNotFound();
 
         $this
             ->actingAs($user)
@@ -814,41 +1371,50 @@ class RepairOrderManagementTest extends TestCase
      * @param  array{
      *     customer_name?: string,
      *     customer_phone?: string,
+     *     customer_id?: int|null,
+     *     vehicle_id?: int|null,
      *     problem_description?: string,
      *     preferred_date?: string|null,
      *     status?: BookingRequestStatus,
-     *     vehicle?: array{brand?: string|null, model?: string|null, license_plate?: string|null}
+     *     vehicle?: array{brand?: string|null, model?: string|null, year?: int|null, license_plate?: string|null}
      * }  $overrides
      */
     private function createBookingRequest(Workshop $workshop, array $overrides = []): BookingRequest
     {
         $customerNumber = BookingRequest::query()->count() + 1;
-        $customer = Customer::create([
-            'workshop_id' => $workshop->id,
-            'name' => $overrides['customer_name'] ?? 'Jane Driver',
-            'phone' => $overrides['customer_phone'] ?? "+1 (555) 123-45{$customerNumber}",
-            'normalized_phone' => "155512345{$customerNumber}",
-        ]);
+        $customerName = array_key_exists('customer_name', $overrides) ? $overrides['customer_name'] : 'Jane Driver';
+        $customerPhone = array_key_exists('customer_phone', $overrides) ? $overrides['customer_phone'] : "+1 (555) 123-45{$customerNumber}";
+        $customer = null;
+
+        if (! array_key_exists('customer_id', $overrides)) {
+            $customer = Customer::create([
+                'workshop_id' => $workshop->id,
+                'name' => $customerName,
+                'phone' => $customerPhone,
+                'normalized_phone' => "155512345{$customerNumber}",
+            ]);
+        }
 
         $vehicle = null;
 
         if (isset($overrides['vehicle'])) {
             $vehicle = Vehicle::create([
                 'workshop_id' => $workshop->id,
-                'customer_id' => $customer->id,
+                'customer_id' => $customer?->id ?? $overrides['customer_id'],
                 'brand' => $overrides['vehicle']['brand'] ?? null,
                 'model' => $overrides['vehicle']['model'] ?? null,
+                'year' => $overrides['vehicle']['year'] ?? null,
                 'license_plate' => $overrides['vehicle']['license_plate'] ?? null,
             ]);
         }
 
         return BookingRequest::create([
             'workshop_id' => $workshop->id,
-            'customer_id' => $customer->id,
-            'vehicle_id' => $vehicle?->id,
+            'customer_id' => $overrides['customer_id'] ?? $customer?->id,
+            'vehicle_id' => $overrides['vehicle_id'] ?? $vehicle?->id,
             'created_by_user_id' => null,
-            'customer_name' => $overrides['customer_name'] ?? 'Jane Driver',
-            'customer_phone' => $overrides['customer_phone'] ?? "+1 (555) 123-45{$customerNumber}",
+            'customer_name' => $customerName,
+            'customer_phone' => $customerPhone,
             'problem_description' => $overrides['problem_description'] ?? 'Brake noise on cold start.',
             'preferred_date' => $overrides['preferred_date'] ?? null,
             'status' => $overrides['status'] ?? BookingRequestStatus::New,

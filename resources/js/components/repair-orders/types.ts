@@ -8,17 +8,19 @@ export type RepairOrderFormVehicle = {
     id: number;
     brand: string | null;
     model: string | null;
+    year: number | null;
     licensePlate: string | null;
 };
 
 export type RepairOrderFormCustomer = {
     id: number;
-    name: string;
+    name: string | null;
     phone: string;
+    phoneNormalized: string;
     vehicles?: RepairOrderFormVehicle[];
 };
 
-export type RepairOrderStatusValue = 'draft' | 'estimated' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+export type RepairOrderStatusValue = 'draft' | 'estimated' | 'in_progress' | 'completed' | 'cancelled';
 
 export type RepairOrderStatus = {
     value: RepairOrderStatusValue;
@@ -43,7 +45,7 @@ export type RepairOrderListItem = {
 
 export type RepairOrderCustomer = {
     id: number;
-    name: string;
+    name: string | null;
     phone: string;
 };
 
@@ -125,8 +127,10 @@ export type RepairOrderEstimate = {
 
 export type RepairOrderStatusActions = {
     canMarkEstimated: boolean;
+    canStart: boolean;
     canComplete: boolean;
     canCancel: boolean;
+    hasEstimate: boolean;
 };
 
 export type RepairOrderDetails = {

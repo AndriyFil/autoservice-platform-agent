@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { RepairOrderFormCustomer } from './types';
 import { computed, ref, watch } from 'vue';
+import type { RepairOrderFormCustomer } from './types';
 
 const props = defineProps<{
     id: string;
@@ -17,10 +17,27 @@ const isOpen = ref(false);
 
 const selectedCustomer = computed(() => props.customers.find((customer) => customer.id === Number(props.modelValue)) ?? null);
 
-const customerLabel = (customer: RepairOrderFormCustomer): string => `${customer.name} - ${customer.phone}`;
+const customerLabel = (customer: RepairOrderFormCustomer): string => `${customer.name ?? 'Unnamed customer'} - ${customer.phone}`;
+
+const normalizePhoneSearch = (phone: string): string => {
+    const trimmed = phone.trim();
+    const hasLeadingPlus = trimmed.startsWith('+');
+    const digits = trimmed.replace(/[\s\-()]+/g, '').replace(/\D+/g, '');
+
+    if (/^0\d{9}$/.test(digits)) {
+        return `+38${digits}`;
+    }
+
+    if (/^380\d{9}$/.test(digits)) {
+        return `+${digits}`;
+    }
+
+    return hasLeadingPlus ? `+${digits}` : digits;
+};
 
 const filteredCustomers = computed(() => {
     const query = search.value.trim().toLowerCase();
+    const normalizedQuery = normalizePhoneSearch(search.value);
 
     if (props.customers.length === 0) {
         return [];
@@ -31,7 +48,11 @@ const filteredCustomers = computed(() => {
     }
 
     return props.customers
-        .filter((customer) => `${customer.name} ${customer.phone}`.toLowerCase().includes(query))
+        .filter((customer) => {
+            const displayText = `${customer.name ?? ''} ${customer.phone}`.toLowerCase();
+
+            return displayText.includes(query) || (normalizedQuery !== '' && customer.phoneNormalized.includes(normalizedQuery));
+        })
         .slice(0, 8);
 });
 
@@ -105,7 +126,7 @@ const selectCustomer = (customer: RepairOrderFormCustomer) => {
                     :aria-selected="String(customer.id) === modelValue"
                     @mousedown.prevent="selectCustomer(customer)"
                 >
-                    <span class="font-medium text-foreground">{{ customer.name }}</span>
+                    <span class="font-medium text-foreground">{{ customer.name ?? 'Unnamed customer' }}</span>
                     <span class="text-xs text-muted-foreground">{{ customer.phone }}</span>
                 </button>
             </template>

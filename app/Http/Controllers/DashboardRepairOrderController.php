@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\RepairOrders\CreateRepairOrderAction;
+use App\Actions\RepairOrders\CreateRepairOrderFromBookingRequestAction;
 use App\Http\Requests\StoreRepairOrderRequest;
 use App\Models\RepairOrder;
 use App\Queries\Dashboard\DashboardRepairOrderDetailsQuery;
@@ -63,11 +64,15 @@ class DashboardRepairOrderController extends Controller
     public function store(
         StoreRepairOrderRequest $request,
         CreateRepairOrderAction $createRepairOrder,
+        CreateRepairOrderFromBookingRequestAction $createRepairOrderFromBookingRequest,
     ): RedirectResponse {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
+        $data = $request->validated();
 
         try {
-            $repairOrder = $createRepairOrder->handle($activeWorkshopUser, $request->validated());
+            $repairOrder = isset($data['booking_request_id'])
+                ? $createRepairOrderFromBookingRequest->handle($activeWorkshopUser, $data)
+                : $createRepairOrder->handle($activeWorkshopUser, $data);
         } catch (DomainException $exception) {
             return back()->withErrors([
                 'repair_order' => $exception->getMessage(),

@@ -3,7 +3,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
-import { Ban, Check, FileText } from 'lucide-vue-next';
+import { Ban, Check, FileText, Play } from 'lucide-vue-next';
 import type { RepairOrderStatusActions } from './types';
 
 const props = defineProps<{
@@ -14,13 +14,20 @@ const props = defineProps<{
 const { t } = useTranslations();
 
 const estimateForm = useForm({});
+const startForm = useForm({});
 const completeForm = useForm({});
 const cancelForm = useForm({});
 
-const anyProcessing = () => estimateForm.processing || completeForm.processing || cancelForm.processing;
+const anyProcessing = () => estimateForm.processing || startForm.processing || completeForm.processing || cancelForm.processing;
 
 const submitEstimate = () => {
     estimateForm.post(route('dashboard.repair-orders.estimate', { repairOrder: props.repairOrderId }), {
+        preserveScroll: true,
+    });
+};
+
+const submitStart = () => {
+    startForm.post(route('dashboard.repair-orders.start', { repairOrder: props.repairOrderId }), {
         preserveScroll: true,
     });
 };
@@ -43,7 +50,19 @@ const submitCancel = () => {
         <div class="flex flex-wrap gap-2">
             <Button v-if="actions.canMarkEstimated" type="button" size="sm" :disabled="anyProcessing()" @click="submitEstimate">
                 <FileText class="size-4" />
-                {{ t('repair_orders.actions.create_estimate_pdf') }}
+                {{ t(actions.hasEstimate ? 'repair_orders.actions.regenerate_estimate_pdf' : 'repair_orders.actions.create_estimate_pdf') }}
+            </Button>
+
+            <Button
+                v-if="actions.canStart"
+                type="button"
+                size="sm"
+                class="bg-blue-600 text-white hover:bg-blue-700"
+                :disabled="anyProcessing()"
+                @click="submitStart"
+            >
+                <Play class="size-4" />
+                {{ t('repair_orders.actions.start_work') }}
             </Button>
 
             <Button

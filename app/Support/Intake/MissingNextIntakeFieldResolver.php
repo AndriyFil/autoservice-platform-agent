@@ -14,9 +14,7 @@ class MissingNextIntakeFieldResolver
     public function __construct()
     {
         $this->rules = [
-            new MissingPhoneIntakeFieldRule(),
-            new MissingVehicleIntakeFieldRule(),
-            new MissingPreferredTimeIntakeFieldRule(),
+            new MissingPhoneIntakeFieldRule,
         ];
     }
 

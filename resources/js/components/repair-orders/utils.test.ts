@@ -12,8 +12,8 @@ import {
 } from './utils';
 
 describe('canCompleteRepairOrder', () => {
-    it('allows only draft and in_progress', () => {
-        expect(canCompleteRepairOrder('draft')).toBe(true);
+    it('allows only in_progress', () => {
+        expect(canCompleteRepairOrder('draft')).toBe(false);
         expect(canCompleteRepairOrder('in_progress')).toBe(true);
         expect(canCompleteRepairOrder('estimated')).toBe(false);
         expect(canCompleteRepairOrder('completed')).toBe(false);
@@ -25,7 +25,6 @@ describe('canCancelRepairOrder', () => {
     it('allows every active status but not terminal ones', () => {
         expect(canCancelRepairOrder('draft')).toBe(true);
         expect(canCancelRepairOrder('estimated')).toBe(true);
-        expect(canCancelRepairOrder('approved')).toBe(true);
         expect(canCancelRepairOrder('in_progress')).toBe(true);
         expect(canCancelRepairOrder('completed')).toBe(false);
         expect(canCancelRepairOrder('cancelled')).toBe(false);

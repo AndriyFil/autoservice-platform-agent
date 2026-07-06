@@ -7,7 +7,6 @@ use App\Support\Intake\IntakeExtractionResult;
 use App\Support\Intake\LlmIntakeExtractor;
 use App\Support\Intake\ManualFallbackIntakeExtractor;
 use App\Support\Intake\MissingNextIntakeFieldResolver;
-use App\Support\PhoneNormalizer;
 use PHPUnit\Framework\TestCase;
 
 class IntakeExtractorTest extends TestCase
@@ -21,7 +20,7 @@ class IntakeExtractorTest extends TestCase
         $this->assertNull($data->vehicleMake);
         $this->assertNull($data->vehicleModel);
         $this->assertNull($data->vehiclePlate);
-        $this->assertSame(MissingIntakeField::Vehicle->value, $data->missingNextField);
+        $this->assertNull($data->missingNextField);
     }
 
     public function test_extractor_contract_has_no_diagnosis_or_recommendation_fields(): void
@@ -53,9 +52,9 @@ class IntakeExtractorTest extends TestCase
         $this->assertSame(MissingIntakeField::Phone->value, $data->missingNextField);
     }
 
-    public function test_missing_next_field_resolver_prioritizes_phone_before_vehicle(): void
+    public function test_missing_next_field_resolver_requires_only_phone(): void
     {
-        $field = (new MissingNextIntakeFieldResolver())->resolve(
+        $field = (new MissingNextIntakeFieldResolver)->resolve(
             phone: null,
             vehicleMake: null,
             vehicleModel: null,
@@ -66,25 +65,25 @@ class IntakeExtractorTest extends TestCase
         $this->assertSame(MissingIntakeField::Phone, $field);
     }
 
-    public function test_missing_next_field_is_vehicle_when_phone_exists_but_vehicle_is_missing(): void
+    public function test_missing_next_field_is_null_when_phone_exists_but_vehicle_is_missing(): void
     {
         $data = $this->fallback()->extract('Something is wrong with my car. Call +38 (050) 111-22-33.');
 
-        $this->assertSame('380501112233', $data->phone);
-        $this->assertSame(MissingIntakeField::Vehicle->value, $data->missingNextField);
+        $this->assertSame('+380501112233', $data->phone);
+        $this->assertNull($data->missingNextField);
     }
 
     public function test_phone_can_still_be_normalized_safely_when_provided(): void
     {
         $data = $this->fallback()->extract('Please call me at +38 (050) 111-22-33.');
 
-        $this->assertSame('380501112233', $data->phone);
-        $this->assertSame(MissingIntakeField::Vehicle->value, $data->missingNextField);
+        $this->assertSame('+380501112233', $data->phone);
+        $this->assertNull($data->missingNextField);
     }
 
-    public function test_missing_next_field_resolver_returns_preferred_time_after_phone_and_vehicle(): void
+    public function test_missing_next_field_resolver_does_not_require_preferred_time(): void
     {
-        $field = (new MissingNextIntakeFieldResolver())->resolve(
+        $field = (new MissingNextIntakeFieldResolver)->resolve(
             phone: '380501112233',
             vehicleMake: 'Opel',
             vehicleModel: 'Insignia',
@@ -92,12 +91,12 @@ class IntakeExtractorTest extends TestCase
             preferredTimeText: null,
         );
 
-        $this->assertSame(MissingIntakeField::PreferredTime, $field);
+        $this->assertNull($field);
     }
 
     public function test_missing_next_field_resolver_returns_null_when_enough_information_exists(): void
     {
-        $field = (new MissingNextIntakeFieldResolver())->resolve(
+        $field = (new MissingNextIntakeFieldResolver)->resolve(
             phone: '380501112233',
             vehicleMake: 'Opel',
             vehicleModel: 'Insignia',
@@ -122,7 +121,9 @@ class IntakeExtractorTest extends TestCase
         $this->assertStringContainsString('  - make: string|null', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringContainsString('  - model: string|null', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringContainsString('  - plate: string|null', LlmIntakeExtractor::PROMPT_SPEC);
-        $this->assertStringContainsString('- missing_next_field: "phone"|"vehicle"|"preferred_time"|null', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringContainsString('- missing_next_field: "phone"|null', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringNotContainsString('"vehicle"|"preferred_time"', LlmIntakeExtractor::PROMPT_SPEC);
+        $this->assertStringNotContainsString('phone, vehicle, preferred_time', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringNotContainsString('vehicle_make:', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringNotContainsString('vehicle_model:', LlmIntakeExtractor::PROMPT_SPEC);
         $this->assertStringNotContainsString('vehicle_plate:', LlmIntakeExtractor::PROMPT_SPEC);
@@ -131,8 +132,7 @@ class IntakeExtractorTest extends TestCase
     private function fallback(): ManualFallbackIntakeExtractor
     {
         return new ManualFallbackIntakeExtractor(
-            new PhoneNormalizer(),
-            new MissingNextIntakeFieldResolver(),
+            new MissingNextIntakeFieldResolver,
         );
     }
 

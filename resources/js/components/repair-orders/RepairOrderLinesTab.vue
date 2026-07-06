@@ -9,13 +9,14 @@ defineProps<{
 </script>
 
 <template>
-    <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+    <div class="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
         <RepairOrderLinesSection
+            class="min-w-0"
             :repair-order-id="repairOrder.id"
             :lines="repairOrder.lines"
             :available-line-types="repairOrder.availableLineTypes"
         />
 
-        <RepairOrderTotalsSummary :totals="repairOrder.workingTotals" />
+        <RepairOrderTotalsSummary class="min-w-0" :totals="repairOrder.workingTotals" />
     </div>
 </template>

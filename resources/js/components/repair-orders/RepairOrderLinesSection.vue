@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
 import { Pencil, Plus, Save, Trash2, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { RepairOrderLine, RepairOrderLineTypeOption } from './types';
 import { centsToDecimalInput, decimalInputToCents, formatCents } from './utils';
 
@@ -29,6 +29,7 @@ const props = defineProps<{
 const { t } = useTranslations();
 
 const editingLineId = ref<number | null>(null);
+const editingLine = computed(() => props.lines.find((line) => line.id === editingLineId.value) ?? null);
 
 const blankForm = (): LineForm => ({
     type: props.availableLineTypes[0]?.value ?? 'labor',
@@ -113,7 +114,7 @@ const deleteLine = (line: RepairOrderLine) => {
 </script>
 
 <template>
-    <section class="space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+    <section class="min-w-0 space-y-4 rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-base font-semibold text-foreground">{{ t('repair_orders.sections.working_lines') }}</h2>
             <div class="text-sm text-muted-foreground">
@@ -122,11 +123,12 @@ const deleteLine = (line: RepairOrderLine) => {
         </div>
 
         <form
-            class="grid gap-3 rounded-md border border-sidebar-border/70 bg-muted/30 p-3 dark:border-sidebar-border"
+            v-if="!editingLine"
+            class="grid min-w-0 gap-3 rounded-md border border-sidebar-border/70 bg-muted/30 p-3 dark:border-sidebar-border"
             @submit.prevent="submitAddLine"
         >
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[8rem_minmax(12rem,1fr)_7rem_9rem_7rem_6rem]">
-                <label class="space-y-1 text-sm">
+            <div class="grid min-w-0 gap-3 md:grid-cols-2 2xl:grid-cols-[7rem_minmax(8rem,1fr)_5.5rem_7rem_5.5rem_5.5rem]">
+                <label class="min-w-0 space-y-1 text-sm">
                     <span class="font-medium text-foreground">{{ t('repair_orders.fields.type') }}</span>
                     <select v-model="addForm.type" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
                         <option v-for="type in availableLineTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
@@ -134,13 +136,13 @@ const deleteLine = (line: RepairOrderLine) => {
                     <InputError :message="addForm.errors.type" />
                 </label>
 
-                <label class="space-y-1 text-sm">
+                <label class="min-w-0 space-y-1 text-sm">
                     <span class="font-medium text-foreground">{{ t('repair_orders.fields.description') }}</span>
                     <input v-model="addForm.description" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="text" />
                     <InputError :message="addForm.errors.description" />
                 </label>
 
-                <label class="space-y-1 text-sm">
+                <label class="min-w-0 space-y-1 text-sm">
                     <span class="font-medium text-foreground">{{ t('repair_orders.fields.quantity') }}</span>
                     <input
                         v-model="addForm.quantity"
@@ -152,7 +154,7 @@ const deleteLine = (line: RepairOrderLine) => {
                     <InputError :message="addForm.errors.quantity" />
                 </label>
 
-                <label class="space-y-1 text-sm">
+                <label class="min-w-0 space-y-1 text-sm">
                     <span class="font-medium text-foreground">{{ t('repair_orders.fields.unit_price') }}</span>
                     <input
                         v-model="addForm.unit_price"
@@ -165,7 +167,7 @@ const deleteLine = (line: RepairOrderLine) => {
                     <InputError :message="addForm.errors.unit_price_cents" />
                 </label>
 
-                <label class="space-y-1 text-sm">
+                <label class="min-w-0 space-y-1 text-sm">
                     <span class="font-medium text-foreground">{{ t('repair_orders.fields.tax') }} %</span>
                     <input
                         v-model="addForm.tax_rate"
@@ -178,7 +180,7 @@ const deleteLine = (line: RepairOrderLine) => {
                     <InputError :message="addForm.errors.tax_rate" />
                 </label>
 
-                <label class="space-y-1 text-sm">
+                <label class="min-w-0 space-y-1 text-sm">
                     <span class="font-medium text-foreground">{{ t('repair_orders.fields.order') }}</span>
                     <input
                         v-model.number="addForm.sort_order"
@@ -192,9 +194,99 @@ const deleteLine = (line: RepairOrderLine) => {
             </div>
 
             <div class="flex justify-end">
-                <Button type="submit" size="sm" :disabled="addForm.processing">
+                <Button type="submit" size="sm" class="w-full sm:w-auto" :disabled="addForm.processing">
                     <Plus class="size-4" />
                     {{ t('repair_orders.actions.add_line') }}
+                </Button>
+            </div>
+        </form>
+
+        <form
+            v-if="editingLine"
+            class="grid min-w-0 gap-3 rounded-md border border-primary/20 bg-primary/5 p-3 dark:border-primary/30"
+            @submit.prevent="submitEditLine(editingLine)"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-foreground">{{ t('repair_orders.actions.edit') }}</h3>
+                    <p class="text-xs text-muted-foreground">{{ editingLine.description }}</p>
+                </div>
+                <Button type="button" size="sm" variant="outline" :disabled="editForm.processing" @click="cancelEditing">
+                    <X class="size-4" />
+                    {{ t('repair_orders.actions.cancel') }}
+                </Button>
+            </div>
+
+            <div class="grid min-w-0 gap-3 md:grid-cols-2 2xl:grid-cols-[7rem_minmax(8rem,1fr)_5.5rem_7rem_5.5rem_5.5rem]">
+                <label class="min-w-0 space-y-1 text-sm">
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.type') }}</span>
+                    <select v-model="editForm.type" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                        <option v-for="type in availableLineTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+                    </select>
+                    <InputError :message="editForm.errors.type" />
+                </label>
+
+                <label class="min-w-0 space-y-1 text-sm">
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.description') }}</span>
+                    <input v-model="editForm.description" class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" type="text" />
+                    <InputError :message="editForm.errors.description" />
+                </label>
+
+                <label class="min-w-0 space-y-1 text-sm">
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.quantity') }}</span>
+                    <input
+                        v-model="editForm.quantity"
+                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                    />
+                    <InputError :message="editForm.errors.quantity" />
+                </label>
+
+                <label class="min-w-0 space-y-1 text-sm">
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.unit_price') }}</span>
+                    <input
+                        v-model="editForm.unit_price"
+                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputmode="decimal"
+                    />
+                    <InputError :message="editForm.errors.unit_price_cents" />
+                </label>
+
+                <label class="min-w-0 space-y-1 text-sm">
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.tax') }} %</span>
+                    <input
+                        v-model="editForm.tax_rate"
+                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                    />
+                    <InputError :message="editForm.errors.tax_rate" />
+                </label>
+
+                <label class="min-w-0 space-y-1 text-sm">
+                    <span class="font-medium text-foreground">{{ t('repair_orders.fields.order') }}</span>
+                    <input
+                        v-model.number="editForm.sort_order"
+                        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        type="number"
+                        min="0"
+                        step="1"
+                    />
+                    <InputError :message="editForm.errors.sort_order" />
+                </label>
+            </div>
+
+            <div class="flex justify-end">
+                <Button type="submit" size="sm" class="w-full sm:w-auto" :disabled="editForm.processing">
+                    <Save class="size-4" />
+                    {{ t('repair_orders.actions.save') }}
                 </Button>
             </div>
         </form>
@@ -207,7 +299,7 @@ const deleteLine = (line: RepairOrderLine) => {
         </div>
 
         <div v-else class="overflow-x-auto rounded-md border border-sidebar-border/70 dark:border-sidebar-border">
-            <table class="w-full min-w-[56rem] text-left text-sm">
+            <table class="w-full min-w-[48rem] text-left text-sm">
                 <thead
                     class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border"
                 >
@@ -218,123 +310,51 @@ const deleteLine = (line: RepairOrderLine) => {
                         <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.unit') }}</th>
                         <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.tax') }}</th>
                         <th class="px-3 py-2 text-right">{{ t('repair_orders.fields.total') }}</th>
-                        <th class="w-36 px-3 py-2 text-right">{{ t('repair_orders.fields.actions') }}</th>
+                        <th class="w-24 px-3 py-2 text-right">{{ t('repair_orders.fields.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                    <tr v-for="line in lines" :key="line.id">
-                        <template v-if="editingLineId === line.id">
-                            <td class="px-3 py-2 align-top">
-                                <select v-model="editForm.type" class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-                                    <option v-for="type in availableLineTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
-                                </select>
-                            </td>
-                            <td class="min-w-56 px-3 py-2 align-top">
-                                <input
-                                    v-model="editForm.description"
-                                    class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                                    type="text"
-                                />
-                                <InputError :message="editForm.errors.description" />
-                            </td>
-                            <td class="px-3 py-2 align-top">
-                                <input
-                                    v-model="editForm.quantity"
-                                    class="h-9 w-24 rounded-md border border-input bg-background px-2 text-right text-sm"
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                />
-                                <InputError :message="editForm.errors.quantity" />
-                            </td>
-                            <td class="px-3 py-2 align-top">
-                                <input
-                                    v-model="editForm.unit_price"
-                                    class="h-9 w-28 rounded-md border border-input bg-background px-2 text-right text-sm"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    inputmode="decimal"
-                                />
-                                <InputError :message="editForm.errors.unit_price_cents" />
-                            </td>
-                            <td class="px-3 py-2 align-top">
-                                <input
-                                    v-model="editForm.tax_rate"
-                                    class="h-9 w-24 rounded-md border border-input bg-background px-2 text-right text-sm"
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.01"
-                                />
-                                <InputError :message="editForm.errors.tax_rate" />
-                            </td>
-                            <td class="px-3 py-2 text-right align-top text-muted-foreground">{{ formatCents(line.totalCents) }}</td>
-                            <td class="px-3 py-2 align-top">
-                                <div class="flex flex-col justify-end gap-2 sm:flex-row">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        class="w-full sm:w-auto"
-                                        :disabled="editForm.processing"
-                                        @click="submitEditLine(line)"
-                                    >
-                                        <Save class="size-4" />
-                                        {{ t('repair_orders.actions.save') }}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        class="w-full sm:w-auto"
-                                        :disabled="editForm.processing"
-                                        @click="cancelEditing"
-                                    >
-                                        <X class="size-4" />
-                                        {{ t('repair_orders.actions.cancel') }}
-                                    </Button>
-                                </div>
-                            </td>
-                        </template>
-
-                        <template v-else>
-                            <td class="whitespace-nowrap px-3 py-2 align-top text-muted-foreground">{{ line.type.label }}</td>
-                            <td class="px-3 py-2 align-top text-foreground">{{ line.description }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">{{ line.quantity }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">
-                                {{ formatCents(line.unitPriceCents) }}
-                            </td>
-                            <td class="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">{{ line.taxRate }}%</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-right align-top font-medium text-foreground">
-                                {{ formatCents(line.totalCents) }}
-                            </td>
-                            <td class="px-3 py-2 align-top">
-                                <div class="flex flex-col justify-end gap-2 sm:flex-row">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        class="w-full sm:w-auto"
-                                        :disabled="deleteForm.processing"
-                                        @click="startEditing(line)"
-                                    >
-                                        <Pencil class="size-4" />
-                                        {{ t('repair_orders.actions.edit') }}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="destructive"
-                                        class="w-full sm:w-auto"
-                                        :disabled="deleteForm.processing"
-                                        @click="deleteLine(line)"
-                                    >
-                                        <Trash2 class="size-4" />
-                                        {{ t('repair_orders.actions.delete') }}
-                                    </Button>
-                                </div>
-                            </td>
-                        </template>
+                    <tr v-for="line in lines" :key="line.id" :class="editingLineId === line.id ? 'bg-primary/5' : undefined">
+                        <td class="whitespace-nowrap px-3 py-2 align-top text-muted-foreground">{{ line.type.label }}</td>
+                        <td class="px-3 py-2 align-top text-foreground">{{ line.description }}</td>
+                        <td class="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">{{ line.quantity }}</td>
+                        <td class="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">
+                            {{ formatCents(line.unitPriceCents) }}
+                        </td>
+                        <td class="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">{{ line.taxRate }}%</td>
+                        <td class="whitespace-nowrap px-3 py-2 text-right align-top font-medium text-foreground">
+                            {{ formatCents(line.totalCents) }}
+                        </td>
+                        <td class="px-3 py-2 align-top">
+                            <div class="inline-flex w-full justify-end gap-1.5">
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    class="h-8 w-8"
+                                    :disabled="deleteForm.processing || editForm.processing"
+                                    :aria-label="t('repair_orders.actions.edit')"
+                                    :title="t('repair_orders.actions.edit')"
+                                    @click="startEditing(line)"
+                                >
+                                    <Pencil class="size-4" />
+                                    <span class="sr-only">{{ t('repair_orders.actions.edit') }}</span>
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="destructive"
+                                    class="h-8 w-8"
+                                    :disabled="deleteForm.processing || editForm.processing"
+                                    :aria-label="t('repair_orders.actions.delete')"
+                                    :title="t('repair_orders.actions.delete')"
+                                    @click="deleteLine(line)"
+                                >
+                                    <Trash2 class="size-4" />
+                                    <span class="sr-only">{{ t('repair_orders.actions.delete') }}</span>
+                                </Button>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>

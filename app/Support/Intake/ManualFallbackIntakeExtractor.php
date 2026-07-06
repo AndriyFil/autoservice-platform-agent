@@ -2,12 +2,11 @@
 
 namespace App\Support\Intake;
 
-use App\Support\PhoneNormalizer;
+use App\Support\Phone;
 
 class ManualFallbackIntakeExtractor implements IntakeExtractorInterface
 {
     public function __construct(
-        private readonly PhoneNormalizer $phoneNormalizer,
         private readonly MissingNextIntakeFieldResolver $missingNextFieldResolver,
     ) {}
 
@@ -38,7 +37,7 @@ class ManualFallbackIntakeExtractor implements IntakeExtractorInterface
         preg_match_all('/(?:\+?\d[\d\s().-]{6,}\d)/', $message, $matches);
 
         foreach ($matches[0] as $match) {
-            $normalizedPhone = $this->phoneNormalizer->normalize($match);
+            $normalizedPhone = (new Phone($match))->normalize();
 
             if (strlen($normalizedPhone) >= 7) {
                 return $normalizedPhone;

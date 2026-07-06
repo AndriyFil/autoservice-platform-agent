@@ -2,67 +2,74 @@
 
 ## Goal
 
-Refactor the RepairOrder show page into tabs so overview, working lines, estimates, documents, and timeline are no longer mixed on one cluttered screen.
+Add canonical phone normalization so Customer matching uses `phone_normalized` inside the active workshop and does not create duplicates for the same real phone entered in different formats.
 
 ## Files Changed
 
-- `resources/js/pages/Dashboard/RepairOrders/Show.vue` - converted the page body into a five-tab layout and kept top-level repair-order actions in the header.
-- `resources/js/components/repair-orders/RepairOrderOverviewTab.vue` - added the summary-only overview tab with status, customer, vehicle, problem/source, working total, and latest estimate summary.
-- `resources/js/components/repair-orders/RepairOrderLinesTab.vue` - added the Lines tab wrapper for working lines and working totals.
-- `resources/js/components/repair-orders/RepairOrderEstimatesTab.vue` - added the Estimates tab wrapper with the allowed generate-estimate action and estimate versions list.
-- `resources/js/components/repair-orders/RepairOrderDocumentsTab.vue` - added the Documents tab with filename, type, status, generated date, download, and empty state.
-- `resources/js/components/repair-orders/RepairOrderTimelineTab.vue` - moved the existing timeline/source request details into a dedicated tab.
-- `resources/js/components/repair-orders/RepairOrderLinesSection.vue` - changed visible price input from cents to decimal money, improved responsive form/table sizing, and tightened edit/delete button layout.
-- `resources/js/components/repair-orders/utils.ts` and `utils.test.ts` - added decimal-money-to-cents conversion helpers and focused Vitest coverage.
-- `resources/js/components/repair-orders/types.ts` - added the repair-order document DTO used by the Documents tab.
-- `app/Queries/Dashboard/DashboardRepairOrderDetailsQuery.php` - added a scoped `documents` prop from repair-order estimate documents for the Documents tab.
-- `tests/Feature/RepairOrderManagementTest.php` - added coverage that the show page exposes document metadata and download URLs.
-- `lang/en/repair_orders.php`, `lang/pl/repair_orders.php`, `lang/uk/repair_orders.php` - added tab/document/overview labels and replaced the visible unit cents label with unit price.
-- `.ai/task-report.md` - updated with this task report.
-
-Note: the working tree already contained unrelated modified files before this task, especially estimate-generation actions/tests and `.ai/lessons/autoservice.md`. Those were left intact.
+- `app/Support/Phone.php` - implements a constructor-based phone helper that holds the raw phone value and exposes canonical Ukrainian normalization, plus a legacy digits-only helper for the existing `normalized_phone` column.
+- `app/Models/Customer.php` - fills/recalculates `phone_normalized` when `phone` changes while keeping legacy `normalized_phone` populated for existing code paths.
+- `app/Models/BookingRequest.php` - fills/recalculates `customer_phone_normalized` when `customer_phone` changes.
+- `app/Actions/BookingRequests/ResolveBookingRequestCustomerAction.php` - matches customers by `workshop_id` and `phone_normalized`.
+- `app/Actions/BookingRequests/CreatePublicBookingRequestAction.php` - stores `customer_phone_normalized` on public booking requests.
+- `app/Actions/BookingRequests/SubmitIntakeRequestAction.php` - stores raw public intake phone plus `customer_phone_normalized`.
+- `app/Http/Requests/StorePublicIntakeRequest.php` - returns the submitted display phone instead of the normalized value.
+- `app/Actions/RepairOrders/CreateRepairOrderFromBookingRequestAction.php` - reuses or creates customers by booking request `customer_phone_normalized`.
+- `app/Queries/Dashboard/DashboardRepairOrderFormQuery.php` - preselects existing customers by normalized booking phone and exposes `phoneNormalized` for picker search.
+- `resources/js/components/repair-orders/RepairOrderCustomerSelect.vue` - normalizes typed phone search input while continuing to display `phone`.
+- `resources/js/components/repair-orders/types.ts` - adds `phoneNormalized` to repair-order customer options.
+- `database/migrations/2026_07_06_000001_add_phone_normalized_columns.php` - adds/backfills normalized phone columns and conditionally creates the customer unique index.
+- `database/factories/CustomerFactory.php` and `database/factories/BookingRequestFactory.php` - generate normalized phone fields in test data.
+- `database/seeders/DatabaseSeeder.php` - seeds customers through `phone_normalized`.
+- `tests/Unit/PhoneTest.php` - covers Ukrainian variants and imperfect input.
+- `tests/Feature/PublicIntakeSubmissionTest.php` - verifies public intake stores display phone and normalized phone separately.
+- `tests/Feature/PublicBookingRequestFlowTest.php` - verifies Ukrainian variants reuse one customer inside a workshop and same phone can exist in another workshop.
+- `tests/Feature/RepairOrderManagementTest.php` - verifies repair-order creation from booking request reuses customer by `phone_normalized`.
+- `tests/Feature/CustomerManagementTest.php` - verifies customer phone updates recalculate `phone_normalized`.
+- `tests/Unit/IntakeExtractorTest.php` and `tests/Feature/LlmIntakeExtractionTest.php` - updates fallback extraction expectations to canonical phone output.
 
 ## Implementation Summary
 
-The show page now uses tabs:
-
-- Overview: repair order status, customer phone/name, vehicle, problem, source/original request when available, current working total, latest estimate summary.
-- Lines: add-line form, working repair order lines, edit/delete controls, and working totals.
-- Estimates: estimate versions, status, total, generated date, PDF download, and generate estimate button when allowed.
-- Documents: document list with filename/type/status/generated date/download, or an empty state.
-- Timeline: the existing opened/closed/source request/original message/preferred date information.
-
-The line price field now displays and accepts decimal money such as `123.45`. The frontend converts that value back to `unit_price_cents` only when submitting to the existing Laravel request.
+- Canonical `phone_normalized` rules:
+  - remove spaces, dashes, and parentheses
+  - preserve a leading `+`
+  - `0XXXXXXXXX` becomes `+380XXXXXXXXX`
+  - `380XXXXXXXXX` becomes `+380XXXXXXXXX`
+  - `+380XXXXXXXXX` stays `+380XXXXXXXXX`
+  - imperfect input falls back to cleaned `+digits` or digits without throwing
+- Display phones remain stored in `phone` and `customer_phone`.
+- Customer matching now uses `workshop_id + phone_normalized`, not raw phone and not global phone matching.
+- Public intake and public booking requests store `customer_phone_normalized`.
+- Repair-order creation from booking request finds/creates customers by `customer_phone_normalized`.
+- Customer picker phone search compares normalized query text to `phoneNormalized` while displaying raw phone.
 
 ## Architecture Decisions
 
-- Kept the controller and write/action flow unchanged.
-- Added only a read-model prop for documents because the UI did not have enough data for the requested Documents tab.
-- Kept feature-specific tab components in `resources/js/components/repair-orders/` instead of creating global tab or document abstractions.
-- Reused the existing estimate generation/status action behavior and did not change estimate regeneration rules.
+- Replaced the stateless `PhoneNormalizer` service with a focused `App\Support\Phone` Pure Fabrication/value-style helper, so the raw phone is explicit constructor state and normalization is behavior on that value.
+- Added model-level recalculation as a persistence safeguard because customers and booking requests are created from several actions, factories, and tests.
+- Kept legacy `normalized_phone` populated to avoid breaking existing code/data while new matching moves to `phone_normalized`.
+- Kept workshop isolation in every customer lookup by requiring `workshop_id`.
 
 ## Tradeoffs
 
-- The tab control is local page markup rather than a shared UI primitive because no reusable tabs component exists yet and this need is repair-order-specific.
-- Internal names still include cents where they represent backend storage/request fields; visible UI labels no longer expose cents wording.
-- Documents are currently sourced from estimate documents because those are the documents available in the existing model relationships.
+- Both `normalized_phone` and `phone_normalized` exist for now. `phone_normalized` is the new canonical matching field; `normalized_phone` remains for compatibility with existing schema/tests.
+- The migration adds `unique(workshop_id, phone_normalized)` only when current data has no duplicates. If duplicates exist, it leaves a non-unique lookup index so data is not deleted or merged automatically.
 
 ## Tests
 
-- `npm run build` - passed; Vite reported only the existing Browserslist data age warning.
-- `php artisan test tests/Feature/RepairOrderManagementTest.php` - passed, 25 tests / 232 assertions.
-- `php artisan test tests/Feature/GenerateEstimatePdfActionTest.php` - passed, 2 tests / 7 assertions.
-- `php artisan test` - passed, 172 tests / 1349 assertions.
-- `composer analyse` - first sandboxed run failed with `EPERM` while PHPStan tried to bind `127.0.0.1:0`; escalated rerun passed with no errors.
-- `npm run test -- resources/js/components/repair-orders/utils.test.ts` - passed, 1 file / 13 tests.
-- `git diff --check` - passed.
+- `php artisan test tests/Feature/PublicIntakeSubmissionTest.php` - passed, 16 tests / 146 assertions.
+- `php artisan test tests/Feature/RepairOrderManagementTest.php` - passed, 38 tests / 445 assertions.
+- `php artisan test tests/Feature/CustomerManagementTest.php` - passed, 7 tests / 106 assertions.
+- `php artisan test tests/Feature/PublicBookingRequestFlowTest.php` - passed, 10 tests / 126 assertions.
+- `php artisan test` - passed, 201 tests / 1632 assertions.
+- `composer analyse` - first sandbox run failed with TCP listener `EPERM`; rerun with approved escalation passed with no errors.
 
 ## Risks
 
-- Existing unrelated dirty files remain in the worktree and may appear in broader diffs.
-- The backend request field remains `unit_price_cents`; this is intentional storage/API shape, but future UI work should continue hiding cents wording from users.
+- I did not run migrations against a persistent development/production database, so no existing live duplicate customer groups were inspected directly.
+- The migration will detect duplicates at migration time. If any duplicate `(workshop_id, phone_normalized)` groups exist, it will not force-delete or merge data and will create a non-unique index instead.
+- The repository had many pre-existing dirty worktree changes before this task; they were not reverted.
 
 ## Follow Ups
 
-- Consider renaming `canMarkEstimated` to estimate-generation wording in a focused cleanup if that prop is touched again.
-- Consider a local visual smoke test of the tabs in-browser once a dev server is intentionally started.
+- If migration fallback is triggered on real data, run a focused duplicate cleanup/report task before adding the unique constraint.
+- Consider a future cleanup to remove the legacy `normalized_phone` column after all code and existing data are fully migrated to `phone_normalized`.

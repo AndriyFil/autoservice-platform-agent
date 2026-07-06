@@ -121,17 +121,49 @@ class PrepareEstimateForPdfActionTest extends TestCase
         $this->assertSame(EstimateStatus::Generated, $nextEstimate->status);
     }
 
-    public function test_approved_repair_order_cannot_generate_next_estimate_version(): void
+    public function test_in_progress_repair_order_can_generate_next_estimate_version_without_status_regression(): void
+    {
+        [$workshopUser, $repairOrder, $estimate] = $this->buildRegenerableEstimate(
+            repairOrderStatus: RepairOrderStatus::InProgress,
+        );
+
+        $nextEstimate = app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
+
+        $this->assertNotSame($estimate->id, $nextEstimate->id);
+        $this->assertSame(2, $nextEstimate->version);
+        $this->assertSame(EstimateStatus::Generated, $nextEstimate->status);
+        $this->assertSame(RepairOrderStatus::InProgress, $repairOrder->refresh()->status);
+    }
+
+    public function test_completed_repair_order_cannot_generate_next_estimate_version(): void
     {
         [$workshopUser, $repairOrder] = $this->buildRegenerableEstimate(
-            repairOrderStatus: RepairOrderStatus::Approved,
+            repairOrderStatus: RepairOrderStatus::Completed,
         );
 
         $documentsBefore = Document::query()->count();
 
         try {
             app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
-            $this->fail('Expected DomainException for approved repair order.');
+            $this->fail('Expected DomainException for completed repair order.');
+        } catch (DomainException) {
+            // expected
+        }
+
+        $this->assertSame($documentsBefore, Document::query()->count());
+    }
+
+    public function test_cancelled_repair_order_cannot_generate_next_estimate_version(): void
+    {
+        [$workshopUser, $repairOrder] = $this->buildRegenerableEstimate(
+            repairOrderStatus: RepairOrderStatus::Cancelled,
+        );
+
+        $documentsBefore = Document::query()->count();
+
+        try {
+            app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
+            $this->fail('Expected DomainException for cancelled repair order.');
         } catch (DomainException) {
             // expected
         }

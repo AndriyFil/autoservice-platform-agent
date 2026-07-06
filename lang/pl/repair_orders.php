@@ -12,12 +12,14 @@ return [
         'download' => 'Pobierz',
         'edit' => 'Edytuj',
         'save' => 'Zapisz',
+        'regenerate_estimate_pdf' => 'Wygeneruj PDF kosztorysu ponownie',
+        'start_work' => 'Rozpocznij pracę',
         'view_booking_request' => 'Zobacz zgłoszenie',
     ],
 
     'estimate_errors' => [
         'missing_lines' => 'Dodaj co najmniej jedną pozycję zlecenia naprawy przed utworzeniem kosztorysu.',
-        'repair_order_locked' => 'Po zatwierdzeniu tego zlecenia naprawy nie można już wygenerować PDF kosztorysu.',
+        'repair_order_locked' => 'Nie można już wygenerować PDF kosztorysu dla tego zlecenia naprawy.',
     ],
 
     'fields' => [
@@ -92,7 +94,6 @@ return [
     'repair_order_statuses' => [
         'draft' => 'Wersja robocza',
         'estimated' => 'Wyceniono',
-        'approved' => 'Zatwierdzono',
         'in_progress' => 'W trakcie',
         'completed' => 'Zakończono',
         'cancelled' => 'Anulowano',

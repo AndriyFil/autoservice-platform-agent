@@ -12,12 +12,14 @@ return [
         'download' => 'Download',
         'edit' => 'Edit',
         'save' => 'Save',
+        'regenerate_estimate_pdf' => 'Regenerate estimate PDF',
+        'start_work' => 'Start work',
         'view_booking_request' => 'View booking request',
     ],
 
     'estimate_errors' => [
         'missing_lines' => 'Add at least one repair order line before creating an estimate.',
-        'repair_order_locked' => 'This repair order can no longer generate estimate PDFs after approval.',
+        'repair_order_locked' => 'This repair order can no longer generate estimate PDFs.',
     ],
 
     'fields' => [
@@ -92,7 +94,6 @@ return [
     'repair_order_statuses' => [
         'draft' => 'Draft',
         'estimated' => 'Estimated',
-        'approved' => 'Approved',
         'in_progress' => 'In Progress',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',

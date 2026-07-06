@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BookingRequestStatus;
+use App\Support\Phone;
 use Database\Factories\BookingRequestFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,11 +27,24 @@ class BookingRequest extends Model
         'created_by_user_id',
         'customer_name',
         'customer_phone',
+        'customer_phone_normalized',
         'problem_description',
         'original_message',
         'preferred_date',
         'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (BookingRequest $bookingRequest): void {
+            if (! $bookingRequest->isDirty('customer_phone') && filled($bookingRequest->customer_phone_normalized)) {
+                return;
+            }
+
+            $bookingRequest->customer_phone_normalized = (new Phone((string) $bookingRequest->customer_phone))
+                ->normalize();
+        });
+    }
 
     /**
      * Get the attributes that should be cast.

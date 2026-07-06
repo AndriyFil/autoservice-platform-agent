@@ -2,21 +2,24 @@
 
 namespace App\Actions\RepairOrders;
 
+use App\Enums\BookingRequestStatus;
 use App\Enums\RepairOrderStatus;
+use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\RepairOrder;
 use App\Models\Vehicle;
 use App\Models\WorkshopUser;
+use App\Support\Phone;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
-class CreateRepairOrderAction
+class CreateRepairOrderFromBookingRequestAction
 {
     /**
      * @param  array{
-     *     customer_id: int,
+     *     customer_name?: string|null,
      *     vehicle_id?: int|null,
-     *     problem_description: string,
+     *     booking_request_id: int,
      *     notes?: string|null,
      *     new_vehicle?: array{make?: string|null, model?: string|null, year?: int|null, plate?: string|null}
      * }  $data
@@ -24,30 +27,67 @@ class CreateRepairOrderAction
     public function handle(WorkshopUser $activeWorkshopUser, array $data): RepairOrder
     {
         return DB::transaction(function () use ($activeWorkshopUser, $data): RepairOrder {
-            $customer = $this->resolveSelectedCustomer($activeWorkshopUser, $data['customer_id']);
+            $bookingRequest = $this->resolveBookingRequest($activeWorkshopUser, $data['booking_request_id']);
+            $customer = $this->resolveCustomer($activeWorkshopUser, $bookingRequest, $data['customer_name'] ?? null);
             $vehicleId = $this->resolveVehicleId($activeWorkshopUser, $customer, $data);
 
             return RepairOrder::create([
                 'workshop_id' => $activeWorkshopUser->workshop_id,
                 'customer_id' => $customer->id,
                 'vehicle_id' => $vehicleId,
-                'booking_request_id' => null,
+                'booking_request_id' => $bookingRequest->id,
                 'status' => RepairOrderStatus::Draft,
                 'notes' => $data['notes'] ?? null,
                 'created_by_user_id' => $activeWorkshopUser->user_id,
-                'problem_description' => $data['problem_description'],
+                'problem_description' => $bookingRequest->problem_description,
                 'opened_at' => now(),
                 'closed_at' => null,
             ]);
         });
     }
 
-    private function resolveSelectedCustomer(WorkshopUser $activeWorkshopUser, int $customerId): Customer
+    private function resolveBookingRequest(WorkshopUser $activeWorkshopUser, int $bookingRequestId): BookingRequest
     {
-        return Customer::query()
-            ->whereKey($customerId)
+        $bookingRequest = BookingRequest::query()
+            ->with('repairOrder')
+            ->whereKey($bookingRequestId)
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->firstOrFail();
+
+        if ($bookingRequest->status !== BookingRequestStatus::Confirmed) {
+            throw new DomainException('Repair order can be created only from a confirmed booking request.');
+        }
+
+        if ($bookingRequest->repairOrder) {
+            throw new DomainException('This booking request already has a repair order.');
+        }
+
+        return $bookingRequest;
+    }
+
+    private function resolveCustomer(
+        WorkshopUser $activeWorkshopUser,
+        BookingRequest $bookingRequest,
+        ?string $submittedCustomerName,
+    ): Customer {
+        $phone = trim((string) $bookingRequest->customer_phone);
+
+        if ($phone === '') {
+            throw new DomainException('Booking request phone is required to create a repair order.');
+        }
+
+        return Customer::firstOrCreate(
+            [
+                'workshop_id' => $activeWorkshopUser->workshop_id,
+                'phone_normalized' => $bookingRequest->customer_phone_normalized
+                    ?: (new Phone($phone))->normalize(),
+            ],
+            [
+                'name' => $this->nullableTrim($submittedCustomerName ?? $bookingRequest->customer_name),
+                'phone' => $phone,
+                'normalized_phone' => (new Phone($phone))->normalizeLegacyDigits(),
+            ],
+        );
     }
 
     /**

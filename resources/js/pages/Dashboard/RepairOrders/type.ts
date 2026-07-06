@@ -2,6 +2,8 @@ import type { RepairOrderActiveWorkshop, RepairOrderFormCustomer } from '@/compo
 
 export type RepairOrderCreateDefaults = {
     customer_id: string;
+    customer_name: string;
+    customer_phone: string;
     vehicle_id: string;
     problem_description: string;
     booking_request_id: string;
@@ -9,9 +11,14 @@ export type RepairOrderCreateDefaults = {
 
 export type RepairOrderSourceBookingRequest = {
     id: number;
-    customerName: string;
-    customerPhone: string;
+    customerName: string | null;
+    customerPhone: string | null;
     preferredDate: string | null;
+    existingCustomer: {
+        id: number;
+        name: string | null;
+        phone: string;
+    } | null;
 };
 
 export type RepairOrderCreateProps = {

@@ -211,6 +211,23 @@ class CustomerManagementTest extends TestCase
                 ->where('customer.bookingRequests.1.problemDescription', 'Oil leak.'));
     }
 
+    public function test_customer_phone_update_recalculates_phone_normalized(): void
+    {
+        $workshop = Workshop::factory()->create();
+        $customer = $this->createCustomer($workshop, [
+            'phone' => '0685620040',
+        ]);
+
+        $this->assertSame('+380685620040', $customer->phone_normalized);
+
+        $customer->update([
+            'phone' => '+38 (050) 111-22-33',
+        ]);
+
+        $this->assertSame('+380501112233', $customer->refresh()->phone_normalized);
+        $this->assertSame('+38 (050) 111-22-33', $customer->phone);
+    }
+
     private function createMembership(User $user, Workshop $workshop): WorkshopUser
     {
         return WorkshopUser::create([

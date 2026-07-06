@@ -1,16 +1,17 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CancelDashboardRepairOrderController;
 use App\Http\Controllers\CompleteDashboardRepairOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardDocumentDownloadController;
-use App\Http\Controllers\DashboardRepairOrderLineController;
 use App\Http\Controllers\DashboardRepairOrderController;
+use App\Http\Controllers\DashboardRepairOrderLineController;
 use App\Http\Controllers\EstimateDashboardRepairOrderController;
-use App\Http\Controllers\PublicIntakeController;
 use App\Http\Controllers\PublicBookingRequestController;
+use App\Http\Controllers\PublicIntakeController;
+use App\Http\Controllers\StartDashboardRepairOrderController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use App\Http\Middleware\EnsureActiveWorkshop;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +73,9 @@ Route::middleware(['auth', EnsureActiveWorkshop::class])
 
         Route::post('{repairOrder}/estimate', [EstimateDashboardRepairOrderController::class, 'store'])
             ->name('estimate');
+
+        Route::post('{repairOrder}/start', [StartDashboardRepairOrderController::class, 'store'])
+            ->name('start');
 
         Route::post('{repairOrder}/complete', [CompleteDashboardRepairOrderController::class, 'store'])
             ->name('complete');

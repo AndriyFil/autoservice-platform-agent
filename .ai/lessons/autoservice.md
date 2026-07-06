@@ -40,8 +40,8 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 
 ## 2026-06-27 - Phone Is Primary Intake Identity
 
-- Correction: Chat-first intake must ask for phone before vehicle when both are missing, because the workshop needs phone to contact the customer.
-- Lesson: Missing-field priority for intake extraction is phone, then vehicle, then preferred time, then null when enough information is present.
+- Correction: Chat-first intake must collect phone because the workshop needs it to contact the customer.
+- Lesson: Missing-field detection for public intake requires only phone. Vehicle and preferred time may be extracted as optional enrichment, but they must not be treated as required next fields.
 - Applies when: Implementing or reviewing intake extraction, missing-field detection, fallback parsing, LLM prompts, or customer follow-up flows.
 
 ## 2026-06-28 - Prefer Strategies For Expandable Branching
@@ -58,7 +58,7 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 
 ## 2026-06-28 - Centralize Intake Field Values In Enums
 
-- Correction: Missing intake field values such as phone, vehicle, and preferred time should not be hardcoded in rules, queries, or tests.
+- Correction: Missing intake field values should not be hardcoded in rules, queries, or tests.
 - Lesson: Put reusable intake field values and labels in an enum and reference that enum from rules, read models, and tests to avoid drift.
 - Applies when: Implementing or reviewing missing-field detection, intake extraction, LLM schema mapping, dashboard/admin queue read models, or tests around intake fields.
 
@@ -85,3 +85,39 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: Staff may generate estimate PDFs repeatedly; repeated generation must create a new estimate version, not rebuild the latest generated estimate.
 - Lesson: Treat each allowed estimate generation as a new immutable `Estimate` snapshot with the next version and its own PDF document. Do not archive, overwrite, or mutate previous generated estimate versions just because staff generated again.
 - Applies when: Implementing or reviewing estimate PDF generation, estimate versioning, document history, dashboard estimate lists, or tests around repeated estimate generation.
+
+## 2026-07-03 - Public Intake Requires Only Message And Phone
+
+- Correction: Public intake MVP requires only the customer's message and phone; vehicle, customer name, and preferred time are optional enrichment for staff to confirm later.
+- Lesson: Do not force customers to add vehicle or preferred time after submit, do not make vehicle/name required for chat-first intake, and do not auto-create `Vehicle` records from AI/manual extraction. Preserve `original_message` and explicit `customer_phone`; staff should confirm or create vehicle details later in the dashboard.
+- Applies when: Implementing or reviewing public intake validation, success messages, extraction missing-field logic, `BookingRequest` creation, or dashboard conversion flows.
+
+## 2026-07-03 - Customer Is Not Platform User
+
+- Correction: Workshop clients are `Customer` records, while `User` records are platform login accounts for owners, staff, and admins.
+- Lesson: Public intake and booking-request conversion must not create login `User` records for customers. When opening a repair order from a booking request, resolve or create `Customer` by active `workshop_id` plus phone, keep customer name optional, and set `RepairOrder.created_by_user_id` to the current staff `User`.
+- Applies when: Implementing or reviewing customer intake, booking request conversion, customer/vehicle selection, repair order creation, authentication, or customer-cabinet ideas.
+
+## 2026-07-04 - RepairOrder Estimated Is Not Closed
+
+- Correction: `RepairOrderStatus::Estimated` means an estimate PDF was generated and is waiting for approval; it is not completed or closed.
+- Lesson: Superseded by the 2026-07-05 MVP lifecycle lesson below. Keep `estimated` distinct from `completed`; do not treat an estimate PDF as closed work.
+- Applies when: Implementing or reviewing repair-order status actions, estimate generation/regeneration, dashboard mutation buttons, or tests around repair-order lifecycle.
+
+## 2026-07-05 - RepairOrder Approval Removed For MVP
+
+- Correction: Repair orders do not use an `approved` status in the MVP lifecycle.
+- Lesson: Keep repair-order transitions centralized in `RepairOrderStatus::canTransitionTo()`: draft can become estimated, in_progress, or cancelled; estimated can become in_progress or cancelled; in_progress can become completed or cancelled; completed and cancelled are terminal. Estimate PDF generation is allowed while a repair order is draft, estimated, or in_progress; generating an estimate for an in_progress order must not regress its status to estimated. Do not add approval actions, buttons, or labels until a customer portal, signed estimate, or invoice approval flow explicitly requires it.
+- Applies when: Implementing or reviewing repair-order status actions, estimate generation/regeneration, dashboard mutation buttons, translations, or lifecycle tests.
+
+## 2026-07-05 - Estimates Can Change During Work
+
+- Correction: Staff can still change/generate estimates while a repair order is in progress; only completed or cancelled orders are locked.
+- Lesson: Allow estimate generation/regeneration for `draft`, `estimated`, and `in_progress` repair orders. Preserve `in_progress` status after estimate generation instead of moving the order back to `estimated`.
+- Applies when: Implementing or reviewing estimate generation, repair-order status action availability, lifecycle tests, or completed/cancelled locking rules.
+
+## 2026-07-06 - Prefer Stateful Domain Helpers For Phone Values
+
+- Correction: Do not model phone normalization as a stateless `PhoneNormalizer` service when a small `Phone` object can hold the raw value and expose normalization behavior.
+- Lesson: For phone-specific behavior, use a focused `Phone` Pure Fabrication/value-style helper with the raw phone passed through the constructor, then call behavior such as `normalize()`.
+- Applies when: Implementing or reviewing phone normalization, customer matching, booking request intake phone storage, or phone search behavior.

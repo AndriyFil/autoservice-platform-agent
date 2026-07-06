@@ -22,13 +22,14 @@ Return only JSON with these keys:
   - plate: string|null
 - preferred_time_text: string|null
 - problem_summary: string|null
-- missing_next_field: "phone"|"vehicle"|"preferred_time"|null
+- missing_next_field: "phone"|null
 - confidence: number from 0 to 1|null
 
 Rules:
 - Preserve the customer's meaning without diagnosing the vehicle.
 - problem_summary must summarize only what the customer wrote.
-- If required details are missing, set missing_next_field using this priority: phone, vehicle, preferred_time.
+- The only required customer follow-up field is phone. Vehicle and preferred time are optional enrichment.
+- If phone is missing, set missing_next_field to "phone"; otherwise set it to null.
 - Server-side rules will re-check missing_next_field after mapping.
 - Do not estimate prices.
 - Do not recommend repairs.

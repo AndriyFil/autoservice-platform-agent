@@ -5,6 +5,7 @@ namespace App\Actions\BookingRequests;
 use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
+use App\Support\Phone;
 use Illuminate\Support\Facades\DB;
 
 class CreatePublicBookingRequestAction
@@ -38,6 +39,7 @@ class CreatePublicBookingRequestAction
                 'created_by_user_id' => null,
                 'customer_name' => $customerName,
                 'customer_phone' => $customerPhone,
+                'customer_phone_normalized' => (new Phone($customerPhone))->normalize(),
                 'problem_description' => $data['problem_description'],
                 'preferred_date' => $data['preferred_date'] ?? null,
                 'status' => BookingRequestStatus::New,

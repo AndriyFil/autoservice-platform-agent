@@ -30,7 +30,9 @@ const canCreateRepairOrder = (bookingRequest: DashboardBookingRequest) =>
 
         <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-sm">
-                <thead class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border">
+                <thead
+                    class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border"
+                >
                     <tr>
                         <th class="px-4 py-3">Customer</th>
                         <th class="px-4 py-3">Problem</th>
@@ -38,7 +40,7 @@ const canCreateRepairOrder = (bookingRequest: DashboardBookingRequest) =>
                         <th class="px-4 py-3">Vehicle</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">Created</th>
-                        <th class="px-4 py-3 text-right">Actions</th>
+                        <th class="w-44 min-w-44 px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
@@ -67,62 +69,97 @@ const canCreateRepairOrder = (bookingRequest: DashboardBookingRequest) =>
                         <td class="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
                             {{ formatDateTime(bookingRequest.createdAt) }}
                         </td>
-                        <td class="whitespace-nowrap px-4 py-3 text-right align-top">
-                            <div class="flex flex-wrap justify-end gap-2">
+                        <td class="w-44 min-w-44 whitespace-nowrap px-4 py-3 text-right align-top">
+                            <div class="inline-flex min-w-40 flex-nowrap items-center justify-end gap-1.5">
                                 <Button
                                     v-if="canConfirmBookingRequest(bookingRequest.status.value)"
                                     type="button"
-                                    size="sm"
-                                    class="bg-green-600 text-white hover:bg-green-700"
+                                    size="icon"
+                                    class="h-8 w-8 bg-green-600 text-white hover:bg-green-700"
                                     :disabled="processing"
+                                    :aria-label="`Confirm request for ${bookingRequest.customerName}`"
+                                    :title="`Confirm request for ${bookingRequest.customerName}`"
                                     @click="$emit('statusAction', bookingRequest.id, bookingRequest.customerName, 'confirmed')"
                                 >
                                     <Check class="size-4" />
-                                    Confirm
+                                    <span class="sr-only">Confirm request</span>
                                 </Button>
 
                                 <Button
                                     v-if="canRejectBookingRequest(bookingRequest.status.value)"
                                     type="button"
-                                    size="sm"
+                                    size="icon"
                                     variant="destructive"
+                                    class="h-8 w-8"
                                     :disabled="processing"
+                                    :aria-label="`Reject request for ${bookingRequest.customerName}`"
+                                    :title="`Reject request for ${bookingRequest.customerName}`"
                                     @click="$emit('statusAction', bookingRequest.id, bookingRequest.customerName, 'rejected')"
                                 >
                                     <X class="size-4" />
-                                    Reject
+                                    <span class="sr-only">Reject request</span>
                                 </Button>
 
                                 <Button
                                     v-if="canCancelBookingRequest(bookingRequest.status.value)"
                                     type="button"
-                                    size="sm"
-                                    class="bg-amber-600 text-white hover:bg-amber-700"
+                                    size="icon"
+                                    class="h-8 w-8 bg-amber-600 text-white hover:bg-amber-700"
                                     :disabled="processing"
+                                    :aria-label="`Cancel request for ${bookingRequest.customerName}`"
+                                    :title="`Cancel request for ${bookingRequest.customerName}`"
                                     @click="$emit('statusAction', bookingRequest.id, bookingRequest.customerName, 'cancelled')"
                                 >
                                     <Ban class="size-4" />
-                                    Cancel
+                                    <span class="sr-only">Cancel request</span>
                                 </Button>
 
-                                <Button v-if="canCreateRepairOrder(bookingRequest)" as-child size="sm">
-                                    <Link :href="route('dashboard.repair-orders.create', { booking_request: bookingRequest.id })">
+                                <Button
+                                    v-if="canCreateRepairOrder(bookingRequest)"
+                                    as-child
+                                    size="icon"
+                                    class="h-8 w-8"
+                                    :title="`Start repair order for ${bookingRequest.customerName}`"
+                                >
+                                    <Link
+                                        :href="route('dashboard.repair-orders.create', { booking_request: bookingRequest.id })"
+                                        :aria-label="`Start repair order for ${bookingRequest.customerName}`"
+                                    >
                                         <Wrench class="size-4" />
-                                        Start work
+                                        <span class="sr-only">Start repair order</span>
                                     </Link>
                                 </Button>
 
-                                <Button v-if="bookingRequest.repairOrder" as-child size="sm" variant="outline">
-                                    <Link :href="route('dashboard.repair-orders.show', { repairOrder: bookingRequest.repairOrder.id })">
+                                <Button
+                                    v-if="bookingRequest.repairOrder"
+                                    as-child
+                                    size="icon"
+                                    variant="outline"
+                                    class="h-8 w-8"
+                                    :title="`Open repair order for ${bookingRequest.customerName}`"
+                                >
+                                    <Link
+                                        :href="route('dashboard.repair-orders.show', { repairOrder: bookingRequest.repairOrder.id })"
+                                        :aria-label="`Open repair order for ${bookingRequest.customerName}`"
+                                    >
                                         <ClipboardList class="size-4" />
-                                        Repair order
+                                        <span class="sr-only">Open repair order</span>
                                     </Link>
                                 </Button>
 
-                                <Button as-child size="sm" variant="outline">
-                                    <Link :href="route('dashboard.booking-requests.show', { bookingRequest: bookingRequest.id })">
+                                <Button
+                                    as-child
+                                    size="icon"
+                                    variant="outline"
+                                    class="h-8 w-8"
+                                    :title="`View request from ${bookingRequest.customerName}`"
+                                >
+                                    <Link
+                                        :href="route('dashboard.booking-requests.show', { bookingRequest: bookingRequest.id })"
+                                        :aria-label="`View request from ${bookingRequest.customerName}`"
+                                    >
                                         <Eye class="size-4" />
-                                        View
+                                        <span class="sr-only">View request</span>
                                     </Link>
                                 </Button>
                             </div>

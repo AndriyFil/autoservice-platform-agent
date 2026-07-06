@@ -23,8 +23,21 @@ class Vehicle extends Model
         'customer_id',
         'brand',
         'model',
+        'year',
         'license_plate',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'year' => 'integer',
+        ];
+    }
 
     /** @return BelongsTo<Workshop, $this> */
     public function workshop(): BelongsTo
