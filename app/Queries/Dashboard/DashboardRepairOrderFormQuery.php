@@ -19,7 +19,7 @@ class DashboardRepairOrderFormQuery
      *         vehicles: array<int, array{id: int, brand: string|null, model: string|null, year: int|null, licensePlate: string|null}>
      *     }>,
      *     defaults: array{customer_id: string, customer_name: string, customer_phone: string, vehicle_id: string, problem_description: string, booking_request_id: string},
-     *     sourceBookingRequest: array{id: int, customerName: string|null, customerPhone: string|null, preferredDate: string|null, existingCustomer: array{id: int, name: string|null, phone: string}|null}|null,
+     *     sourceBookingRequest: array{id: int, customerName: string|null, customerPhone: string|null, problemDescription: string|null, originalMessage: string|null, preferredDate: string|null, existingCustomer: array{id: int, name: string|null, phone: string}|null}|null,
      *     existingRepairOrderId: int|null
      * }
      */
@@ -71,7 +71,9 @@ class DashboardRepairOrderFormQuery
                 'customer_name' => $sourceBookingRequest ? ($sourceBookingRequest->customer_name ?? '') : '',
                 'customer_phone' => $sourceBookingRequest ? ($sourceBookingRequest->customer_phone ?? '') : '',
                 'vehicle_id' => $existingCustomerVehiclesCount === 1 ? (string) $existingCustomer->vehicles->first()->id : '',
-                'problem_description' => $sourceBookingRequest->problem_description ?? '',
+                'problem_description' => $sourceBookingRequest
+                    ? ($this->bookingRequestProblemDescription($sourceBookingRequest) ?? '')
+                    : '',
                 'booking_request_id' => $sourceBookingRequest ? (string) $sourceBookingRequest->id : '',
             ],
             'sourceBookingRequest' => $sourceBookingRequest
@@ -79,6 +81,8 @@ class DashboardRepairOrderFormQuery
                     'id' => $sourceBookingRequest->id,
                     'customerName' => $sourceBookingRequest->customer_name,
                     'customerPhone' => $sourceBookingRequest->customer_phone,
+                    'problemDescription' => $sourceBookingRequest->problem_description,
+                    'originalMessage' => $sourceBookingRequest->original_message,
                     'preferredDate' => $sourceBookingRequest->preferred_date?->toDateString(),
                     'existingCustomer' => $existingCustomer
                         ? [
@@ -113,5 +117,18 @@ class DashboardRepairOrderFormQuery
             ->where('phone_normalized', $bookingRequest->customer_phone_normalized
                 ?: (new Phone($phone))->normalize())
             ->first();
+    }
+
+    private function bookingRequestProblemDescription(BookingRequest $bookingRequest): ?string
+    {
+        return $this->nullableTrim($bookingRequest->problem_description)
+            ?? $this->nullableTrim($bookingRequest->original_message);
+    }
+
+    private function nullableTrim(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 }

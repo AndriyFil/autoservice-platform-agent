@@ -91,6 +91,10 @@ const clearSelectedVehicle = () => {
                 <div v-if="sourceBookingRequest" class="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                     <div class="font-medium">Creating from booking request</div>
                     <div class="mt-1">Booking request phone: {{ sourceBookingRequest.customerPhone }}</div>
+                    <div v-if="sourceBookingRequest.originalMessage" class="mt-2">
+                        <div class="font-medium">Original customer message</div>
+                        <p class="mt-1 whitespace-pre-line">{{ sourceBookingRequest.originalMessage }}</p>
+                    </div>
                     <div v-if="existingBookingCustomer" class="mt-2">
                         Existing Customer selected:
                         <span class="font-medium">{{ existingBookingCustomer.name ?? 'Unnamed customer' }}</span>

@@ -13,6 +13,8 @@ export type RepairOrderSourceBookingRequest = {
     id: number;
     customerName: string | null;
     customerPhone: string | null;
+    problemDescription: string | null;
+    originalMessage: string | null;
     preferredDate: string | null;
     existingCustomer: {
         id: number;
