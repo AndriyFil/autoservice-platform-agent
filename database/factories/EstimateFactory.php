@@ -25,6 +25,7 @@ class EstimateFactory extends Factory
             'tax_cents' => 0,
             'total_cents' => 0,
             'currency' => 'USD',
+            'requires_customer_approval' => false,
             'created_by_user_id' => null,
             'generated_at' => null,
             'approved_at' => null,

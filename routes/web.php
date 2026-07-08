@@ -1,17 +1,15 @@
 <?php
 
-use App\Http\Controllers\CancelDashboardRepairOrderController;
-use App\Http\Controllers\CompleteDashboardRepairOrderController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardBookingRequestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardDocumentDownloadController;
 use App\Http\Controllers\DashboardRepairOrderController;
+use App\Http\Controllers\DashboardRepairOrderEstimateApprovalRequirementController;
 use App\Http\Controllers\DashboardRepairOrderLineController;
 use App\Http\Controllers\EstimateDashboardRepairOrderController;
 use App\Http\Controllers\PublicBookingRequestController;
 use App\Http\Controllers\PublicIntakeController;
-use App\Http\Controllers\StartDashboardRepairOrderController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use App\Http\Middleware\EnsureActiveWorkshop;
 use Illuminate\Support\Facades\Route;
@@ -74,14 +72,11 @@ Route::middleware(['auth', EnsureActiveWorkshop::class])
         Route::post('{repairOrder}/estimate', [EstimateDashboardRepairOrderController::class, 'store'])
             ->name('estimate');
 
-        Route::post('{repairOrder}/start', [StartDashboardRepairOrderController::class, 'store'])
-            ->name('start');
+        Route::patch('{repairOrder}/estimate-approval-requirement', [DashboardRepairOrderEstimateApprovalRequirementController::class, 'update'])
+            ->name('estimate-approval-requirement.update');
 
-        Route::post('{repairOrder}/complete', [CompleteDashboardRepairOrderController::class, 'store'])
-            ->name('complete');
-
-        Route::post('{repairOrder}/cancel', [CancelDashboardRepairOrderController::class, 'store'])
-            ->name('cancel');
+        Route::patch('{repairOrder}/status', [DashboardRepairOrderController::class, 'updateStatus'])
+            ->name('status');
     });
 
 Route::middleware(['auth', EnsureActiveWorkshop::class])
@@ -93,7 +88,7 @@ Route::middleware(['auth', EnsureActiveWorkshop::class])
     });
 
 Route::middleware(['auth', EnsureActiveWorkshop::class])
-    ->prefix('customers')
+    ->prefix('dashboard/customers')
     ->name('customers.')
     ->group(function () {
         Route::get('/', [CustomerController::class, 'index'])
@@ -101,6 +96,15 @@ Route::middleware(['auth', EnsureActiveWorkshop::class])
 
         Route::get('{customer}', [CustomerController::class, 'show'])
             ->name('show');
+
+        Route::patch('{customer}', [CustomerController::class, 'update'])
+            ->name('update');
+
+        Route::post('{customer}/vehicles', [CustomerController::class, 'storeVehicle'])
+            ->name('vehicles.store');
+
+        Route::patch('{customer}/vehicles/{vehicle}', [CustomerController::class, 'updateVehicle'])
+            ->name('vehicles.update');
     });
 
 Route::get('book/{workshop:slug}', [PublicBookingRequestController::class, 'create'])

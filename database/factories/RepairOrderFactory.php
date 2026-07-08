@@ -4,13 +4,14 @@ namespace Database\Factories;
 
 use App\Enums\RepairOrderStatus;
 use App\Models\Customer;
+use App\Models\RepairOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Workshop;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\RepairOrder>
+ * @extends Factory<RepairOrder>
  */
 class RepairOrderFactory extends Factory
 {
@@ -27,6 +28,7 @@ class RepairOrderFactory extends Factory
             'vehicle_id' => null,
             'booking_request_id' => null,
             'status' => RepairOrderStatus::Draft,
+            'requires_estimate_approval' => true,
             'notes' => null,
             'created_by_user_id' => User::factory(),
             'problem_description' => fake()->sentence(),

@@ -17,6 +17,7 @@ class CreateRepairOrderAction
      *     customer_id: int,
      *     vehicle_id?: int|null,
      *     problem_description: string,
+     *     requires_estimate_approval?: bool,
      *     notes?: string|null,
      *     new_vehicle?: array{make?: string|null, model?: string|null, year?: int|null, plate?: string|null}
      * }  $data
@@ -33,6 +34,7 @@ class CreateRepairOrderAction
                 'vehicle_id' => $vehicleId,
                 'booking_request_id' => null,
                 'status' => RepairOrderStatus::Draft,
+                'requires_estimate_approval' => $data['requires_estimate_approval'] ?? true,
                 'notes' => $data['notes'] ?? null,
                 'created_by_user_id' => $activeWorkshopUser->user_id,
                 'problem_description' => $data['problem_description'],

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/vue3';
 import { Eye } from 'lucide-vue-next';
 import RepairOrderEmptyState from './RepairOrderEmptyState.vue';
-import RepairOrderStatusBadge from './RepairOrderStatusBadge.vue';
+import RepairOrderStatusDropdown from './RepairOrderStatusDropdown.vue';
 import type { RepairOrderListItem } from './types';
 import { formatDateTime, vehicleSummary } from './utils';
 
@@ -22,7 +22,9 @@ defineProps<{
 
         <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-sm">
-                <thead class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border">
+                <thead
+                    class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border"
+                >
                     <tr>
                         <th class="px-4 py-3">Customer</th>
                         <th class="px-4 py-3">Problem</th>
@@ -50,7 +52,11 @@ defineProps<{
                             {{ vehicleSummary(repairOrder.vehicle) }}
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 align-top">
-                            <RepairOrderStatusBadge :status="repairOrder.status" />
+                            <RepairOrderStatusDropdown
+                                :repair-order-id="repairOrder.id"
+                                :status="repairOrder.status"
+                                :transitions="repairOrder.availableStatusTransitions"
+                            />
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
                             {{ formatDateTime(repairOrder.openedAt) }}

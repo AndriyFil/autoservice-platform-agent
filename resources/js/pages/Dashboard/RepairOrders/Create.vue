@@ -3,6 +3,7 @@ import InputError from '@/components/InputError.vue';
 import RepairOrderCustomerSelect from '@/components/repair-orders/RepairOrderCustomerSelect.vue';
 import type { RepairOrderFormVehicle } from '@/components/repair-orders/types';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -31,6 +32,7 @@ const form = useForm({
     vehicle_id: props.defaults.vehicle_id,
     booking_request_id: props.defaults.booking_request_id,
     problem_description: props.defaults.problem_description,
+    requires_estimate_approval: props.defaults.requires_estimate_approval,
     new_vehicle: {
         make: '',
         model: '',
@@ -200,6 +202,25 @@ const clearSelectedVehicle = () => {
                         class="flex min-h-32 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <InputError :message="form.errors.problem_description" />
+                </div>
+
+                <div class="rounded-md border border-sidebar-border/70 p-3 dark:border-sidebar-border">
+                    <div class="flex items-start gap-3">
+                        <Checkbox
+                            id="requires_estimate_approval"
+                            :model-value="form.requires_estimate_approval"
+                            @update:model-value="(value) => (form.requires_estimate_approval = value === true)"
+                        />
+
+                        <div class="grid gap-1.5">
+                            <Label for="requires_estimate_approval">Require customer approval for estimate</Label>
+                            <p class="text-xs text-muted-foreground">
+                                If enabled, the estimate should be approved by the customer before work starts. Disable for simple jobs confirmed
+                                outside the system.
+                            </p>
+                            <InputError :message="form.errors.requires_estimate_approval" />
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex justify-end">

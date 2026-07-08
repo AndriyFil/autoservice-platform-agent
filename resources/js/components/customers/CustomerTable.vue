@@ -4,7 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { Eye } from 'lucide-vue-next';
 import CustomerEmptyState from './CustomerEmptyState.vue';
 import type { CustomerListItem } from './types';
-import { formatDateTime } from './utils';
+import { customerDisplayName, formatDateTime } from './utils';
 
 defineProps<{
     customers: CustomerListItem[];
@@ -21,7 +21,9 @@ defineProps<{
 
         <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-sm">
-                <thead class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border">
+                <thead
+                    class="border-b border-sidebar-border/70 bg-muted/40 text-xs font-medium uppercase text-muted-foreground dark:border-sidebar-border"
+                >
                     <tr>
                         <th class="px-4 py-3">Customer</th>
                         <th class="px-4 py-3">Phone</th>
@@ -34,8 +36,11 @@ defineProps<{
                 <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
                     <tr v-for="customer in customers" :key="customer.id">
                         <td class="px-4 py-3 align-top">
-                            <Link :href="route('customers.show', { customer: customer.id })" class="font-medium text-foreground underline-offset-4 hover:underline">
-                                {{ customer.name }}
+                            <Link
+                                :href="route('customers.show', { customer: customer.id })"
+                                class="font-medium text-foreground underline-offset-4 hover:underline"
+                            >
+                                {{ customerDisplayName(customer.name) }}
                             </Link>
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">

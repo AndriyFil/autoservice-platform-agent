@@ -18,10 +18,19 @@ class CustomerListQuery
      *     latestBookingRequestDate: string|null
      * }>
      */
-    public function handle(WorkshopUser $activeWorkshopUser): array
+    public function handle(WorkshopUser $activeWorkshopUser, ?string $search = null): array
     {
         return Customer::query()
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
+            ->when($this->nullableTrim($search), function ($query, string $search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('phone_normalized', 'like', "%{$search}%")
+                        ->orWhere('normalized_phone', 'like', "%{$search}%");
+                });
+            })
             ->withCount(['vehicles', 'bookingRequests'])
             ->withMax('bookingRequests', 'created_at')
             ->orderBy('name')
@@ -38,5 +47,12 @@ class CustomerListQuery
                     : null,
             ])
             ->all();
+    }
+
+    private function nullableTrim(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 }

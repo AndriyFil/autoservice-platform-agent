@@ -38,6 +38,7 @@ export type RepairOrderListItem = {
     customerName: string;
     problemDescription: string;
     status: RepairOrderStatus;
+    availableStatusTransitions: RepairOrderStatusTransition[];
     vehicle: RepairOrderVehicle | null;
     openedAt: string;
     closedAt: string | null;
@@ -127,10 +128,12 @@ export type RepairOrderEstimate = {
 
 export type RepairOrderStatusActions = {
     canMarkEstimated: boolean;
-    canStart: boolean;
-    canComplete: boolean;
-    canCancel: boolean;
     hasEstimate: boolean;
+};
+
+export type RepairOrderStatusTransition = {
+    value: RepairOrderStatusValue;
+    label: string;
 };
 
 export type RepairOrderDetails = {
@@ -138,6 +141,8 @@ export type RepairOrderDetails = {
     status: RepairOrderStatus;
     problemDescription: string;
     notes: string | null;
+    requiresEstimateApproval: boolean;
+    canUpdateEstimateApprovalRequirement: boolean;
     openedAt: string;
     closedAt: string | null;
     lines: RepairOrderLine[];
@@ -147,6 +152,7 @@ export type RepairOrderDetails = {
     documents: RepairOrderDocument[];
     availableLineTypes: RepairOrderLineTypeOption[];
     statusActions: RepairOrderStatusActions;
+    availableStatusTransitions: RepairOrderStatusTransition[];
     customer: RepairOrderCustomer;
     vehicle: RepairOrderDetailsVehicle | null;
     bookingRequest: RepairOrderSourceBookingRequest | null;
@@ -169,5 +175,6 @@ export type RepairOrderShowProps = {
     errors?: {
         status?: string;
         repair_order_line?: string;
+        requires_estimate_approval?: string;
     };
 };

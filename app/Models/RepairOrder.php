@@ -25,6 +25,7 @@ class RepairOrder extends Model
         'vehicle_id',
         'booking_request_id',
         'status',
+        'requires_estimate_approval',
         'notes',
         'created_by_user_id',
         'problem_description',
@@ -41,6 +42,7 @@ class RepairOrder extends Model
     {
         return [
             'status' => RepairOrderStatus::class,
+            'requires_estimate_approval' => 'boolean',
             'opened_at' => 'datetime',
             'closed_at' => 'datetime',
         ];

@@ -6,6 +6,7 @@ use App\Enums\BookingRequestStatus;
 use App\Enums\WorkshopUserRole;
 use App\Models\BookingRequest;
 use App\Models\Customer;
+use App\Models\RepairOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Workshop;
@@ -27,6 +28,9 @@ class CustomerManagementTest extends TestCase
             ->assertRedirect('/login');
 
         $this->get(route('customers.show', $customer))
+            ->assertRedirect('/login');
+
+        $this->patch(route('customers.update', $customer))
             ->assertRedirect('/login');
     }
 
@@ -137,9 +141,11 @@ class CustomerManagementTest extends TestCase
                 ->where('customer.id', $customer->id)
                 ->where('customer.name', 'Jane Driver')
                 ->where('customer.phone', '+1 555 123 4567')
+                ->where('customer.createdAt', $customer->created_at->toISOString())
                 ->has('customer.vehicles', 1)
                 ->where('customer.vehicles.0.brand', 'Honda')
                 ->where('customer.vehicles.0.model', 'Civic')
+                ->where('customer.vehicles.0.year', null)
                 ->where('customer.vehicles.0.licensePlate', 'AA1234BB')
                 ->has('customer.bookingRequests', 1)
                 ->where('customer.bookingRequests.0.id', $bookingRequest->id)
@@ -147,7 +153,8 @@ class CustomerManagementTest extends TestCase
                 ->where('customer.bookingRequests.0.status.label', 'Confirmed')
                 ->where('customer.bookingRequests.0.problemDescription', 'Brake noise on cold start.')
                 ->where('customer.bookingRequests.0.preferredDate', '2026-06-20')
-                ->where('customer.bookingRequests.0.createdAt', $bookingRequest->created_at->toISOString()));
+                ->where('customer.bookingRequests.0.createdAt', $bookingRequest->created_at->toISOString())
+                ->has('customer.repairOrders', 0));
     }
 
     public function test_customer_detail_returns_not_found_for_another_workshop_customer(): void
@@ -193,6 +200,13 @@ class CustomerManagementTest extends TestCase
             'problem_description' => 'Battery drain.',
             'created_at' => Carbon::parse('2026-06-11 09:00:00'),
         ]);
+        $repairOrder = RepairOrder::factory()->create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'vehicle_id' => $newerVehicle->id,
+            'problem_description' => 'Battery diagnostic.',
+            'opened_at' => Carbon::parse('2026-06-12 09:00:00'),
+        ]);
 
         $this
             ->actingAs($user)
@@ -208,24 +222,263 @@ class CustomerManagementTest extends TestCase
                 ->where('customer.bookingRequests.0.id', $newerBookingRequest->id)
                 ->where('customer.bookingRequests.0.problemDescription', 'Battery drain.')
                 ->where('customer.bookingRequests.1.id', $olderBookingRequest->id)
-                ->where('customer.bookingRequests.1.problemDescription', 'Oil leak.'));
+                ->where('customer.bookingRequests.1.problemDescription', 'Oil leak.')
+                ->has('customer.repairOrders', 1)
+                ->where('customer.repairOrders.0.id', $repairOrder->id)
+                ->where('customer.repairOrders.0.vehicle.id', $newerVehicle->id));
     }
 
-    public function test_customer_phone_update_recalculates_phone_normalized(): void
+    public function test_staff_can_update_customer_name(): void
     {
+        $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = $this->createCustomer($workshop, [
+            'name' => 'Old Name',
+            'phone' => '+1 555 100 2000',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->patch(route('customers.update', $customer), [
+                'name' => 'New Name',
+                'phone' => '+1 555 100 2000',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
+
+        $this->assertSame('New Name', $customer->refresh()->name);
+    }
+
+    public function test_staff_can_update_customer_phone_and_recalculate_phone_normalized(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
         $customer = $this->createCustomer($workshop, [
             'phone' => '0685620040',
         ]);
 
         $this->assertSame('+380685620040', $customer->phone_normalized);
 
-        $customer->update([
-            'phone' => '+38 (050) 111-22-33',
-        ]);
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->patch(route('customers.update', $customer), [
+                'name' => $customer->name,
+                'phone' => '+38 (050) 111-22-33',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
 
         $this->assertSame('+380501112233', $customer->refresh()->phone_normalized);
         $this->assertSame('+38 (050) 111-22-33', $customer->phone);
+    }
+
+    public function test_duplicate_phone_normalized_in_same_workshop_is_blocked(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $existingCustomer = $this->createCustomer($workshop, [
+            'phone' => '0685620040',
+        ]);
+        $customer = $this->createCustomer($workshop, [
+            'phone' => '+1 555 999 0000',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('customers.show', $customer))
+            ->patch(route('customers.update', $customer), [
+                'name' => $customer->name,
+                'phone' => '+38 (068) 562-00-40',
+            ])
+            ->assertRedirect(route('customers.show', $customer))
+            ->assertSessionHasErrors('phone');
+
+        $this->assertSame('+380685620040', $existingCustomer->refresh()->phone_normalized);
+        $this->assertSame('+1 555 999 0000', $customer->refresh()->phone);
+    }
+
+    public function test_same_phone_normalized_in_another_workshop_is_allowed(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $this->createCustomer($otherWorkshop, [
+            'phone' => '0685620040',
+        ]);
+        $customer = $this->createCustomer($workshop, [
+            'phone' => '+1 555 999 0000',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->patch(route('customers.update', $customer), [
+                'name' => $customer->name,
+                'phone' => '+38 (068) 562-00-40',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
+
+        $this->assertSame('+380685620040', $customer->refresh()->phone_normalized);
+    }
+
+    public function test_staff_cannot_update_customer_from_another_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        $otherCustomer = $this->createCustomer($otherWorkshop);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->patch(route('customers.update', $otherCustomer), [
+                'name' => 'Leaked Name',
+                'phone' => '+1 555 444 3333',
+            ])
+            ->assertNotFound();
+    }
+
+    public function test_staff_can_add_vehicle_to_customer(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = $this->createCustomer($workshop);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('customers.vehicles.store', $customer), [
+                'make' => 'Opel',
+                'model' => 'Insignia',
+                'year' => 2018,
+                'plate' => 'AA7777BB',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
+
+        $this->assertDatabaseHas('vehicles', [
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'Opel',
+            'model' => 'Insignia',
+            'year' => 2018,
+            'license_plate' => 'AA7777BB',
+        ]);
+    }
+
+    public function test_staff_can_update_vehicle(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = $this->createCustomer($workshop);
+        $vehicle = $this->createVehicle($workshop, $customer);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->patch(route('customers.vehicles.update', [$customer, $vehicle]), [
+                'make' => 'Skoda',
+                'model' => 'Octavia',
+                'year' => 2020,
+                'plate' => 'AA8888BB',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
+
+        $vehicle->refresh();
+
+        $this->assertSame('Skoda', $vehicle->brand);
+        $this->assertSame('Octavia', $vehicle->model);
+        $this->assertSame(2020, $vehicle->year);
+        $this->assertSame('AA8888BB', $vehicle->license_plate);
+    }
+
+    public function test_staff_cannot_update_vehicle_from_another_customer(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = $this->createCustomer($workshop);
+        $otherCustomer = $this->createCustomer($workshop);
+        $vehicle = $this->createVehicle($workshop, $otherCustomer);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->patch(route('customers.vehicles.update', [$customer, $vehicle]), [
+                'make' => 'Skoda',
+                'model' => 'Octavia',
+                'year' => 2020,
+                'plate' => 'AA8888BB',
+            ])
+            ->assertNotFound();
+    }
+
+    public function test_staff_cannot_update_vehicle_from_another_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        $customer = $this->createCustomer($activeWorkshop);
+        $otherCustomer = $this->createCustomer($otherWorkshop);
+        $vehicle = $this->createVehicle($otherWorkshop, $otherCustomer);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->patch(route('customers.vehicles.update', [$customer, $vehicle]), [
+                'make' => 'Skoda',
+                'model' => 'Octavia',
+                'year' => 2020,
+                'plate' => 'AA8888BB',
+            ])
+            ->assertNotFound();
+    }
+
+    public function test_customer_management_does_not_create_or_modify_users(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Staff User',
+            'email' => 'staff@example.com',
+        ]);
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = $this->createCustomer($workshop);
+        $userCount = User::count();
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->patch(route('customers.update', $customer), [
+                'name' => 'Updated Customer',
+                'phone' => '+1 555 100 2000',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('customers.vehicles.store', $customer), [
+                'make' => 'Opel',
+                'model' => 'Astra',
+                'year' => 2017,
+                'plate' => 'AA5555BB',
+            ])
+            ->assertRedirect(route('customers.show', $customer));
+
+        $this->assertSame($userCount, User::count());
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Staff User',
+            'email' => 'staff@example.com',
+        ]);
     }
 
     private function createMembership(User $user, Workshop $workshop): WorkshopUser
@@ -253,7 +506,7 @@ class CustomerManagementTest extends TestCase
     }
 
     /**
-     * @param  array{brand?: string|null, model?: string|null, license_plate?: string|null}  $overrides
+     * @param  array{brand?: string|null, model?: string|null, year?: int|null, license_plate?: string|null}  $overrides
      */
     private function createVehicle(Workshop $workshop, Customer $customer, array $overrides = []): Vehicle
     {
@@ -262,6 +515,7 @@ class CustomerManagementTest extends TestCase
             'customer_id' => $customer->id,
             'brand' => $overrides['brand'] ?? 'Honda',
             'model' => $overrides['model'] ?? 'Civic',
+            'year' => $overrides['year'] ?? null,
             'license_plate' => $overrides['license_plate'] ?? 'AA1234BB',
         ]);
     }

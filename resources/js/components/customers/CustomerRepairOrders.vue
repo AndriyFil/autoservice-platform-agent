@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import BookingRequestStatusBadge from '@/components/dashboard/BookingRequestStatusBadge.vue';
+import RepairOrderStatusBadge from '@/components/repair-orders/RepairOrderStatusBadge.vue';
 import { Link } from '@inertiajs/vue3';
-import type { CustomerBookingRequest } from './types';
-import { formatDate, formatDateTime } from './utils';
+import type { CustomerRepairOrder } from './types';
+import { formatDateTime, vehicleSummary } from './utils';
 
 defineProps<{
-    bookingRequests: CustomerBookingRequest[];
+    repairOrders: CustomerRepairOrder[];
 }>();
 </script>
 
 <template>
     <section class="overflow-hidden rounded-lg border border-sidebar-border/70 dark:border-sidebar-border">
         <div class="border-b border-sidebar-border/70 px-4 py-3 dark:border-sidebar-border">
-            <h2 class="text-base font-semibold text-foreground">Booking requests</h2>
+            <h2 class="text-base font-semibold text-foreground">Repair orders</h2>
         </div>
 
-        <div v-if="bookingRequests.length === 0" class="px-4 py-10 text-center text-sm text-muted-foreground">No booking requests yet.</div>
+        <div v-if="repairOrders.length === 0" class="px-4 py-10 text-center text-sm text-muted-foreground">No repair orders yet.</div>
 
         <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-sm">
@@ -25,25 +25,25 @@ defineProps<{
                     <tr>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">Problem</th>
-                        <th class="px-4 py-3">Preferred</th>
-                        <th class="px-4 py-3">Created</th>
+                        <th class="px-4 py-3">Vehicle</th>
+                        <th class="px-4 py-3">Opened</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
-                    <tr v-for="bookingRequest in bookingRequests" :key="bookingRequest.id">
+                    <tr v-for="repairOrder in repairOrders" :key="repairOrder.id">
                         <td class="whitespace-nowrap px-4 py-3 align-top">
-                            <BookingRequestStatusBadge :status="bookingRequest.status" />
+                            <RepairOrderStatusBadge :status="repairOrder.status" />
                         </td>
                         <td class="max-w-xl px-4 py-3 align-top text-foreground">
-                            <Link :href="bookingRequest.showUrl" class="underline-offset-4 hover:underline">
-                                {{ bookingRequest.problemDescription }}
+                            <Link :href="repairOrder.showUrl" class="underline-offset-4 hover:underline">
+                                {{ repairOrder.problemDescription ?? `Repair order #${repairOrder.id}` }}
                             </Link>
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
-                            {{ formatDate(bookingRequest.preferredDate) }}
+                            {{ repairOrder.vehicle ? vehicleSummary(repairOrder.vehicle) : '-' }}
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
-                            {{ formatDateTime(bookingRequest.createdAt) }}
+                            {{ formatDateTime(repairOrder.openedAt) }}
                         </td>
                     </tr>
                 </tbody>

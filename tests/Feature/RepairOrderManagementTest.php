@@ -18,6 +18,7 @@ use App\Models\Workshop;
 use App\Models\WorkshopUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -118,6 +119,7 @@ class RepairOrderManagementTest extends TestCase
                 ->where('defaults.customer_id', (string) $customer->id)
                 ->where('defaults.vehicle_id', (string) $vehicle->id)
                 ->where('defaults.booking_request_id', (string) $bookingRequest->id)
+                ->where('defaults.requires_estimate_approval', true)
                 ->where('defaults.problem_description', 'Brake pedal feels soft.')
                 ->where('defaults.customer_phone', '+1 555 123 4567')
                 ->where('sourceBookingRequest.id', $bookingRequest->id)
@@ -292,10 +294,73 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame($bookingRequest->id, $repairOrder->booking_request_id);
         $this->assertSame($user->id, $repairOrder->created_by_user_id);
         $this->assertSame(RepairOrderStatus::Draft, $repairOrder->status);
+        $this->assertTrue($repairOrder->requires_estimate_approval);
         $this->assertSame('Brake pedal feels soft.', $repairOrder->problem_description);
         $this->assertSame('2026-06-12 10:00:00', $repairOrder->opened_at->toDateTimeString());
         $this->assertNull($repairOrder->closed_at);
         $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->status);
+    }
+
+    public function test_repair_order_model_casts_requires_estimate_approval_as_boolean(): void
+    {
+        $repairOrder = RepairOrder::factory()->create([
+            'requires_estimate_approval' => 1,
+        ]);
+
+        $this->assertTrue($repairOrder->refresh()->requires_estimate_approval);
+    }
+
+    public function test_manual_repair_order_can_be_created_without_requiring_estimate_approval(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Manual Customer',
+            'phone' => '+1 555 999 0000',
+            'normalized_phone' => '15559990000',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'customer_id' => $customer->id,
+                'problem_description' => 'Oil change.',
+                'requires_estimate_approval' => false,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse(RepairOrder::query()->firstOrFail()->requires_estimate_approval);
+    }
+
+    public function test_repair_order_created_from_booking_request_can_disable_estimate_approval_requirement(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => 'Brake noise.',
+                'requires_estimate_approval' => false,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse(RepairOrder::query()->firstOrFail()->requires_estimate_approval);
+    }
+
+    public function test_workshop_level_approval_setting_is_not_schema_source_of_truth(): void
+    {
+        $this->assertFalse(Schema::hasColumn('workshops', 'require_estimate_approval'));
+        $this->assertTrue(Schema::hasColumn('repair_orders', 'requires_estimate_approval'));
     }
 
     public function test_confirmed_booking_request_reuses_existing_customer_by_phone_normalized(): void
@@ -1002,6 +1067,10 @@ class RepairOrderManagementTest extends TestCase
                 ->where('repairOrders.0.id', $manualRepairOrder->id)
                 ->where('repairOrders.0.customerName', 'Active Customer')
                 ->where('repairOrders.0.status.value', 'draft')
+                ->where('repairOrders.0.availableStatusTransitions.0.value', 'in_progress')
+                ->where('repairOrders.0.availableStatusTransitions.0.label', 'Start work')
+                ->where('repairOrders.0.availableStatusTransitions.1.value', 'cancelled')
+                ->where('repairOrders.0.availableStatusTransitions.1.label', 'Cancel order')
                 ->where('repairOrders.1.id', $activeRepairOrder->id));
     }
 
@@ -1056,13 +1125,14 @@ class RepairOrderManagementTest extends TestCase
                 ->where('repairOrder.bookingRequest.status.value', 'confirmed')
                 ->where('repairOrder.bookingRequest.preferredDate', '2026-06-20')
                 ->where('repairOrder.statusActions.canMarkEstimated', false)
-                ->where('repairOrder.statusActions.canStart', true)
-                ->where('repairOrder.statusActions.canComplete', false)
-                ->where('repairOrder.statusActions.canCancel', true)
-                ->where('repairOrder.statusActions.hasEstimate', false));
+                ->where('repairOrder.statusActions.hasEstimate', false)
+                ->where('repairOrder.availableStatusTransitions.0.value', 'in_progress')
+                ->where('repairOrder.availableStatusTransitions.0.label', 'Start work')
+                ->where('repairOrder.availableStatusTransitions.1.value', 'cancelled')
+                ->where('repairOrder.availableStatusTransitions.1.label', 'Cancel order'));
     }
 
-    public function test_repair_order_show_action_availability_flags_match_statuses(): void
+    public function test_repair_order_show_available_status_transitions_match_statuses(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
@@ -1072,42 +1142,41 @@ class RepairOrderManagementTest extends TestCase
             RepairOrderStatus::Draft->value => [
                 'status' => RepairOrderStatus::Draft,
                 'canMarkEstimated' => true,
-                'canStart' => true,
-                'canComplete' => false,
-                'canCancel' => true,
                 'hasEstimate' => false,
+                'availableStatusTransitions' => [
+                    ['value' => 'in_progress', 'label' => 'Start work'],
+                    ['value' => 'cancelled', 'label' => 'Cancel order'],
+                ],
             ],
             RepairOrderStatus::Estimated->value => [
                 'status' => RepairOrderStatus::Estimated,
                 'canMarkEstimated' => true,
-                'canStart' => true,
-                'canComplete' => false,
-                'canCancel' => true,
                 'hasEstimate' => true,
+                'availableStatusTransitions' => [
+                    ['value' => 'in_progress', 'label' => 'Start work'],
+                    ['value' => 'cancelled', 'label' => 'Cancel order'],
+                ],
             ],
             RepairOrderStatus::InProgress->value => [
                 'status' => RepairOrderStatus::InProgress,
                 'canMarkEstimated' => true,
-                'canStart' => false,
-                'canComplete' => true,
-                'canCancel' => true,
                 'hasEstimate' => true,
+                'availableStatusTransitions' => [
+                    ['value' => 'completed', 'label' => 'Complete order'],
+                    ['value' => 'cancelled', 'label' => 'Cancel order'],
+                ],
             ],
             RepairOrderStatus::Completed->value => [
                 'status' => RepairOrderStatus::Completed,
                 'canMarkEstimated' => false,
-                'canStart' => false,
-                'canComplete' => false,
-                'canCancel' => false,
                 'hasEstimate' => true,
+                'availableStatusTransitions' => [],
             ],
             RepairOrderStatus::Cancelled->value => [
                 'status' => RepairOrderStatus::Cancelled,
                 'canMarkEstimated' => false,
-                'canStart' => false,
-                'canComplete' => false,
-                'canCancel' => false,
                 'hasEstimate' => true,
+                'availableStatusTransitions' => [],
             ],
         ];
 
@@ -1144,10 +1213,8 @@ class RepairOrderManagementTest extends TestCase
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('repairOrder.status.value', $statusValue)
                     ->where('repairOrder.statusActions.canMarkEstimated', $expectation['canMarkEstimated'])
-                    ->where('repairOrder.statusActions.canStart', $expectation['canStart'])
-                    ->where('repairOrder.statusActions.canComplete', $expectation['canComplete'])
-                    ->where('repairOrder.statusActions.canCancel', $expectation['canCancel'])
-                    ->where('repairOrder.statusActions.hasEstimate', $expectation['hasEstimate']));
+                    ->where('repairOrder.statusActions.hasEstimate', $expectation['hasEstimate'])
+                    ->where('repairOrder.availableStatusTransitions', $expectation['availableStatusTransitions']));
         }
     }
 
@@ -1246,7 +1313,8 @@ class RepairOrderManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('bookingRequest.status.value', 'confirmed')
-                ->where('bookingRequest.repairOrder', null));
+                ->where('linkedRepairOrder', null)
+                ->where('canCreateRepairOrder', true));
 
         $this
             ->actingAs($user)
@@ -1255,8 +1323,9 @@ class RepairOrderManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('bookingRequest.status.value', 'confirmed')
-                ->where('bookingRequest.repairOrder.id', $repairOrder->id)
-                ->where('bookingRequest.repairOrder.status.value', 'draft'));
+                ->where('linkedRepairOrder.id', $repairOrder->id)
+                ->where('linkedRepairOrder.status.value', 'draft')
+                ->where('canCreateRepairOrder', false));
     }
 
     public function test_estimated_repair_order_cannot_complete_directly(): void
@@ -1274,11 +1343,38 @@ class RepairOrderManagementTest extends TestCase
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.complete', $repairOrder))
+            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                'status' => RepairOrderStatus::Completed->value,
+            ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHasErrors('status');
 
         $this->assertSame(RepairOrderStatus::Estimated, $repairOrder->refresh()->status);
+        $this->assertNull($repairOrder->closed_at);
+    }
+
+    public function test_draft_repair_order_cannot_be_marked_estimated_through_status_route(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'status' => RepairOrderStatus::Draft,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                'status' => RepairOrderStatus::Estimated->value,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame(RepairOrderStatus::Draft, $repairOrder->refresh()->status);
         $this->assertNull($repairOrder->closed_at);
     }
 
@@ -1297,7 +1393,9 @@ class RepairOrderManagementTest extends TestCase
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.start', $repairOrder))
+            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                'status' => RepairOrderStatus::InProgress->value,
+            ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHas('status', 'Repair order started.');
 
@@ -1320,7 +1418,9 @@ class RepairOrderManagementTest extends TestCase
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.start', $repairOrder))
+            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                'status' => RepairOrderStatus::InProgress->value,
+            ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHas('status', 'Repair order started.');
 
@@ -1345,7 +1445,9 @@ class RepairOrderManagementTest extends TestCase
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.complete', $repairOrder))
+            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                'status' => RepairOrderStatus::Completed->value,
+            ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHas('status', 'Repair order completed.');
 
@@ -1355,22 +1457,29 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame('2026-06-12 11:00:00', $repairOrder->closed_at->toDateTimeString());
     }
 
-    public function test_open_repair_order_can_be_cancelled(): void
+    public function test_estimated_repair_order_can_be_cancelled(): void
     {
         Carbon::setTestNow('2026-06-12 12:00:00');
 
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
-        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
-            'status' => BookingRequestStatus::Confirmed,
-        ]));
+        $repairOrder = $this->createRepairOrder(
+            $this->createBookingRequest($workshop, [
+                'status' => BookingRequestStatus::Confirmed,
+            ]),
+            [
+                'status' => RepairOrderStatus::Estimated,
+            ],
+        );
 
         $this
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.cancel', $repairOrder))
+            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                'status' => RepairOrderStatus::Cancelled->value,
+            ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHas('status', 'Repair order cancelled.');
 
@@ -1392,29 +1501,17 @@ class RepairOrderManagementTest extends TestCase
             'closed_at' => Carbon::parse('2026-06-12 11:00:00'),
         ]);
 
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.start', $repairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.complete', $repairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.cancel', $repairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
+        foreach ([RepairOrderStatus::Draft, RepairOrderStatus::InProgress, RepairOrderStatus::Completed, RepairOrderStatus::Cancelled] as $targetStatus) {
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard.repair-orders.show', $repairOrder))
+                ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                    'status' => $targetStatus->value,
+                ])
+                ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+                ->assertSessionHasErrors('status');
+        }
 
         $repairOrder->refresh();
 
@@ -1434,29 +1531,17 @@ class RepairOrderManagementTest extends TestCase
             'closed_at' => Carbon::parse('2026-06-12 12:00:00'),
         ]);
 
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.start', $repairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.complete', $repairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->post(route('dashboard.repair-orders.cancel', $repairOrder))
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
+        foreach ([RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress, RepairOrderStatus::Completed] as $targetStatus) {
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard.repair-orders.show', $repairOrder))
+                ->patch(route('dashboard.repair-orders.status', $repairOrder), [
+                    'status' => $targetStatus->value,
+                ])
+                ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+                ->assertSessionHasErrors('status');
+        }
 
         $repairOrder->refresh();
 
@@ -1477,22 +1562,105 @@ class RepairOrderManagementTest extends TestCase
         $this
             ->actingAs($user)
             ->withSession(['active_workshop_id' => $activeWorkshop->id])
-            ->post(route('dashboard.repair-orders.start', $otherRepairOrder))
-            ->assertNotFound();
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $activeWorkshop->id])
-            ->post(route('dashboard.repair-orders.complete', $otherRepairOrder))
-            ->assertNotFound();
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $activeWorkshop->id])
-            ->post(route('dashboard.repair-orders.cancel', $otherRepairOrder))
+            ->patch(route('dashboard.repair-orders.status', $otherRepairOrder), [
+                'status' => RepairOrderStatus::InProgress->value,
+            ])
             ->assertNotFound();
 
         $this->assertSame(RepairOrderStatus::Draft, $otherRepairOrder->refresh()->status);
+    }
+
+    public function test_repair_order_show_exposes_estimate_approval_requirement_settings(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'requires_estimate_approval' => false,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('repairOrder.requiresEstimateApproval', false)
+                ->where('repairOrder.canUpdateEstimateApprovalRequirement', true));
+    }
+
+    public function test_open_repair_order_estimate_approval_requirement_can_be_toggled(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'requires_estimate_approval' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->patch(route('dashboard.repair-orders.estimate-approval-requirement.update', $repairOrder), [
+                'requires_estimate_approval' => false,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHas('status', 'Estimate approval requirement updated.');
+
+        $this->assertFalse($repairOrder->refresh()->requires_estimate_approval);
+    }
+
+    public function test_completed_repair_order_estimate_approval_requirement_cannot_be_toggled(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'status' => RepairOrderStatus::Completed,
+            'requires_estimate_approval' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->patch(route('dashboard.repair-orders.estimate-approval-requirement.update', $repairOrder), [
+                'requires_estimate_approval' => false,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('requires_estimate_approval');
+
+        $this->assertTrue($repairOrder->refresh()->requires_estimate_approval);
+    }
+
+    public function test_cross_workshop_estimate_approval_requirement_update_is_not_accessible(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        $otherRepairOrder = $this->createRepairOrder($this->createBookingRequest($otherWorkshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'requires_estimate_approval' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->patch(route('dashboard.repair-orders.estimate-approval-requirement.update', $otherRepairOrder), [
+                'requires_estimate_approval' => false,
+            ])
+            ->assertNotFound();
+
+        $this->assertTrue($otherRepairOrder->refresh()->requires_estimate_approval);
     }
 
     private function createMembership(
@@ -1566,7 +1734,7 @@ class RepairOrderManagementTest extends TestCase
     }
 
     /**
-     * @param  array{status?: RepairOrderStatus, opened_at?: Carbon, closed_at?: Carbon|null}  $overrides
+     * @param  array{status?: RepairOrderStatus, requires_estimate_approval?: bool, opened_at?: Carbon, closed_at?: Carbon|null}  $overrides
      */
     private function createRepairOrder(BookingRequest $bookingRequest, array $overrides = []): RepairOrder
     {
@@ -1576,6 +1744,7 @@ class RepairOrderManagementTest extends TestCase
             'vehicle_id' => $bookingRequest->vehicle_id,
             'booking_request_id' => $bookingRequest->id,
             'status' => $overrides['status'] ?? RepairOrderStatus::Draft,
+            'requires_estimate_approval' => $overrides['requires_estimate_approval'] ?? true,
             'problem_description' => $bookingRequest->problem_description,
             'opened_at' => $overrides['opened_at'] ?? Carbon::parse('2026-06-12 10:00:00'),
             'closed_at' => $overrides['closed_at'] ?? null,

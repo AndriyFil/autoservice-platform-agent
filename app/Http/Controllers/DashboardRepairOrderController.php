@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RepairOrders\ChangeRepairOrderStatusAction;
 use App\Actions\RepairOrders\CreateRepairOrderAction;
 use App\Actions\RepairOrders\CreateRepairOrderFromBookingRequestAction;
+use App\Enums\RepairOrderStatus;
 use App\Http\Requests\StoreRepairOrderRequest;
+use App\Http\Requests\UpdateRepairOrderStatusRequest;
 use App\Models\RepairOrder;
 use App\Queries\Dashboard\DashboardRepairOrderDetailsQuery;
 use App\Queries\Dashboard\DashboardRepairOrderFormQuery;
@@ -99,5 +102,33 @@ class DashboardRepairOrderController extends Controller
             ],
             'repairOrder' => $repairOrderDetailsQuery->handle($activeWorkshopUser, $repairOrder),
         ]);
+    }
+
+    public function updateStatus(
+        UpdateRepairOrderStatusRequest $request,
+        RepairOrder $repairOrder,
+        ChangeRepairOrderStatusAction $changeRepairOrderStatus,
+    ): RedirectResponse {
+        $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
+
+        try {
+            $changeRepairOrderStatus->handle($activeWorkshopUser, $repairOrder, $request->status());
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'status' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', $this->statusChangeMessage($request->status()));
+    }
+
+    private function statusChangeMessage(RepairOrderStatus $status): string
+    {
+        return match ($status) {
+            RepairOrderStatus::InProgress => 'Repair order started.',
+            RepairOrderStatus::Completed => 'Repair order completed.',
+            RepairOrderStatus::Cancelled => 'Repair order cancelled.',
+            default => 'Repair order status updated.',
+        };
     }
 }

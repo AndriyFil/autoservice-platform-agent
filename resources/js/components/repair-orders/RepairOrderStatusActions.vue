@@ -3,7 +3,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/composables/useTranslations';
 import { useForm } from '@inertiajs/vue3';
-import { Ban, Check, FileText, Play } from 'lucide-vue-next';
+import { FileText } from 'lucide-vue-next';
 import type { RepairOrderStatusActions } from './types';
 
 const props = defineProps<{
@@ -14,32 +14,11 @@ const props = defineProps<{
 const { t } = useTranslations();
 
 const estimateForm = useForm({});
-const startForm = useForm({});
-const completeForm = useForm({});
-const cancelForm = useForm({});
 
-const anyProcessing = () => estimateForm.processing || startForm.processing || completeForm.processing || cancelForm.processing;
+const anyProcessing = () => estimateForm.processing;
 
 const submitEstimate = () => {
     estimateForm.post(route('dashboard.repair-orders.estimate', { repairOrder: props.repairOrderId }), {
-        preserveScroll: true,
-    });
-};
-
-const submitStart = () => {
-    startForm.post(route('dashboard.repair-orders.start', { repairOrder: props.repairOrderId }), {
-        preserveScroll: true,
-    });
-};
-
-const submitComplete = () => {
-    completeForm.post(route('dashboard.repair-orders.complete', { repairOrder: props.repairOrderId }), {
-        preserveScroll: true,
-    });
-};
-
-const submitCancel = () => {
-    cancelForm.post(route('dashboard.repair-orders.cancel', { repairOrder: props.repairOrderId }), {
         preserveScroll: true,
     });
 };
@@ -51,42 +30,6 @@ const submitCancel = () => {
             <Button v-if="actions.canMarkEstimated" type="button" size="sm" :disabled="anyProcessing()" @click="submitEstimate">
                 <FileText class="size-4" />
                 {{ t(actions.hasEstimate ? 'repair_orders.actions.regenerate_estimate_pdf' : 'repair_orders.actions.create_estimate_pdf') }}
-            </Button>
-
-            <Button
-                v-if="actions.canStart"
-                type="button"
-                size="sm"
-                class="bg-blue-600 text-white hover:bg-blue-700"
-                :disabled="anyProcessing()"
-                @click="submitStart"
-            >
-                <Play class="size-4" />
-                {{ t('repair_orders.actions.start_work') }}
-            </Button>
-
-            <Button
-                v-if="actions.canComplete"
-                type="button"
-                size="sm"
-                class="bg-green-600 text-white hover:bg-green-700"
-                :disabled="anyProcessing()"
-                @click="submitComplete"
-            >
-                <Check class="size-4" />
-                {{ t('repair_orders.actions.complete') }}
-            </Button>
-
-            <Button
-                v-if="actions.canCancel"
-                type="button"
-                size="sm"
-                class="bg-amber-600 text-white hover:bg-amber-700"
-                :disabled="anyProcessing()"
-                @click="submitCancel"
-            >
-                <Ban class="size-4" />
-                {{ t('repair_orders.actions.cancel') }}
             </Button>
         </div>
 

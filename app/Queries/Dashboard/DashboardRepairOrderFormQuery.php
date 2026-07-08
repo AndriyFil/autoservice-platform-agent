@@ -18,7 +18,7 @@ class DashboardRepairOrderFormQuery
      *         phoneNormalized: string,
      *         vehicles: array<int, array{id: int, brand: string|null, model: string|null, year: int|null, licensePlate: string|null}>
      *     }>,
-     *     defaults: array{customer_id: string, customer_name: string, customer_phone: string, vehicle_id: string, problem_description: string, booking_request_id: string},
+     *     defaults: array{customer_id: string, customer_name: string, customer_phone: string, vehicle_id: string, problem_description: string, booking_request_id: string, requires_estimate_approval: bool},
      *     sourceBookingRequest: array{id: int, customerName: string|null, customerPhone: string|null, problemDescription: string|null, originalMessage: string|null, preferredDate: string|null, existingCustomer: array{id: int, name: string|null, phone: string}|null}|null,
      *     existingRepairOrderId: int|null
      * }
@@ -75,6 +75,7 @@ class DashboardRepairOrderFormQuery
                     ? ($this->bookingRequestProblemDescription($sourceBookingRequest) ?? '')
                     : '',
                 'booking_request_id' => $sourceBookingRequest ? (string) $sourceBookingRequest->id : '',
+                'requires_estimate_approval' => true,
             ],
             'sourceBookingRequest' => $sourceBookingRequest
                 ? [

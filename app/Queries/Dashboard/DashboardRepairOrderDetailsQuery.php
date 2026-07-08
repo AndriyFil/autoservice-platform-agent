@@ -19,6 +19,8 @@ class DashboardRepairOrderDetailsQuery
      *     status: array{value: string, label: string},
      *     problemDescription: string|null,
      *     notes: string|null,
+     *     requiresEstimateApproval: bool,
+     *     canUpdateEstimateApprovalRequirement: bool,
      *     openedAt: string,
      *     closedAt: string|null,
      *     lines: array<int, array{id: int, type: array{value: string, label: string}, description: string, quantity: string, unitPriceCents: int, taxRate: string, sortOrder: int, subtotalCents: int, taxCents: int, totalCents: int}>,
@@ -27,7 +29,8 @@ class DashboardRepairOrderDetailsQuery
      *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string}|null}>,
      *     documents: array<int, array{id: int, filename: string, type: array{value: string, label: string}, status: array{value: string, label: string}, generatedAt: string|null, downloadUrl: string|null}>,
      *     availableLineTypes: array<int, array{value: string, label: string}>,
-     *     statusActions: array{canMarkEstimated: bool, canStart: bool, canComplete: bool, canCancel: bool, hasEstimate: bool},
+     *     statusActions: array{canMarkEstimated: bool, hasEstimate: bool},
+     *     availableStatusTransitions: array<int, array{value: string, label: string}>,
      *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
      *     bookingRequest: array{id: int, status: array{value: string, label: string}, problemDescription: string, originalMessage: string|null, preferredDate: string|null, createdAt: string}|null
@@ -56,6 +59,8 @@ class DashboardRepairOrderDetailsQuery
             ],
             'problemDescription' => $repairOrder->problem_description,
             'notes' => $repairOrder->notes,
+            'requiresEstimateApproval' => $repairOrder->requires_estimate_approval,
+            'canUpdateEstimateApprovalRequirement' => ! in_array($repairOrder->status, [RepairOrderStatus::Completed, RepairOrderStatus::Cancelled], true),
             'openedAt' => $repairOrder->opened_at->toISOString(),
             'closedAt' => $repairOrder->closed_at?->toISOString(),
             'lines' => $repairOrder->lines
@@ -143,6 +148,7 @@ class DashboardRepairOrderDetailsQuery
                 RepairOrderLineType::cases(),
             ),
             'statusActions' => $this->statusActions($repairOrder),
+            'availableStatusTransitions' => $this->availableStatusTransitions($repairOrder->status),
             'customer' => $repairOrder->customer
                 ? [
                     'id' => $repairOrder->customer->id,
@@ -175,7 +181,7 @@ class DashboardRepairOrderDetailsQuery
     }
 
     /**
-     * @return array{canMarkEstimated: bool, canStart: bool, canComplete: bool, canCancel: bool, hasEstimate: bool}
+     * @return array{canMarkEstimated: bool, hasEstimate: bool}
      */
     private function statusActions(RepairOrder $repairOrder): array
     {
@@ -184,10 +190,32 @@ class DashboardRepairOrderDetailsQuery
         return [
             'canMarkEstimated' => in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress], true)
                 && $repairOrder->lines->isNotEmpty(),
-            'canStart' => $repairOrder->status->canTransitionTo(RepairOrderStatus::InProgress),
-            'canComplete' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Completed),
-            'canCancel' => $repairOrder->status->canTransitionTo(RepairOrderStatus::Cancelled),
             'hasEstimate' => $hasEstimate,
         ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function availableStatusTransitions(RepairOrderStatus $status): array
+    {
+        $actionLabels = [
+            RepairOrderStatus::InProgress->value => 'Start work',
+            RepairOrderStatus::Completed->value => 'Complete order',
+            RepairOrderStatus::Cancelled->value => 'Cancel order',
+        ];
+
+        return collect([
+            RepairOrderStatus::InProgress,
+            RepairOrderStatus::Completed,
+            RepairOrderStatus::Cancelled,
+        ])
+            ->filter(fn (RepairOrderStatus $targetStatus): bool => $status->canTransitionTo($targetStatus))
+            ->map(fn (RepairOrderStatus $targetStatus): array => [
+                'value' => $targetStatus->value,
+                'label' => $actionLabels[$targetStatus->value],
+            ])
+            ->values()
+            ->all();
     }
 }

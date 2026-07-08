@@ -29,7 +29,7 @@ class DashboardBookingRequestController extends Controller
                 'name' => $activeWorkshop->name,
                 'slug' => $activeWorkshop->slug,
             ],
-            'bookingRequest' => $bookingRequestDetailsQuery->handle($activeWorkshopUser, $bookingRequest),
+            ...$bookingRequestDetailsQuery->handle($activeWorkshopUser, $bookingRequest),
         ]);
     }
 

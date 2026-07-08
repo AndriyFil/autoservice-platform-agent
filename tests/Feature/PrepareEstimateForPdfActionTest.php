@@ -41,6 +41,24 @@ class PrepareEstimateForPdfActionTest extends TestCase
         $this->assertSame(9000, $estimate->total_cents);
     }
 
+    public function test_generated_estimate_does_not_require_customer_approval_when_repair_order_flag_is_false(): void
+    {
+        [$workshopUser, $repairOrder] = $this->buildRepairOrderWithLine(requireEstimateApproval: false);
+
+        $estimate = app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
+
+        $this->assertFalse($estimate->requires_customer_approval);
+    }
+
+    public function test_generated_estimate_copies_repair_order_customer_approval_requirement(): void
+    {
+        [$workshopUser, $repairOrder] = $this->buildRepairOrderWithLine(requireEstimateApproval: true);
+
+        $estimate = app(PrepareEstimateForPdfAction::class)->handle($workshopUser, $repairOrder);
+
+        $this->assertTrue($estimate->requires_customer_approval);
+    }
+
     public function test_existing_estimate_does_not_get_rebuilt_when_generating_next_version(): void
     {
         Storage::fake('documents_local');
@@ -186,13 +204,16 @@ class PrepareEstimateForPdfActionTest extends TestCase
     /**
      * @return array{0: WorkshopUser, 1: RepairOrder}
      */
-    private function buildRepairOrderWithLine(RepairOrderStatus $repairOrderStatus = RepairOrderStatus::Draft): array
-    {
+    private function buildRepairOrderWithLine(
+        RepairOrderStatus $repairOrderStatus = RepairOrderStatus::Draft,
+        bool $requireEstimateApproval = false,
+    ): array {
         $workshop = Workshop::factory()->create();
         $user = User::factory()->create();
         $workshopUser = $this->createMembership($user, $workshop);
         $repairOrder = RepairOrder::factory()->forWorkshop($workshop)->create([
             'status' => $repairOrderStatus,
+            'requires_estimate_approval' => $requireEstimateApproval,
         ]);
 
         RepairOrderLine::factory()->create([

@@ -1,35 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RepairOrderVehicle } from './types';
-import {
-    canCancelRepairOrder,
-    canCompleteRepairOrder,
-    centsToDecimalInput,
-    decimalInputToCents,
-    formatCents,
-    formatDate,
-    formatDateTime,
-    vehicleSummary,
-} from './utils';
-
-describe('canCompleteRepairOrder', () => {
-    it('allows only in_progress', () => {
-        expect(canCompleteRepairOrder('draft')).toBe(false);
-        expect(canCompleteRepairOrder('in_progress')).toBe(true);
-        expect(canCompleteRepairOrder('estimated')).toBe(false);
-        expect(canCompleteRepairOrder('completed')).toBe(false);
-        expect(canCompleteRepairOrder('cancelled')).toBe(false);
-    });
-});
-
-describe('canCancelRepairOrder', () => {
-    it('allows every active status but not terminal ones', () => {
-        expect(canCancelRepairOrder('draft')).toBe(true);
-        expect(canCancelRepairOrder('estimated')).toBe(true);
-        expect(canCancelRepairOrder('in_progress')).toBe(true);
-        expect(canCancelRepairOrder('completed')).toBe(false);
-        expect(canCancelRepairOrder('cancelled')).toBe(false);
-    });
-});
+import { centsToDecimalInput, decimalInputToCents, formatCents, formatDate, formatDateTime, vehicleSummary } from './utils';
 
 describe('formatCents', () => {
     it('renders cents as a two-decimal amount', () => {

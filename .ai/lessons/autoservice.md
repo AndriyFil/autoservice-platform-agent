@@ -121,3 +121,15 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: Do not model phone normalization as a stateless `PhoneNormalizer` service when a small `Phone` object can hold the raw value and expose normalization behavior.
 - Lesson: For phone-specific behavior, use a focused `Phone` Pure Fabrication/value-style helper with the raw phone passed through the constructor, then call behavior such as `normalize()`.
 - Applies when: Implementing or reviewing phone normalization, customer matching, booking request intake phone storage, or phone search behavior.
+
+## 2026-07-07 - Estimate Approval Requirement Is Per Repair Order
+
+- Correction: Estimate approval requirement is not a workshop-level setting.
+- Lesson: Store `requires_estimate_approval` on each `RepairOrder`, default it to true for new repair orders, allow staff to disable it per order when appropriate, and snapshot that value to `Estimate.requires_customer_approval` during estimate generation.
+- Applies when: Implementing or reviewing estimate approval settings, repair-order creation, booking-request conversion, estimate generation, or future customer approval links.
+
+## 2026-07-07 - Status Badge Is The Status Control
+
+- Correction: Jira-like status changes should happen by clicking the status badge itself, not by adding a separate selectbox or adjacent change-status button.
+- Lesson: When a dashboard status is editable, make the badge/pill the dropdown trigger in both detail headers and tables. Keep valid transitions backend-provided and do not duplicate transition rules in Vue.
+- Applies when: Implementing or reviewing editable status UI for repair orders or similar dashboard workflow records.

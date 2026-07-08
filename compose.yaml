@@ -16,9 +16,14 @@ services:
       DB_DATABASE: autoservice
       DB_USERNAME: autoservice
       DB_PASSWORD: autoservice
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       VITE_DEV_SERVER_URL: http://localhost:5173
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: sh -c "composer install && php artisan serve --host=0.0.0.0 --port=8000"
 
@@ -50,6 +55,31 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
 volumes:
   postgres-data:
   node-modules:
+  redis-data:
+  rabbitmq-data:

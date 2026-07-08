@@ -75,6 +75,7 @@ class PrepareEstimateForPdfAction
             'tax_cents' => $repairOrder->taxCents(),
             'total_cents' => $repairOrder->totalCents(),
             'currency' => config('app.currency', 'USD'),
+            'requires_customer_approval' => $repairOrder->requires_estimate_approval,
             'created_by_user_id' => $activeWorkshopUser->user_id,
             'generated_at' => now(),
         ]);

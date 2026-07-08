@@ -7,6 +7,7 @@ export type RepairOrderCreateDefaults = {
     vehicle_id: string;
     problem_description: string;
     booking_request_id: string;
+    requires_estimate_approval: boolean;
 };
 
 export type RepairOrderSourceBookingRequest = {

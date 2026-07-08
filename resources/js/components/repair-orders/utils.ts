@@ -1,8 +1,4 @@
-import type { RepairOrderStatusValue, RepairOrderVehicle } from './types';
-
-export const canCompleteRepairOrder = (status: RepairOrderStatusValue) => status === 'in_progress';
-
-export const canCancelRepairOrder = (status: RepairOrderStatusValue) => ['draft', 'estimated', 'in_progress'].includes(status);
+import type { RepairOrderVehicle } from './types';
 
 export const formatCents = (cents: number): string =>
     new Intl.NumberFormat(undefined, {

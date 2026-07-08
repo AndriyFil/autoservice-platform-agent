@@ -29,7 +29,9 @@ export const formatDateTime = (date: string | null): string => {
 };
 
 export const vehicleSummary = (vehicle: CustomerVehicle): string => {
-    const parts = [vehicle.brand, vehicle.model, vehicle.licensePlate].filter(Boolean);
+    const parts = [vehicle.brand, vehicle.model, vehicle.year?.toString(), vehicle.licensePlate].filter(Boolean);
 
     return parts.length > 0 ? parts.join(' ') : 'No vehicle details';
 };
+
+export const customerDisplayName = (name: string | null): string => name || 'Unnamed customer';

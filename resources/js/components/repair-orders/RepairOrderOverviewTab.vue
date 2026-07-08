@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import RepairOrderStatusBadge from '@/components/repair-orders/RepairOrderStatusBadge.vue';
 import { useTranslations } from '@/composables/useTranslations';
+import { Link } from '@inertiajs/vue3';
 import type { RepairOrderDetails } from './types';
 import { formatCents, formatDateTime, vehicleSummary } from './utils';
 
@@ -22,7 +23,12 @@ const latestEstimate = () => props.repairOrder.estimates[0] ?? null;
         <div class="grid gap-4 md:grid-cols-2">
             <div>
                 <div class="text-xs font-medium uppercase text-muted-foreground">{{ t('repair_orders.fields.customer') }}</div>
-                <div class="mt-1 text-sm font-medium text-foreground">{{ repairOrder.customer.name }}</div>
+                <Link
+                    :href="route('customers.show', { customer: repairOrder.customer.id })"
+                    class="mt-1 block text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                    {{ repairOrder.customer.name ?? 'Unnamed customer' }}
+                </Link>
                 <div class="text-sm text-muted-foreground">{{ repairOrder.customer.phone }}</div>
             </div>
 

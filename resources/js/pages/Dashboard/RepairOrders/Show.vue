@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import RepairOrderDocumentsTab from '@/components/repair-orders/RepairOrderDocumentsTab.vue';
+import RepairOrderEstimateApprovalSettings from '@/components/repair-orders/RepairOrderEstimateApprovalSettings.vue';
 import RepairOrderEstimatesTab from '@/components/repair-orders/RepairOrderEstimatesTab.vue';
 import RepairOrderLinesTab from '@/components/repair-orders/RepairOrderLinesTab.vue';
 import RepairOrderOverviewTab from '@/components/repair-orders/RepairOrderOverviewTab.vue';
 import RepairOrderStatusActions from '@/components/repair-orders/RepairOrderStatusActions.vue';
+import RepairOrderStatusDropdown from '@/components/repair-orders/RepairOrderStatusDropdown.vue';
 import RepairOrderTimelineTab from '@/components/repair-orders/RepairOrderTimelineTab.vue';
 import type { RepairOrderShowProps } from '@/components/repair-orders/types';
 import { useTranslations } from '@/composables/useTranslations';
@@ -62,7 +64,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <RepairOrderStatusActions :repair-order-id="repairOrder.id" :actions="repairOrder.statusActions" :status-error="errors?.status" />
+                <div class="flex flex-col items-start gap-2 sm:items-end">
+                    <RepairOrderStatusDropdown
+                        :repair-order-id="repairOrder.id"
+                        :status="repairOrder.status"
+                        :transitions="repairOrder.availableStatusTransitions"
+                        :status-error="errors?.status"
+                    />
+
+                    <RepairOrderStatusActions :repair-order-id="repairOrder.id" :actions="repairOrder.statusActions" />
+                </div>
             </div>
 
             <div v-if="flash?.status" class="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
@@ -90,7 +101,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
             </div>
 
-            <RepairOrderOverviewTab v-if="activeTab === 'overview'" :repair-order="repairOrder" />
+            <template v-if="activeTab === 'overview'">
+                <RepairOrderOverviewTab :repair-order="repairOrder" />
+                <RepairOrderEstimateApprovalSettings :repair-order="repairOrder" />
+            </template>
             <RepairOrderLinesTab v-else-if="activeTab === 'lines'" :repair-order="repairOrder" />
             <RepairOrderEstimatesTab v-else-if="activeTab === 'estimates'" :repair-order="repairOrder" :status-error="errors?.status" />
             <RepairOrderDocumentsTab v-else-if="activeTab === 'documents'" :documents="repairOrder.documents" />

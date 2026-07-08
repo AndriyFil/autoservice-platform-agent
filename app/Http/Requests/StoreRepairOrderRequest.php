@@ -15,6 +15,7 @@ class StoreRepairOrderRequest extends DashboardFormRequest
             'vehicle_id' => ['nullable', 'integer'],
             'booking_request_id' => ['nullable', 'integer'],
             'problem_description' => ['required', 'string', 'max:5000'],
+            'requires_estimate_approval' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:10000'],
             'new_vehicle' => ['nullable', 'array'],
             'new_vehicle.make' => ['nullable', 'string', 'max:255'],

@@ -17,7 +17,7 @@ defineProps<{
         >
             <RepairOrderStatusActions
                 :repair-order-id="repairOrder.id"
-                :actions="{ canMarkEstimated: repairOrder.statusActions.canMarkEstimated, canComplete: false, canCancel: false }"
+                :actions="{ canMarkEstimated: repairOrder.statusActions.canMarkEstimated, hasEstimate: repairOrder.statusActions.hasEstimate }"
                 :status-error="statusError"
             />
         </div>

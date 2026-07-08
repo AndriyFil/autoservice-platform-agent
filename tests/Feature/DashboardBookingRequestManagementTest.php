@@ -116,6 +116,202 @@ class DashboardBookingRequestManagementTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_booking_request_show_identifies_matched_customer_by_normalized_phone(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Matched Driver',
+            'phone' => '+380 67 111 22 33',
+            'normalized_phone' => '380671112233',
+        ]);
+        $vehicle = Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'Opel',
+            'model' => 'Insignia',
+            'year' => 2017,
+            'license_plate' => 'AA1234BB',
+        ]);
+        $bookingRequest = BookingRequest::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => 'Jane from intake',
+            'customer_phone' => '067 111 22 33',
+            'problem_description' => 'Check engine light came on.',
+            'original_message' => 'Opel Insignia, check engine light came on, maybe sensors, when can I come?',
+            'preferred_date' => '2026-07-12',
+            'status' => BookingRequestStatus::New,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('matchedCustomer.id', $customer->id)
+                ->where('matchedCustomer.name', 'Matched Driver')
+                ->where('matchedCustomer.showUrl', route('customers.show', $customer))
+                ->where('matchedCustomerVehicles.0.id', $vehicle->id)
+                ->where('matchedCustomerVehicles.0.brand', 'Opel')
+                ->where('matchedCustomerVehicles.0.model', 'Insignia'));
+    }
+
+    public function test_booking_request_show_does_not_match_customer_from_another_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        Customer::create([
+            'workshop_id' => $otherWorkshop->id,
+            'name' => 'Other Workshop Customer',
+            'phone' => '067 222 33 44',
+            'normalized_phone' => '380672223344',
+        ]);
+        $bookingRequest = BookingRequest::create([
+            'workshop_id' => $activeWorkshop->id,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '067 222 33 44',
+            'problem_description' => 'Customer hears a grinding noise.',
+            'original_message' => 'Grinding noise after braking.',
+            'preferred_date' => null,
+            'status' => BookingRequestStatus::New,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('matchedCustomer', null)
+                ->where('matchedCustomerVehicles', [])
+                ->where('customerCreationNotice', 'No existing customer found. A new customer will be created when a repair order is created.'));
+    }
+
+    public function test_booking_request_show_includes_original_message_and_extracted_data(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = BookingRequest::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => 'Olena Driver',
+            'customer_phone' => '+380 50 333 44 55',
+            'problem_description' => 'Check engine light and sensor concern.',
+            'original_message' => 'Opel Insignia, check engine light came on, maybe sensors, Friday morning?',
+            'preferred_date' => '2026-07-17',
+            'status' => BookingRequestStatus::New,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('bookingRequest.originalMessage', 'Opel Insignia, check engine light came on, maybe sensors, Friday morning?')
+                ->where('bookingRequest.extractedData.customerName', 'Olena Driver')
+                ->where('bookingRequest.extractedData.phone', '+380 50 333 44 55')
+                ->where('bookingRequest.extractedData.preferredDate', '2026-07-17')
+                ->where('bookingRequest.extractedData.summary', 'Check engine light and sensor concern.'));
+    }
+
+    public function test_booking_request_show_exposes_create_repair_order_when_no_linked_order_exists(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('linkedRepairOrder', null)
+                ->where('canCreateRepairOrder', true));
+    }
+
+    public function test_booking_request_show_exposes_linked_repair_order_instead_of_create_action(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+        $repairOrder = RepairOrder::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $bookingRequest->customer_id,
+            'vehicle_id' => $bookingRequest->vehicle_id,
+            'booking_request_id' => $bookingRequest->id,
+            'status' => RepairOrderStatus::Draft,
+            'problem_description' => $bookingRequest->problem_description,
+            'opened_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('linkedRepairOrder.id', $repairOrder->id)
+                ->where('linkedRepairOrder.showUrl', route('dashboard.repair-orders.show', $repairOrder))
+                ->where('canCreateRepairOrder', false));
+    }
+
+    public function test_duplicate_repair_order_creation_from_same_booking_request_is_prevented(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]);
+        RepairOrder::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $bookingRequest->customer_id,
+            'vehicle_id' => $bookingRequest->vehicle_id,
+            'booking_request_id' => $bookingRequest->id,
+            'status' => RepairOrderStatus::Draft,
+            'problem_description' => $bookingRequest->problem_description,
+            'opened_at' => now(),
+            'closed_at' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.create', ['booking_request' => $bookingRequest->id]))
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => $bookingRequest->problem_description,
+                'requires_estimate_approval' => true,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.create', ['booking_request' => $bookingRequest->id]))
+            ->assertSessionHasErrors('repair_order');
+
+        $this->assertSame(1, RepairOrder::query()->where('booking_request_id', $bookingRequest->id)->count());
+    }
+
     public function test_owner_can_apply_valid_status_transitions(): void
     {
         $this->assertRoleCanApplyValidStatusTransitions(WorkshopUserRole::Owner);
@@ -347,6 +543,7 @@ class DashboardBookingRequestManagementTest extends TestCase
      *     customer_name?: string,
      *     customer_phone?: string,
      *     problem_description?: string,
+     *     original_message?: string|null,
      *     preferred_date?: string|null,
      *     status?: BookingRequestStatus,
      *     vehicle?: array{brand?: string|null, model?: string|null, license_plate?: string|null}
@@ -382,9 +579,9 @@ class DashboardBookingRequestManagementTest extends TestCase
             'customer_name' => $overrides['customer_name'] ?? 'Jane Driver',
             'customer_phone' => $overrides['customer_phone'] ?? "+1 (555) 123-45{$customerNumber}",
             'problem_description' => $overrides['problem_description'] ?? 'Brake noise on cold start.',
+            'original_message' => $overrides['original_message'] ?? null,
             'preferred_date' => $overrides['preferred_date'] ?? null,
             'status' => $overrides['status'] ?? BookingRequestStatus::New,
         ]);
     }
-
 }
