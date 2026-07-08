@@ -34,7 +34,9 @@ Laravel connects to PostgreSQL with:
 - `RABBITMQ_PORT=5672`
 - `RABBITMQ_USER=guest`
 - `RABBITMQ_PASSWORD=guest`
+- `RABBITMQ_VHOST=/`
 - `RABBITMQ_EXCHANGE=autoservice.events`
+- `RABBITMQ_EXCHANGE_TYPE=topic`
 
 Redis is the Laravel cache backend for local Docker. Laravel's cache, rate limiter, and cache lock APIs use the configured cache store.
 

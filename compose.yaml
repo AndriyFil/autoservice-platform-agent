@@ -19,6 +19,13 @@ services:
       CACHE_STORE: redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VHOST: /
+      RABBITMQ_EXCHANGE: autoservice.events
+      RABBITMQ_EXCHANGE_TYPE: topic
       VITE_DEV_SERVER_URL: http://localhost:5173
     depends_on:
       postgres:
@@ -77,6 +84,11 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres-data:
