@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\Urls\AppUrl;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        $middleware->redirectGuestsTo(fn () => AppUrl::adminPathWhenSplit('/login'));
+        $middleware->redirectUsersTo(fn () => AppUrl::adminPathWhenSplit('/dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

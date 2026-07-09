@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\BookingRequestStatus;
-use App\Enums\WorkshopUserRole;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\User;

@@ -10,12 +10,23 @@
 
 ## Ports
 
-- Laravel: `http://localhost:8080`
+- Laravel fallback: `http://localhost:8080`
+- Public surface: `http://autoservice.test:8080`
+- Admin surface: `http://admin.autoservice.test:8080`
 - Vite: `http://localhost:5173`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 - RabbitMQ AMQP: `localhost:5672`
 - RabbitMQ management UI: `http://localhost:15672`
+
+## Local Hostnames
+
+Add these hostnames on the host machine:
+
+```txt
+127.0.0.1 autoservice.test
+127.0.0.1 admin.autoservice.test
+```
 
 ## Environment
 
@@ -27,6 +38,9 @@ Laravel connects to PostgreSQL with:
 - `DB_DATABASE=autoservice`
 - `DB_USERNAME=autoservice`
 - `DB_PASSWORD=autoservice`
+- `APP_URL=http://localhost:8080`
+- `PUBLIC_APP_URL=http://autoservice.test:8080`
+- `ADMIN_APP_URL=http://admin.autoservice.test:8080`
 - `CACHE_STORE=redis`
 - `REDIS_HOST=redis`
 - `REDIS_PORT=6379`
@@ -57,5 +71,6 @@ docker compose exec app php artisan migrate:fresh
 Open:
 
 ```text
-http://localhost:8080
+http://autoservice.test:8080
+http://admin.autoservice.test:8080
 ```

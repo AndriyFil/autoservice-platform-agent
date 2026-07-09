@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\WorkshopUserRole;
+use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopUser;
@@ -45,7 +45,9 @@ class EnsureActiveWorkshopMiddlewareTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('activeWorkshop.id', $workshop->id)
                 ->where('activeWorkshop.name', 'Main Auto')
-                ->where('activeWorkshop.slug', 'main-auto'));
+                ->where('activeWorkshop.slug', 'main-auto')
+                ->where('auth.activeWorkshopUser.role', 'owner')
+                ->where('auth.activeWorkshopUser.workshopId', $workshop->id));
     }
 
     public function test_workshop_onboarding_route_does_not_require_active_workshop_membership(): void

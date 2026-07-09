@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-vue-next';
 
 export interface Auth {
     user: User;
+    activeWorkshopUser: ActiveWorkshopUser | null;
 }
 
 export interface BreadcrumbItem {
@@ -41,6 +42,12 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+}
+
+export interface ActiveWorkshopUser {
+    id: number;
+    role: 'owner' | 'staff';
+    workshopId: number;
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;

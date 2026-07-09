@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\BookingRequestStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Enums\EstimateStatus;
 use App\Enums\RepairOrderStatus;
-use App\Enums\WorkshopUserRole;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\Estimate;

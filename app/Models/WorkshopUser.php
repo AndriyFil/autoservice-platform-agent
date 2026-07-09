@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\WorkshopUserRole;
+use App\Domain\Workshops\Enums\WorkshopUserRole;
 use Database\Factories\WorkshopUserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -46,5 +46,18 @@ class WorkshopUser extends Model
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
+    }
+
+    public function isLastOwner(): bool
+    {
+        if ($this->role !== WorkshopUserRole::Owner) {
+            return false;
+        }
+
+        return self::query()
+            ->where('workshop_id', $this->workshop_id)
+            ->where('role', WorkshopUserRole::Owner)
+            ->whereKeyNot($this->id)
+            ->doesntExist();
     }
 }

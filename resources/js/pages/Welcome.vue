@@ -5,6 +5,8 @@ import { Building2, ClipboardList, Wrench } from 'lucide-vue-next';
 defineProps<{
     canLogin?: boolean;
     canRegister?: boolean;
+    adminLoginUrl: string;
+    adminRegisterUrl: string;
 }>();
 </script>
 
@@ -21,19 +23,16 @@ defineProps<{
             </Link>
 
             <nav v-if="canLogin" class="flex items-center gap-2 text-sm">
-                <Link
-                    :href="route('login')"
-                    class="rounded-md px-3 py-2 font-medium text-slate-600 transition hover:bg-white/60 hover:text-slate-950"
-                >
-                    Login
+                <Link :href="adminLoginUrl" class="rounded-md px-3 py-2 font-medium text-slate-600 transition hover:bg-white/60 hover:text-slate-950">
+                    Staff login
                 </Link>
 
                 <Link
                     v-if="canRegister"
-                    :href="route('register')"
+                    :href="adminRegisterUrl"
                     class="rounded-md border border-slate-300 bg-white/50 px-3 py-2 font-medium text-slate-700 shadow-sm transition hover:border-[#2f6471]/40 hover:bg-white hover:text-slate-950"
                 >
-                    Register
+                    Create workshop account
                 </Link>
             </nav>
         </header>
@@ -45,20 +44,21 @@ defineProps<{
                     Chat-first service requests for every workshop.
                 </h1>
                 <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                    AutoService helps workshops collect customer requests from their own public page and review
-                    new intake requests in a tenant-scoped dashboard.
+                    AutoService helps workshops collect customer requests from their own public page and review new intake requests in a tenant-scoped
+                    dashboard.
                 </p>
+                <p class="mt-4 max-w-2xl text-sm leading-6 text-slate-600">Customer of a workshop? Use the booking link provided by your workshop.</p>
                 <div class="mt-8 flex flex-wrap gap-3">
                     <Link
                         v-if="canRegister"
-                        :href="route('register')"
+                        :href="adminRegisterUrl"
                         class="inline-flex min-h-11 items-center justify-center rounded-md bg-[#2f6471] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#285864]"
                     >
                         Create workshop account
                     </Link>
                     <Link
                         v-if="canLogin"
-                        :href="route('login')"
+                        :href="adminLoginUrl"
                         class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white/60 px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#2f6471]/40 hover:bg-white"
                     >
                         Staff login
@@ -74,8 +74,8 @@ defineProps<{
                     <div>
                         <h2 class="text-base font-semibold text-slate-950">Tenant public pages</h2>
                         <p class="mt-2 text-sm leading-6 text-slate-600">
-                            Each workshop receives requests through its own public URL, so intake belongs to the
-                            right workshop from the first message.
+                            Each workshop receives requests through its own public URL, so intake belongs to the right workshop from the first
+                            message.
                         </p>
                     </div>
                 </div>
@@ -87,8 +87,7 @@ defineProps<{
                     <div>
                         <h2 class="text-base font-semibold text-slate-950">Staff review first</h2>
                         <p class="mt-2 text-sm leading-6 text-slate-600">
-                            Requests preserve the customer's words and wait for staff confirmation before visit time,
-                            pricing, or repair decisions.
+                            Requests preserve the customer's words and wait for staff confirmation before visit time, pricing, or repair decisions.
                         </p>
                     </div>
                 </div>

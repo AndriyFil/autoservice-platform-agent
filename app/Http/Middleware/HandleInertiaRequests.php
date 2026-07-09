@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\WorkshopUser;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -42,8 +43,9 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
-            'auth' => [
+            'auth' => fn (): array => [
                 'user' => $request->user(),
+                'activeWorkshopUser' => $this->activeWorkshopUser($request),
             ],
             'flash' => [
                 'status' => $request->session()->get('status'),
@@ -53,5 +55,23 @@ class HandleInertiaRequests extends Middleware
                 'estimates' => __('estimates'),
             ],
         ]);
+    }
+
+    /**
+     * @return array{id: int, role: string, workshopId: int}|null
+     */
+    private function activeWorkshopUser(Request $request): ?array
+    {
+        $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
+
+        if (! $activeWorkshopUser instanceof WorkshopUser) {
+            return null;
+        }
+
+        return [
+            'id' => $activeWorkshopUser->id,
+            'role' => $activeWorkshopUser->role->value,
+            'workshopId' => $activeWorkshopUser->workshop_id,
+        ];
     }
 }

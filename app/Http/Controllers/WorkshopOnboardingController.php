@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Workshops\CreateInitialWorkshopAction;
+use App\Domain\Workshops\Actions\CreateInitialWorkshopAction;
 use App\Http\Requests\StoreWorkshopOnboardingRequest;
 use App\Models\WorkshopUser;
 use Illuminate\Http\RedirectResponse;

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\RepairOrderLineType;
 use App\Enums\RepairOrderStatus;
-use App\Enums\WorkshopUserRole;
 use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
