@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Customers\CreateCustomerVehicleAction;
-use App\Actions\Customers\UpdateCustomerAction;
-use App\Actions\Customers\UpdateCustomerVehicleAction;
+use App\Domain\Customers\Actions\CreateCustomerVehicleAction;
+use App\Domain\Customers\Actions\UpdateCustomerAction;
+use App\Domain\Customers\Actions\UpdateCustomerVehicleAction;
+use App\Domain\Customers\Queries\CustomerIndexQuery;
+use App\Domain\Customers\Queries\CustomerShowQuery;
 use App\Http\Requests\StoreCustomerVehicleRequest;
 use App\Http\Requests\UpdateCustomerRequest;
 use App\Http\Requests\UpdateCustomerVehicleRequest;
 use App\Models\Customer;
 use App\Models\Vehicle;
-use App\Queries\Customers\CustomerDetailsQuery;
-use App\Queries\Customers\CustomerListQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,7 +21,7 @@ class CustomerController extends Controller
 {
     public function index(
         Request $request,
-        CustomerListQuery $customerListQuery,
+        CustomerIndexQuery $customerIndexQuery,
     ): Response {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
         $activeWorkshop = $activeWorkshopUser->workshop;
@@ -32,7 +32,7 @@ class CustomerController extends Controller
                 'name' => $activeWorkshop->name,
                 'slug' => $activeWorkshop->slug,
             ],
-            'customers' => $customerListQuery->handle($activeWorkshopUser, $request->string('search')->toString()),
+            'customers' => $customerIndexQuery->handle($activeWorkshopUser, $request->string('search')->toString()),
             'filters' => [
                 'search' => $request->string('search')->toString(),
             ],
@@ -42,7 +42,7 @@ class CustomerController extends Controller
     public function show(
         Request $request,
         Customer $customer,
-        CustomerDetailsQuery $customerDetailsQuery,
+        CustomerShowQuery $customerShowQuery,
     ): Response {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
         $activeWorkshop = $activeWorkshopUser->workshop;
@@ -53,7 +53,7 @@ class CustomerController extends Controller
                 'name' => $activeWorkshop->name,
                 'slug' => $activeWorkshop->slug,
             ],
-            'customer' => $customerDetailsQuery->handle($activeWorkshopUser, $customer),
+            'customer' => $customerShowQuery->handle($activeWorkshopUser, $customer),
         ]);
     }
 

@@ -104,6 +104,32 @@ class CustomerManagementTest extends TestCase
                 ->where('customers.0.latestBookingRequestDate', $latestBookingRequest->created_at->toISOString()));
     }
 
+    public function test_customer_list_search_matches_formatted_phone_against_normalized_phone(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $matchingCustomer = $this->createCustomer($workshop, [
+            'name' => 'Matching Customer',
+            'phone' => '0685620040',
+        ]);
+        $this->createCustomer($workshop, [
+            'name' => 'Other Customer',
+            'phone' => '+1 555 333 4444',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('customers.index', ['search' => '+38 (068)']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Customers/Index')
+                ->has('customers', 1)
+                ->where('customers.0.id', $matchingCustomer->id)
+                ->where('customers.0.name', 'Matching Customer'));
+    }
+
     public function test_customer_detail_works_for_active_workshop_customer(): void
     {
         $user = User::factory()->create();
@@ -368,6 +394,32 @@ class CustomerManagementTest extends TestCase
             'brand' => 'Opel',
             'model' => 'Insignia',
             'year' => 2018,
+            'license_plate' => 'AA7777BB',
+        ]);
+    }
+
+    public function test_staff_cannot_add_vehicle_to_customer_from_another_workshop(): void
+    {
+        $user = User::factory()->create();
+        $activeWorkshop = Workshop::factory()->create();
+        $otherWorkshop = Workshop::factory()->create();
+        $this->createMembership($user, $activeWorkshop);
+        $otherCustomer = $this->createCustomer($otherWorkshop);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $activeWorkshop->id])
+            ->post(route('customers.vehicles.store', $otherCustomer), [
+                'make' => 'Opel',
+                'model' => 'Insignia',
+                'year' => 2018,
+                'plate' => 'AA7777BB',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('vehicles', [
+            'workshop_id' => $activeWorkshop->id,
+            'customer_id' => $otherCustomer->id,
             'license_plate' => 'AA7777BB',
         ]);
     }

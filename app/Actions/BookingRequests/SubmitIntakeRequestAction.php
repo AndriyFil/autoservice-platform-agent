@@ -2,11 +2,11 @@
 
 namespace App\Actions\BookingRequests;
 
+use App\Domain\Shared\ValueObjects\Phone;
 use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
 use App\Support\Intake\IntakeExtractorInterface;
-use App\Support\Phone;
 use Throwable;
 
 class SubmitIntakeRequestAction

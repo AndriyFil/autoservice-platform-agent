@@ -2,7 +2,7 @@
 
 namespace App\Support\Intake;
 
-use App\Support\Phone;
+use App\Domain\Shared\ValueObjects\Phone;
 
 class ManualFallbackIntakeExtractor implements IntakeExtractorInterface
 {

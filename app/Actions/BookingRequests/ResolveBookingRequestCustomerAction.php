@@ -2,9 +2,9 @@
 
 namespace App\Actions\BookingRequests;
 
+use App\Domain\Shared\ValueObjects\Phone;
 use App\Models\Customer;
 use App\Models\Workshop;
-use App\Support\Phone;
 
 class ResolveBookingRequestCustomerAction
 {

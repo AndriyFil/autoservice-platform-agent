@@ -2,10 +2,10 @@
 
 namespace App\Queries\Dashboard;
 
+use App\Domain\Shared\ValueObjects\Phone;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\WorkshopUser;
-use App\Support\Phone;
 
 class DashboardRepairOrderFormQuery
 {

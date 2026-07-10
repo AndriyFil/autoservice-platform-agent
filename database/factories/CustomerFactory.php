@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Domain\Shared\ValueObjects\Phone;
 use App\Models\Customer;
 use App\Models\Workshop;
-use App\Support\Phone;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

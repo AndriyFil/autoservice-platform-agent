@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Support\Phone;
+use App\Domain\Shared\ValueObjects\Phone;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Shared\ValueObjects\Phone;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
@@ -10,7 +11,6 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Workshop;
 use App\Models\WorkshopUser;
-use App\Support\Phone;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder

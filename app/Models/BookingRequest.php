@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Domain\Shared\ValueObjects\Phone;
 use App\Enums\BookingRequestStatus;
-use App\Support\Phone;
 use Database\Factories\BookingRequestFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

@@ -2,98 +2,97 @@
 
 ## Goal
 
-Introduce a practical DDD-lite modular monolith structure and migrate the Workshop Admin backend slice into the `Workshops` domain without changing public/admin route behavior or moving Eloquent models.
+Continue the practical DDD-lite modular monolith migration by moving the Customers business slice into `app/Domain/Customers` and moving shared phone normalization into `app/Domain/Shared/ValueObjects`.
 
 ## Files Changed
 
-- `docs/architecture/ddd-lite-modular-monolith.md`
-- `app/Domain/Workshops/Actions/AddWorkshopStaffAction.php`
-- `app/Domain/Workshops/Actions/CreateInitialWorkshopAction.php`
-- `app/Domain/Workshops/Actions/RemoveWorkshopStaffAction.php`
-- `app/Domain/Workshops/Actions/UpdateWorkshopSettingsAction.php`
-- `app/Domain/Workshops/Actions/UpdateWorkshopStaffRoleAction.php`
-- `app/Domain/Workshops/Queries/WorkshopSettingsQuery.php`
-- `app/Domain/Workshops/Queries/WorkshopStaffQuery.php`
-- `app/Domain/Workshops/Enums/WorkshopUserRole.php`
-- `app/Domain/Workshops/Exceptions/LastOwnerCannotBeDemoted.php`
-- `app/Domain/Workshops/Exceptions/LastOwnerCannotBeRemoved.php`
-- `app/Domain/Workshops/Exceptions/StaffAlreadyBelongsToWorkshop.php`
-- `app/Domain/Workshops/Exceptions/WorkshopStaffNotFound.php`
-- `app/Domain/Workshops/Data/.gitkeep`
-- `app/Domain/Workshops/Services/.gitkeep`
-- `app/Domain/Shared/ValueObjects/.gitkeep`
-- `app/Domain/Shared/Exceptions/.gitkeep`
-- `app/Http/Controllers/Dashboard/WorkshopSettingsController.php`
-- `app/Http/Controllers/Dashboard/WorkshopStaffController.php`
-- `app/Http/Controllers/WorkshopOnboardingController.php`
-- `app/Http/Requests/Workshop/StoreWorkshopStaffRequest.php`
-- `app/Http/Requests/Workshop/UpdateWorkshopStaffRoleRequest.php`
-- `app/Http/Requests/Workshop/WorkshopOwnerRequest.php`
-- `app/Models/WorkshopUser.php`
-- `database/factories/WorkshopUserFactory.php`
+- `app/Domain/Shared/ValueObjects/Phone.php`
+- `app/Domain/Customers/Actions/CreateCustomerVehicleAction.php`
+- `app/Domain/Customers/Actions/UpdateCustomerAction.php`
+- `app/Domain/Customers/Actions/UpdateCustomerVehicleAction.php`
+- `app/Domain/Customers/Data/.gitkeep`
+- `app/Domain/Customers/Exceptions/.gitkeep`
+- `app/Domain/Customers/Queries/CustomerIndexQuery.php`
+- `app/Domain/Customers/Queries/CustomerShowQuery.php`
+- `app/Http/Controllers/CustomerController.php`
+- `app/Models/Customer.php`
+- `app/Models/BookingRequest.php`
+- `app/Actions/BookingRequests/CreatePublicBookingRequestAction.php`
+- `app/Actions/BookingRequests/ResolveBookingRequestCustomerAction.php`
+- `app/Actions/BookingRequests/SubmitIntakeRequestAction.php`
+- `app/Actions/RepairOrders/CreateRepairOrderFromBookingRequestAction.php`
+- `app/Queries/Dashboard/DashboardBookingRequestDetailsQuery.php`
+- `app/Queries/Dashboard/DashboardRepairOrderFormQuery.php`
+- `app/Http/Requests/StorePublicIntakeRequest.php`
+- `app/Support/Intake/ManualFallbackIntakeExtractor.php`
+- `database/factories/CustomerFactory.php`
+- `database/factories/BookingRequestFactory.php`
 - `database/seeders/DatabaseSeeder.php`
-- Workshop-role imports in existing feature tests that create `WorkshopUser` memberships
-- Deleted old Workshop-specific paths under `app/Actions/Workshops`, `app/Queries/Workshops`, and `app/Enums/WorkshopUserRole.php`
+- `tests/Unit/PhoneTest.php`
+- `tests/Feature/CustomerManagementTest.php`
+- Deleted old paths under `app/Actions/Customers`, `app/Queries/Customers`, and `app/Support/Phone.php`
 
 ## Implementation Summary
 
-Added the DDD-lite architecture document explaining why AutoService uses business-context modules inside one Laravel app instead of pure DDD, microservices, or UI-surface domains.
+Moved the shared `Phone` value object from `App\Support` to `App\Domain\Shared\ValueObjects` without changing normalization behavior.
 
-Moved the Workshops slice to `app/Domain/Workshops`: staff/settings Actions, settings/staff Queries, and `WorkshopUserRole`. Updated imports in controllers, requests, model casts/helpers, factories, seeders, and tests.
+Moved customer update and vehicle create/update use cases into `App\Domain\Customers\Actions`. These Actions keep active-workshop checks, prevent cross-workshop mutation, prevent moving vehicles between customers, keep customer phone normalization in sync, and block duplicate customer phones inside the same workshop.
 
-Added Workshops domain exceptions for last-owner protection, duplicate membership, and hidden cross-workshop staff membership lookup. The user-facing form failures still use Laravel validation behavior where existing redirects expect validation errors.
+Moved customer list/show read flows into `App\Domain\Customers\Queries` as `CustomerIndexQuery` and `CustomerShowQuery`. The index query still scopes to the active workshop, keeps counts/latest booking request data, and now normalizes formatted phone search input before searching normalized columns. The show query eager loads vehicles, booking requests, and repair orders with vehicles while scoping customer-owned records to the active workshop.
 
-Kept Eloquent models in `app/Models` and HTTP concerns in `app/Http`. Controllers still orchestrate requests and responses; FormRequests still validate and authorize request input; Actions own the staff/settings business rules.
+Updated imports in controllers, models, factories, seeders, tests, booking-request conversion, repair-order creation, public intake validation, and dashboard queries.
 
-Added a small `WorkshopAdminTest` smoke test that confirms the enum, Action, and Query resolve from the new domain namespace.
+Added regression coverage for formatted phone search and blocking vehicle creation for a customer outside the active workshop.
 
 ## Architecture Decisions
 
-`Workshops` is the first migrated business context because it owns workshop settings, staff membership rules, owner-only management, roles, and last-owner protection.
+Controllers remain HTTP orchestration only. `CustomerController` resolves the active workshop user and delegates writes to `Domain\Customers\Actions` and reads to `Domain\Customers\Queries`.
 
-Public/Admin were not modeled as domains. Dashboard controllers remain dashboard-specific HTTP adapters, while the business rules moved under `Domain\Workshops`.
+Eloquent models stayed in `app/Models` as required. The customer domain classes coordinate use cases around those models without adding repositories or mappers.
 
-The admin Actions now re-check that the active actor is a workshop owner. The FormRequests already enforce this at the HTTP boundary, but the invariant also belongs inside the use-case boundary so direct Action use does not bypass it.
+`Phone` lives in `Domain\Shared\ValueObjects` because phone normalization is used by Customers, BookingRequests, public intake, factories, and repair-order conversion.
 
-`WorkshopStaffNotFound` preserves hidden cross-workshop behavior by returning 404 semantics for membership guesses outside the active workshop.
+Customer remains distinct from User. No customer action creates or mutates `User` records.
 
 ## Tradeoffs
 
-Data classes were deferred. The current staff/settings payloads are single-use validated arrays; adding DTOs now would mostly wrap a few fields once and would not reduce duplication or risk.
+Data classes were deferred. The current customer and vehicle payloads are small validated arrays used once per Action, so DTOs would add churn without reducing duplication or risk.
 
-`Data` and `Services` folders were kept with `.gitkeep` files because the requested architecture includes them, but no empty abstraction was added.
+Domain exceptions were deferred. Existing customer form flows already use `ValidationException` for duplicate phone errors and `firstOrFail()`/404 behavior for cross-workshop access. Adding custom exceptions now would mostly require adapter code without improving the current HTTP behavior.
 
-Other domains were left in their existing `app/Actions`, `app/Queries`, and `app/Enums` locations. Migrating them now would exceed the requested Workshop-only scope.
+No `Services` folder was created because no shared customer service was needed.
 
-The workspace already contained broader public/admin route and frontend changes before this task. Those were treated as existing work and were not reverted.
+`email`, `notes`, and `vin` were not added because the current `customers` and `vehicles` schemas/models do not expose those fields.
 
 ## Tests
 
 Passed:
 
 ```sh
-php -l app/Domain/Workshops/Actions/AddWorkshopStaffAction.php
-php -l app/Domain/Workshops/Actions/UpdateWorkshopStaffRoleAction.php
-php -l app/Domain/Workshops/Actions/RemoveWorkshopStaffAction.php
-php -l app/Domain/Workshops/Actions/UpdateWorkshopSettingsAction.php
-php -l app/Domain/Workshops/Exceptions/LastOwnerCannotBeDemoted.php
-php -l app/Domain/Workshops/Exceptions/WorkshopStaffNotFound.php
-./vendor/bin/phpstan analyse --memory-limit=1G
-php artisan test tests/Feature/WorkshopAdminTest.php
+php -l app/Domain/Shared/ValueObjects/Phone.php
+php -l app/Domain/Customers/Actions/UpdateCustomerAction.php
+php -l app/Domain/Customers/Actions/CreateCustomerVehicleAction.php
+php -l app/Domain/Customers/Actions/UpdateCustomerVehicleAction.php
+php -l app/Domain/Customers/Queries/CustomerIndexQuery.php
+php -l app/Domain/Customers/Queries/CustomerShowQuery.php
+php -l app/Http/Controllers/CustomerController.php
+php -l tests/Feature/CustomerManagementTest.php
+php artisan test tests/Unit/PhoneTest.php tests/Feature/CustomerManagementTest.php
+php artisan test tests/Feature/RepairOrderManagementTest.php tests/Feature/DashboardBookingRequestManagementTest.php tests/Feature/PublicBookingRequestFlowTest.php
 ```
 
-`WorkshopAdminTest` passed 20 tests with 107 assertions.
+Focused behavior results:
 
-One first PHPStan attempt failed inside the sandbox with `Failed to listen on "tcp://127.0.0.1:0": Operation not permitted (EPERM)`. The command was rerun outside the sandbox and passed with no errors.
+- `PhoneTest` and `CustomerManagementTest`: 24 tests, 177 assertions passed.
+- Repair-order and booking-request related suites: 79 tests, 877 assertions passed.
 
 ## Risks
 
-Because several files were already staged/modified before this task, git status shows old paths as deleted and the new `app/Domain` tree as untracked until the move is staged. Review the final staged diff carefully before committing.
+Only the focused customer, phone, repair-order, and booking-request suites were run, not the full backend test suite.
 
-Only the focused Workshop admin feature test was run, not the full backend suite.
+The old customer action/query and support `Phone` files were deleted rather than kept as wrappers. Current local references were updated and checked with `rg`, but any untracked external code importing old namespaces would need the new imports.
 
 ## Follow Ups
 
-- Before merging, stage the old-path deletions and new `app/Domain` files together so Git records the Workshop migration cleanly.
-- Run the full backend suite if the broader pre-existing public/admin and frontend changes are being merged in the same branch.
-- Consider `docs/learning/laravel-domain-modules.md` if future agents need a teaching note on Laravel DDD-lite boundaries.
+- Run the full backend suite before merging if this branch includes broader unrelated changes.
+- Consider `docs/learning/laravel-domain-modules.md` if future agents need a practical learning note for DDD-lite Laravel module boundaries.

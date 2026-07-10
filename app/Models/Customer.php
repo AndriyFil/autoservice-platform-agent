@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\Phone;
+use App\Domain\Shared\ValueObjects\Phone;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

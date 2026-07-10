@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Support\Phone;
+use App\Domain\Shared\ValueObjects\Phone;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
