@@ -2,112 +2,104 @@
 
 ## Goal
 
-Continue the practical DDD-lite modular monolith migration by moving BookingRequest status, public intake, dashboard read models, customer matching, and repair-order conversion logic into `app/Domain/BookingRequests`.
+Continue the practical DDD-lite modular monolith migration by moving RepairOrder business logic into `app/Domain/RepairOrders` while preserving existing routes, UI behavior, workshop isolation, and repair-order lifecycle rules.
 
 ## Files Changed
 
-- `app/Domain/BookingRequests/Enums/BookingRequestStatus.php`
-- `app/Domain/BookingRequests/Actions/SubmitPublicIntakeAction.php`
-- `app/Domain/BookingRequests/Actions/CreatePublicBookingRequestAction.php`
-- `app/Domain/BookingRequests/Actions/ChangeBookingRequestStatusAction.php`
-- `app/Domain/BookingRequests/Actions/CreateRepairOrderFromBookingRequestAction.php`
-- `app/Domain/BookingRequests/Queries/BookingRequestIndexQuery.php`
-- `app/Domain/BookingRequests/Queries/BookingRequestShowQuery.php`
-- `app/Domain/BookingRequests/Services/CustomerMatcher.php`
-- `app/Domain/BookingRequests/Data/.gitkeep`
-- `app/Domain/BookingRequests/Exceptions/.gitkeep`
-- `app/Http/Controllers/DashboardBookingRequestController.php`
-- `app/Http/Controllers/DashboardController.php`
-- `app/Http/Controllers/DashboardRepairOrderController.php`
-- `app/Http/Controllers/PublicBookingRequestController.php`
-- `app/Http/Controllers/PublicIntakeController.php`
-- `app/Http/Requests/UpdateDashboardBookingRequestStatusRequest.php`
-- `app/Models/BookingRequest.php`
-- `app/Queries/Dashboard/DashboardRepairOrderFormQuery.php`
-- `database/factories/BookingRequestFactory.php`
-- `database/seeders/DatabaseSeeder.php`
-- `resources/js/pages/Dashboard/BookingRequests/Show.vue`
-- `tests/Feature/CustomerManagementTest.php`
-- `tests/Feature/DashboardBookingRequestManagementTest.php`
-- `tests/Feature/DashboardTest.php`
-- `tests/Feature/PublicBookingRequestFlowTest.php`
-- `tests/Feature/PublicIntakeSubmissionTest.php`
-- `tests/Feature/RepairOrderManagementTest.php`
-- `tests/Feature/RepairOrderTest.php`
-- Deleted old booking-request paths under `app/Actions/BookingRequests`, `app/Actions/RepairOrders/CreateRepairOrderFromBookingRequestAction.php`, `app/Enums/BookingRequestStatus.php`, and dashboard booking-request query paths under `app/Queries/Dashboard`.
+- Created `app/Domain/RepairOrders/Actions/`
+- Created `app/Domain/RepairOrders/Enums/`
+- Created `app/Domain/RepairOrders/Exceptions/`
+- Created `app/Domain/RepairOrders/Queries/`
+- Created `app/Domain/RepairOrders/Services/`
+- Moved repair-order actions from `app/Actions/RepairOrders/` into `app/Domain/RepairOrders/Actions/`
+- Moved `RepairOrderStatus` and `RepairOrderLineType` from `app/Enums/` into `app/Domain/RepairOrders/Enums/`
+- Moved dashboard repair-order index/show queries from `app/Queries/Dashboard/` into `app/Domain/RepairOrders/Queries/`
+- Updated repair-order controllers, requests, models, factories, estimate code, booking-request conversion code, and tests to import the new domain namespaces.
+- Updated `tests/Feature/RepairOrderLineManagementTest.php`
+- Updated `tests/Unit/RepairOrderStatusTest.php`
 
 ## Implementation Summary
 
-Moved `BookingRequestStatus` into the BookingRequests domain and updated models, requests, seeders, factories, controllers, and tests to import the new enum namespace.
+Moved normal repair-order creation, status changes, estimate-approval requirement updates, and line add/update/remove actions into `App\Domain\RepairOrders\Actions`.
 
-Moved public intake and booking-request status actions into `Domain\BookingRequests\Actions`. The chat-first `SubmitPublicIntakeAction` continues to create a workshop-scoped `BookingRequest`, stores the original message and normalized phone, and lets optional extraction fail without blocking creation.
+Moved `RepairOrderIndexQuery` and `RepairOrderShowQuery` into `App\Domain\RepairOrders\Queries`. They continue to scope reads by the active workshop membership and preserve existing payload shape for Inertia pages.
 
-Moved dashboard booking-request list/show read flows into `Domain\BookingRequests\Queries` as `BookingRequestIndexQuery` and `BookingRequestShowQuery`. The show query still scopes by active workshop, includes original/extracted data, linked repair order, status transitions, and create-repair-order availability.
+Moved `RepairOrderStatus` and `RepairOrderLineType` into `App\Domain\RepairOrders\Enums`. `RepairOrderStatus` still has only `draft`, `estimated`, `in_progress`, `completed`, and `cancelled`, and now exposes `isFinal()` for completed/cancelled checks.
 
-Moved `CreateRepairOrderFromBookingRequestAction` into the BookingRequests domain because the use case starts from a triaged booking request. It still enforces active-workshop scope, confirmed status, duplicate conversion prevention, customer resolution by workshop plus normalized phone, optional vehicle selection/creation, and default per-order estimate approval.
+Added `RepairOrderStatusTransitionService` for backend-provided manual dropdown transitions and labels. It intentionally keeps the existing estimate-generation flow: `estimated` remains a valid enum transition, but the manual status dropdown still does not offer direct `draft -> estimated`.
 
-Added `CustomerMatcher` to centralize active-workshop customer matching by normalized booking-request phone. `BookingRequestShowQuery` and `DashboardRepairOrderFormQuery` now share that rule.
+Added `FinalRepairOrderCannotBeChanged` and used it to block repair-order line mutations and estimate approval requirement changes after completed/cancelled.
 
-Updated legacy `/book/{workshop}` public booking submission behavior so it preserves the route but creates only a `BookingRequest`; it no longer creates or links `Customer` or `Vehicle` records during public submission.
-
-Kept the create-order surface intentionally simple: one `canCreateRepairOrder` prop controls whether staff sees the Create order action. For `new` requests, that action auto-confirms internally before opening the repair-order form.
+After review, line and approval-requirement mutations now re-read the active-workshop repair order with `lockForUpdate()` inside the same transaction as the mutation. This keeps final-status locks safe against concurrent status changes.
 
 ## Architecture Decisions
 
-Controllers remain HTTP orchestration only. They resolve route models/active workshop context, call domain actions or queries, and return redirects/Inertia responses.
+Eloquent models stayed in `app/Models`; only business actions, read queries, enums, one focused service, and one focused exception moved into the RepairOrders domain.
 
-Eloquent models stayed in `app/Models`. The BookingRequests domain coordinates use cases around existing Laravel models without adding repositories or mappers.
+Controllers remain HTTP orchestration: they resolve active workshop context, call domain actions/queries, catch domain exceptions, and return redirects/Inertia responses.
 
-`CustomerMatcher` is a focused service because phone-based customer matching was duplicated in multiple read flows and must always stay workshop-scoped. Broader customer creation behavior stays in the conversion action where the business use case needs it.
+The enum remains the source of truth for allowed lifecycle transitions. The transition service only maps manual UI actions and labels, preventing duplicated dropdown-label logic in index/show queries.
 
-Data classes were deferred because the current validated arrays are small and local to one action each. Domain exceptions were deferred because existing `DomainException` handling already maps cleanly to current dashboard form errors.
+Data classes were deferred because current validated arrays remain small and local. A totals calculator was deferred because totals behavior is already centralized on `RepairOrderLine`/`RepairOrder` methods and not duplicated across actions.
 
 ## Tradeoffs
 
-The legacy public booking route still accepts vehicle fields for compatibility with the existing form request, but those fields no longer create vehicles. Staff should confirm or create vehicle details during triage/repair-order creation.
+`DashboardRepairOrderFormQuery` remains in `app/Queries/Dashboard` because the requested migration named index/show queries, and the form query is mostly page form preparation with BookingRequest customer matching. Moving it later may make sense when dashboard form-read models are migrated as a group.
 
-For staff UX, `new -> confirmed -> create repair order form` remains one user action. No separate confirm-then-create prop is used because there is no separate user-visible action.
+`VehicleDoesNotBelongToCustomer` and `InvalidRepairOrderStatusTransition` were not added because current `DomainException` messages already integrate cleanly with existing form error handling. Only final-status mutation received a named exception because it is now reused by multiple actions.
 
-`CreateRepairOrderFromBookingRequestAction` still lives near booking-request conversion even though it writes a repair order. This keeps the source business use case and duplicate-conversion invariant together while leaving normal repair-order creation in the RepairOrders actions.
-
-Empty `Data` and `Exceptions` folders were kept with `.gitkeep` to match the existing domain folder convention and leave room for future classes only when they pay rent.
+Repair-order line totals remain model methods rather than a service to avoid moving clean, tested arithmetic into an abstraction without reducing duplication.
 
 ## Tests
 
-Passed syntax checks:
+Red/green check for new final line lock:
 
 ```sh
-php -l app/Domain/BookingRequests/Actions/SubmitPublicIntakeAction.php
-php -l app/Domain/BookingRequests/Actions/CreatePublicBookingRequestAction.php
-php -l app/Domain/BookingRequests/Actions/ChangeBookingRequestStatusAction.php
-php -l app/Domain/BookingRequests/Actions/CreateRepairOrderFromBookingRequestAction.php
-php -l app/Domain/BookingRequests/Queries/BookingRequestIndexQuery.php
-php -l app/Domain/BookingRequests/Queries/BookingRequestShowQuery.php
-php -l app/Domain/BookingRequests/Services/CustomerMatcher.php
-php -l app/Queries/Dashboard/DashboardRepairOrderFormQuery.php
-php -l app/Http/Controllers/DashboardBookingRequestController.php
-php -l app/Http/Controllers/DashboardController.php
-php -l app/Http/Controllers/DashboardRepairOrderController.php
-php -l app/Models/BookingRequest.php
-php -l tests/Feature/PublicBookingRequestFlowTest.php
-php -l tests/Feature/DashboardBookingRequestManagementTest.php
-php -l tests/Feature/RepairOrderManagementTest.php
+php artisan test tests/Feature/RepairOrderLineManagementTest.php --filter=final_repair_order_lines_cannot_be_added_updated_or_deleted
 ```
 
-Not run due project workflow unless explicitly requested:
+First run failed because final orders still allowed mutation. After implementation, it passed.
+
+Commands run:
 
 ```sh
-php artisan test tests/Feature/PublicIntakeSubmissionTest.php tests/Feature/PublicBookingRequestFlowTest.php tests/Feature/DashboardBookingRequestManagementTest.php tests/Feature/RepairOrderManagementTest.php tests/Feature/CustomerManagementTest.php tests/Feature/DashboardTest.php tests/Feature/RepairOrderTest.php
+php artisan test tests/Feature/RepairOrderLineManagementTest.php
+php artisan test tests/Feature/RepairOrderManagementTest.php
+php artisan test tests/Feature/DashboardBookingRequestManagementTest.php
+php artisan test tests/Feature/CustomerManagementTest.php
+php artisan test tests/Unit/RepairOrderStatusTest.php
+php artisan test
+composer analyse
 ```
+
+Results:
+
+- `RepairOrderLineManagementTest`: 10 passed, 126 assertions.
+- `RepairOrderManagementTest`: 52 passed, 521 assertions.
+- `DashboardBookingRequestManagementTest`: 18 passed, 239 assertions.
+- `CustomerManagementTest`: 18 passed, 170 assertions.
+- `RepairOrderStatusTest`: 6 passed, 27 assertions.
+- Full `php artisan test`: 265 passed, 2047 assertions.
+- `composer analyse`: passed with no errors after rerunning with escalation because sandboxed PHPStan could not bind its local TCP worker socket.
+- `git diff --check`: passed.
+
+Review follow-up fixed:
+
+- Wrapped line add/update/remove and approval-requirement updates in transactions with locked repair-order reads.
+- Added cancelled repair-order coverage for estimate approval requirement lock.
+
+Not run:
+
+- `php artisan test tests/Feature/BookingRequestManagementTest.php` because that file does not exist; `DashboardBookingRequestManagementTest.php` was run instead.
+- `npm run build` because no frontend files changed.
 
 ## Risks
 
-The full feature suite was not executed in this turn. Public legacy booking tests were updated to the new hard rule, but the Vue page still exposes vehicle fields; that is compatible at the HTTP boundary but may be confusing until the legacy form is retired or simplified.
+This migration touches many imports because PHP enum namespaces changed. Full tests and PHPStan passed, which reduces the risk of stale imports.
 
-The booking-request migration is committed as `8c2cf96 move booking request to domain`, while this task report update remains uncommitted.
+No old RepairOrder enum/action/query wrapper classes were left behind. Any external code importing the old namespaces would need to move to the new domain namespaces.
 
 ## Follow Ups
 
-- Run the focused feature suites above before merging.
-- Consider simplifying or retiring the legacy `/book/{workshop}` form so it no longer asks for vehicle details that public submission intentionally does not persist.
-- Consider `docs/learning/laravel-domain-modules.md` if future agents need a practical learning note for DDD-lite Laravel module boundaries.
+- Next recommended domain to migrate: `Estimates`, because estimate generation already imports RepairOrder status and is the next adjacent business workflow.
+- Consider `docs/learning/laravel-domain-modules.md` if future agents need a practical note on this repo's DDD-lite module boundaries.

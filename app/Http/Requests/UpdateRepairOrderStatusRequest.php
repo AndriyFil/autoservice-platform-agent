@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use Illuminate\Validation\Rule;
 
 class UpdateRepairOrderStatusRequest extends DashboardFormRequest

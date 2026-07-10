@@ -2,12 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Models\RepairOrder;
+use App\Models\RepairOrderLine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\RepairOrderLine>
+ * @extends Factory<RepairOrderLine>
  */
 class RepairOrderLineFactory extends Factory
 {

@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Models\Estimate;
 use App\Models\EstimateLine;
 use Illuminate\Database\Eloquent\Factories\Factory;

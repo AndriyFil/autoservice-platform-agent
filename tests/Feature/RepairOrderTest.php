@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Domain\BookingRequests\Enums\BookingRequestStatus;
-use App\Enums\RepairOrderLineType;
-use App\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\RepairOrder;

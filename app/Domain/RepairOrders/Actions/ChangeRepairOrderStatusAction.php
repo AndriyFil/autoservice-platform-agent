@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Actions\RepairOrders;
+namespace App\Domain\RepairOrders\Actions;
 
-use App\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Models\RepairOrder;
 use App\Models\WorkshopUser;
 use DomainException;
@@ -32,7 +32,7 @@ class ChangeRepairOrderStatusAction
 
             $repairOrder->status = $targetStatus;
 
-            if (in_array($targetStatus, [RepairOrderStatus::Completed, RepairOrderStatus::Cancelled], true)) {
+            if ($targetStatus->isFinal()) {
                 $repairOrder->closed_at = now();
             }
 

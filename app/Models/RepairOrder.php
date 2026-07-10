@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use Database\Factories\RepairOrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

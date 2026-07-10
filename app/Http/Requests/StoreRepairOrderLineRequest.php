@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use Illuminate\Validation\Rule;
 
 class StoreRepairOrderLineRequest extends DashboardFormRequest

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Models\RepairOrder;
 use App\Models\RepairOrderLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;

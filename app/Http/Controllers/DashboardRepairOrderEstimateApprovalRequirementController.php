@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\RepairOrders\UpdateRepairOrderEstimateApprovalRequirementAction;
+use App\Domain\RepairOrders\Actions\UpdateRepairOrderApprovalRequirementAction;
 use App\Http\Requests\UpdateRepairOrderEstimateApprovalRequirementRequest;
 use App\Models\RepairOrder;
 use DomainException;
@@ -13,7 +13,7 @@ class DashboardRepairOrderEstimateApprovalRequirementController extends Controll
     public function update(
         UpdateRepairOrderEstimateApprovalRequirementRequest $request,
         RepairOrder $repairOrder,
-        UpdateRepairOrderEstimateApprovalRequirementAction $updateEstimateApprovalRequirement,
+        UpdateRepairOrderApprovalRequirementAction $updateEstimateApprovalRequirement,
     ): RedirectResponse {
         try {
             $updateEstimateApprovalRequirement->handle(

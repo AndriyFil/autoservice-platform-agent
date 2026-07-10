@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Domain\BookingRequests\Enums\BookingRequestStatus;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Enums\EstimateStatus;
-use App\Enums\RepairOrderStatus;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\Estimate;
@@ -1628,6 +1628,31 @@ class RepairOrderManagementTest extends TestCase
             'status' => BookingRequestStatus::Confirmed,
         ]), [
             'status' => RepairOrderStatus::Completed,
+            'requires_estimate_approval' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->from(route('dashboard.repair-orders.show', $repairOrder))
+            ->patch(route('dashboard.repair-orders.estimate-approval-requirement.update', $repairOrder), [
+                'requires_estimate_approval' => false,
+            ])
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+            ->assertSessionHasErrors('requires_estimate_approval');
+
+        $this->assertTrue($repairOrder->refresh()->requires_estimate_approval);
+    }
+
+    public function test_cancelled_repair_order_estimate_approval_requirement_cannot_be_toggled(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+        ]), [
+            'status' => RepairOrderStatus::Cancelled,
             'requires_estimate_approval' => true,
         ]);
 

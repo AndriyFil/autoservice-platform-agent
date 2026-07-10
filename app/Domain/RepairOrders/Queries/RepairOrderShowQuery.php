@@ -1,18 +1,23 @@
 <?php
 
-namespace App\Queries\Dashboard;
+namespace App\Domain\RepairOrders\Queries;
 
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Services\RepairOrderStatusTransitionService;
 use App\Enums\DocumentStatus;
-use App\Enums\RepairOrderLineType;
-use App\Enums\RepairOrderStatus;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
 use App\Models\RepairOrderLine;
 use App\Models\WorkshopUser;
 
-class DashboardRepairOrderDetailsQuery
+class RepairOrderShowQuery
 {
+    public function __construct(
+        private readonly RepairOrderStatusTransitionService $statusTransitionService,
+    ) {}
+
     /**
      * @return array{
      *     id: int,
@@ -60,7 +65,7 @@ class DashboardRepairOrderDetailsQuery
             'problemDescription' => $repairOrder->problem_description,
             'notes' => $repairOrder->notes,
             'requiresEstimateApproval' => $repairOrder->requires_estimate_approval,
-            'canUpdateEstimateApprovalRequirement' => ! in_array($repairOrder->status, [RepairOrderStatus::Completed, RepairOrderStatus::Cancelled], true),
+            'canUpdateEstimateApprovalRequirement' => ! $repairOrder->status->isFinal(),
             'openedAt' => $repairOrder->opened_at->toISOString(),
             'closedAt' => $repairOrder->closed_at?->toISOString(),
             'lines' => $repairOrder->lines
@@ -148,7 +153,7 @@ class DashboardRepairOrderDetailsQuery
                 RepairOrderLineType::cases(),
             ),
             'statusActions' => $this->statusActions($repairOrder),
-            'availableStatusTransitions' => $this->availableStatusTransitions($repairOrder->status),
+            'availableStatusTransitions' => $this->statusTransitionService->availableManualTransitions($repairOrder->status),
             'customer' => $repairOrder->customer
                 ? [
                     'id' => $repairOrder->customer->id,
@@ -192,30 +197,5 @@ class DashboardRepairOrderDetailsQuery
                 && $repairOrder->lines->isNotEmpty(),
             'hasEstimate' => $hasEstimate,
         ];
-    }
-
-    /**
-     * @return array<int, array{value: string, label: string}>
-     */
-    private function availableStatusTransitions(RepairOrderStatus $status): array
-    {
-        $actionLabels = [
-            RepairOrderStatus::InProgress->value => 'Start work',
-            RepairOrderStatus::Completed->value => 'Complete order',
-            RepairOrderStatus::Cancelled->value => 'Cancel order',
-        ];
-
-        return collect([
-            RepairOrderStatus::InProgress,
-            RepairOrderStatus::Completed,
-            RepairOrderStatus::Cancelled,
-        ])
-            ->filter(fn (RepairOrderStatus $targetStatus): bool => $status->canTransitionTo($targetStatus))
-            ->map(fn (RepairOrderStatus $targetStatus): array => [
-                'value' => $targetStatus->value,
-                'label' => $actionLabels[$targetStatus->value],
-            ])
-            ->values()
-            ->all();
     }
 }

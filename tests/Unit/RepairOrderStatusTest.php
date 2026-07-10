@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use PHPUnit\Framework\TestCase;
 
 class RepairOrderStatusTest extends TestCase
@@ -37,6 +37,15 @@ class RepairOrderStatusTest extends TestCase
                 $this->assertFalse($status->canTransitionTo($targetStatus));
             }
         }
+    }
+
+    public function test_completed_and_cancelled_are_final_statuses(): void
+    {
+        $this->assertFalse(RepairOrderStatus::Draft->isFinal());
+        $this->assertFalse(RepairOrderStatus::Estimated->isFinal());
+        $this->assertFalse(RepairOrderStatus::InProgress->isFinal());
+        $this->assertTrue(RepairOrderStatus::Completed->isFinal());
+        $this->assertTrue(RepairOrderStatus::Cancelled->isFinal());
     }
 
     public function test_approved_is_not_a_repair_order_status(): void

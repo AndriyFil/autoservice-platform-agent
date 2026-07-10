@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Actions\Estimates\GenerateRepairOrderEstimateAction;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
-use App\Enums\RepairOrderLineType;
-use App\Enums\RepairOrderStatus;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\EstimateLine;

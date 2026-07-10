@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Domain\RepairOrders\Enums;
 
 enum RepairOrderStatus: string
 {
@@ -23,5 +23,10 @@ enum RepairOrderStatus: string
             self::InProgress => in_array($status, [self::Completed, self::Cancelled], true),
             self::Completed, self::Cancelled => false,
         };
+    }
+
+    public function isFinal(): bool
+    {
+        return in_array($this, [self::Completed, self::Cancelled], true);
     }
 }

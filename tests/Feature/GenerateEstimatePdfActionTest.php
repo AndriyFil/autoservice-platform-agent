@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Actions\Estimates\GenerateEstimatePdfAction;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Enums\EstimateStatus;
-use App\Enums\RepairOrderLineType;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\EstimateLine;

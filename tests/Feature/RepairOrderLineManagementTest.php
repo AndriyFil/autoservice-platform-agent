@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
-use App\Enums\RepairOrderLineType;
-use App\Enums\RepairOrderStatus;
 use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
@@ -199,6 +199,69 @@ class RepairOrderLineManagementTest extends TestCase
             ->assertSessionHasErrors(['type', 'description', 'quantity', 'unit_price_cents', 'tax_rate']);
 
         $this->assertDatabaseCount('repair_order_lines', 0);
+    }
+
+    public function test_final_repair_order_lines_cannot_be_added_updated_or_deleted(): void
+    {
+        $user = User::factory()->create();
+
+        foreach ([RepairOrderStatus::Completed, RepairOrderStatus::Cancelled] as $status) {
+            $workshop = Workshop::factory()->create();
+            $this->createMembership($user, $workshop);
+            $repairOrder = $this->createRepairOrder($workshop, [
+                'status' => $status,
+            ]);
+            $line = RepairOrderLine::factory()->create([
+                'repair_order_id' => $repairOrder->id,
+                'type' => RepairOrderLineType::Labor,
+                'description' => 'Locked labor',
+                'quantity' => '1.00',
+                'unit_price_cents' => 10000,
+                'tax_rate' => '0.00',
+            ]);
+
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard.repair-orders.show', $repairOrder))
+                ->post(route('dashboard.repair-orders.lines.store', $repairOrder), [
+                    'type' => RepairOrderLineType::Labor->value,
+                    'description' => 'Late line',
+                    'quantity' => '1.00',
+                    'unit_price_cents' => 10000,
+                    'tax_rate' => '0.00',
+                ])
+                ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+                ->assertSessionHasErrors('repair_order_line');
+
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard.repair-orders.show', $repairOrder))
+                ->patch(route('dashboard.repair-orders.lines.update', [$repairOrder, $line]), [
+                    'type' => RepairOrderLineType::Part->value,
+                    'description' => 'Changed locked line',
+                    'quantity' => '2.00',
+                    'unit_price_cents' => 7500,
+                    'tax_rate' => '10.00',
+                ])
+                ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+                ->assertSessionHasErrors('repair_order_line');
+
+            $this
+                ->actingAs($user)
+                ->withSession(['active_workshop_id' => $workshop->id])
+                ->from(route('dashboard.repair-orders.show', $repairOrder))
+                ->delete(route('dashboard.repair-orders.lines.destroy', [$repairOrder, $line]))
+                ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
+                ->assertSessionHasErrors('repair_order_line');
+
+            $this->assertDatabaseHas('repair_order_lines', [
+                'id' => $line->id,
+                'type' => RepairOrderLineType::Labor->value,
+                'description' => 'Locked labor',
+            ]);
+        }
     }
 
     public function test_repair_order_show_exposes_lines_totals_line_types_and_status_actions(): void

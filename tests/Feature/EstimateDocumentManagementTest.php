@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Actions\Estimates\GenerateRepairOrderEstimateAction;
 use App\Actions\Estimates\GenerateRepairOrderEstimateResult;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
-use App\Enums\RepairOrderLineType;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Estimate;

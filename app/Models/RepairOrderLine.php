@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\RepairOrderLineType;
+use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use Database\Factories\RepairOrderLineFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
