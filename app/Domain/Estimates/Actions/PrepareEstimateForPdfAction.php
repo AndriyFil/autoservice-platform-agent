@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Actions\Estimates;
+namespace App\Domain\Estimates\Actions;
 
+use App\Domain\Estimates\Enums\EstimateStatus;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
-use App\Enums\EstimateStatus;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
 use App\Models\RepairOrderLine;

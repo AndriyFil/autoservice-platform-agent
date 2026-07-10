@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions\Estimates;
+namespace App\Domain\Estimates\Actions;
 
 use App\Models\RepairOrder;
 use App\Models\WorkshopUser;

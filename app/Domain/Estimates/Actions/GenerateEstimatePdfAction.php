@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions\Estimates;
+namespace App\Domain\Estimates\Actions;
 
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;

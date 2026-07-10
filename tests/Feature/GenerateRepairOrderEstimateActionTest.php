@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Actions\Estimates\GenerateRepairOrderEstimateAction;
+use App\Domain\Estimates\Actions\GenerateRepairOrderEstimateAction;
 use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;

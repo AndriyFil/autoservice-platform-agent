@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Enums\EstimateStatus;
+use App\Domain\Estimates\Enums\EstimateStatus;
 use PHPUnit\Framework\TestCase;
 
 class EstimateStatusTest extends TestCase

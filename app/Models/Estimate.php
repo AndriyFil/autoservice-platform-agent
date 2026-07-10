@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Domain\Estimates\Enums\EstimateStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
-use App\Enums\EstimateStatus;
 use Database\Factories\EstimateFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

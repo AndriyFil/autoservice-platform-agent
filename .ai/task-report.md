@@ -2,104 +2,67 @@
 
 ## Goal
 
-Remove `estimated` as a RepairOrder operational status and keep estimate generation in the Estimate domain without adding approval flow, customer links, notifications, or new statuses.
+Migrate the existing Estimates domain logic into `app/Domain/Estimates` without adding approval flow, notifications, or changing the RepairOrder status workflow.
 
 ## Files Changed
 
-- `.ai/lessons/autoservice.md`
+- `app/Domain/Estimates/Actions/GenerateEstimatePdfAction.php`
+- `app/Domain/Estimates/Actions/GenerateRepairOrderEstimateAction.php`
+- `app/Domain/Estimates/Actions/GenerateRepairOrderEstimateResult.php`
+- `app/Domain/Estimates/Actions/PrepareEstimateForPdfAction.php`
+- `app/Domain/Estimates/Enums/EstimateStatus.php`
+- `app/Actions/Estimates/GenerateEstimatePdfAction.php`
+- `app/Actions/Estimates/GenerateRepairOrderEstimateAction.php`
+- `app/Actions/Estimates/GenerateRepairOrderEstimateResult.php`
 - `app/Actions/Estimates/PrepareEstimateForPdfAction.php`
-- `app/Domain/RepairOrders/Actions/ChangeRepairOrderStatusAction.php`
-- `app/Domain/RepairOrders/Enums/RepairOrderStatus.php`
-- `app/Domain/RepairOrders/Queries/RepairOrderShowQuery.php`
-- `app/Domain/RepairOrders/Services/RepairOrderStatusTransitionService.php`
-- `app/Http/Controllers/DashboardRepairOrderController.php`
+- `app/Enums/EstimateStatus.php`
 - `app/Http/Controllers/EstimateDashboardRepairOrderController.php`
-- `app/Http/Requests/GenerateRepairOrderEstimateRequest.php`
-- Removed `app/Http/Requests/MarkRepairOrderEstimatedRequest.php`
-- `database/migrations/2026_07_10_000001_remove_estimated_repair_order_status.php`
-- `docs/product/domain-model.md`
-- `docs/product/mvp-scope.md`
-- `lang/en/repair_orders.php`
-- `lang/pl/repair_orders.php`
-- `lang/uk/repair_orders.php`
-- `resources/js/components/customers/types.ts`
-- `resources/js/components/dashboard/types.ts`
-- `resources/js/components/repair-orders/RepairOrderEstimatesTab.vue`
-- `resources/js/components/repair-orders/RepairOrderStatusActions.vue`
-- `resources/js/components/repair-orders/RepairOrderStatusBadge.vue`
-- `resources/js/components/repair-orders/types.ts`
-- `resources/js/pages/Dashboard/BookingRequests/Show.vue`
+- `app/Models/Estimate.php`
+- `database/factories/EstimateFactory.php`
 - `tests/Feature/EstimateDocumentManagementTest.php`
+- `tests/Feature/GenerateEstimatePdfActionTest.php`
 - `tests/Feature/GenerateRepairOrderEstimateActionTest.php`
 - `tests/Feature/PrepareEstimateForPdfActionTest.php`
-- `tests/Feature/RepairOrderLineManagementTest.php`
 - `tests/Feature/RepairOrderManagementTest.php`
-- `tests/Unit/RepairOrderStatusTest.php`
+- `tests/Unit/EstimateStatusTest.php`
+- `.ai/task-report.md`
 
 ## Implementation Summary
 
-`RepairOrderStatus` now contains only `draft`, `in_progress`, `completed`, and `cancelled`.
+Moved the existing estimate generation, PDF rendering, result object, and estimate status enum from the old global `app/Actions/Estimates` and `app/Enums` locations into `app/Domain/Estimates`.
 
-Manual transitions are:
+Updated controllers, models, factories, and tests to import the new domain namespaces.
 
-- `draft -> in_progress, cancelled`
-- `in_progress -> draft, completed, cancelled`
-- `completed -> []`
-- `cancelled -> []`
-
-Estimate PDF generation no longer changes a draft repair order to `estimated`. It remains allowed for draft and in-progress orders with lines, and remains blocked for completed or cancelled orders.
-
-The dashboard estimate action prop was renamed from `canMarkEstimated` to `canGenerateEstimate`, and frontend status unions plus badge colors no longer include `estimated`.
-
-A migration converts existing `repair_orders.status = estimated` rows to `draft`. PostgreSQL/MySQL get a check constraint for the remaining allowed values. SQLite is skipped because this project uses in-memory SQLite for tests and SQLite cannot safely add this table constraint after table creation.
+No new estimate approval flow, notifications, repair-order status changes, migrations, or database branching were added.
 
 ## Architecture Decisions
 
-RepairOrderStatus remains the single source of status-transition rules through `manualTransitions()` and `canTransitionTo()`.
+Kept Eloquent models in `app/Models`, as required by `docs/architecture/autoservice-ddd-rules.md`.
 
-Estimate generation stays in the existing estimate actions; it creates estimate snapshots but does not own RepairOrder lifecycle state.
+Kept HTTP controllers in `app/Http` and changed only their action imports, preserving the controller-as-orchestrator boundary.
 
-The estimate endpoint request class was renamed to `GenerateRepairOrderEstimateRequest` so HTTP naming matches the actual use case instead of the removed status.
+Moved `EstimateStatus` into `app/Domain/Estimates/Enums` because estimate state and transitions are estimate-domain language, matching the existing migrated domain structure.
 
-Transition labels moved into `repair_orders.status_actions` translations instead of staying hardcoded in the transition service.
+Left `UpdateRepairOrderApprovalRequirementAction` in `app/Domain/RepairOrders` because it mutates a per-repair-order flag and does not create or transition an `Estimate`.
 
 ## Tradeoffs
 
-The Inertia prop rename is a small frontend contract change, but it removes stale RepairOrder status terminology and reduces future confusion.
+This is a namespace and ownership migration only. Existing status cases such as `approved` and `rejected` remain because they already existed, but no new approval behavior was introduced.
 
-The migration maps existing `estimated` repair orders to `draft` for development/portfolio cleanup, as requested. It does not infer whether work already started because that would require business data the current schema does not reliably encode.
-
-Historical lessons in `.ai/lessons/autoservice.md` were not rewritten; a newer superseding lesson was appended so future agents apply the current decision while preserving history.
+Tests still rely on PostgreSQL for feature coverage because the project is PostgreSQL-only and the current migrations use PostgreSQL constraint syntax.
 
 ## Tests
 
-Commands run:
-
-```sh
-php artisan test tests/Feature/RepairOrderManagementTest.php
-php artisan test tests/Feature/BookingRequestManagementTest.php
-php artisan test
-composer analyse
-npm run build
-```
-
-Results:
-
-- `php artisan test tests/Feature/RepairOrderManagementTest.php`: passed, 51 tests / 498 assertions.
-- `php artisan test tests/Feature/BookingRequestManagementTest.php`: not found; this exact file does not exist.
-- `php artisan test`: passed, 264 tests / 2017 assertions.
-- `composer analyse`: failed in sandbox because PHPStan could not bind `tcp://127.0.0.1:0`; rerun with escalation was blocked by the environment approval/usage guard.
-- `npm run build`: passed. Vite reported stale Browserslist/caniuse-lite data, but build completed.
+- Passed: `APP_ENV=testing DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=autoservice_testing DB_USERNAME=autoservice DB_PASSWORD=autoservice SESSION_DRIVER=array CACHE_STORE=array QUEUE_CONNECTION=sync php artisan test tests/Unit/EstimateStatusTest.php tests/Feature/PrepareEstimateForPdfActionTest.php tests/Feature/GenerateEstimatePdfActionTest.php tests/Feature/GenerateRepairOrderEstimateActionTest.php tests/Feature/EstimateDocumentManagementTest.php`
+  - 26 passed, 159 assertions.
+- Passed: `APP_ENV=testing DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=autoservice_testing DB_USERNAME=autoservice DB_PASSWORD=autoservice SESSION_DRIVER=array CACHE_STORE=array QUEUE_CONNECTION=sync php artisan test tests/Feature/RepairOrderManagementTest.php --filter=estimate`
+  - 9 passed, 40 assertions.
+- Reference check: no stale `App\Actions\Estimates` or `App\Enums\EstimateStatus` references remain under `app`, `tests`, `database`, `resources`, or `routes`.
 
 ## Risks
 
-`composer analyse` did not complete because of environment restrictions, so static-analysis verification remains open.
-
-SQLite test databases do not receive the added check constraint, but application validation and enum casting reject `estimated`, and PostgreSQL/MySQL migrations add the database constraint.
-
-Remaining `estimated` text references are intentional: invalid-value tests, the cleanup migration, the unrelated `estimated_price` public-intake schema assertion, and historical lessons that are superseded by the new lesson.
+Because this moved class namespaces, any unsearched external code or pending branches that import the old namespaces will need to update imports.
 
 ## Follow Ups
 
-- Run `composer analyse` outside the restricted sandbox.
-- Consider a future `docs/learning/repair-order-status-vs-estimate-status.md` note to explain why operational order state and estimate lifecycle state are separate.
+- Consider updating `phpunit.xml` to default to the PostgreSQL testing connection so PostgreSQL-only migrations do not fail under SQLite.

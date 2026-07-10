@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Actions\Estimates\PrepareEstimateForPdfAction;
+use App\Domain\Estimates\Actions\PrepareEstimateForPdfAction;
+use App\Domain\Estimates\Enums\EstimateStatus;
 use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
-use App\Enums\EstimateStatus;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\EstimateLine;

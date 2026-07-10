@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\EstimateStatus;
+use App\Domain\Estimates\Enums\EstimateStatus;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
 use Illuminate\Database\Eloquent\Factories\Factory;

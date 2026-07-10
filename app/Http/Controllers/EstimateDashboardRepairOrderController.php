@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Estimates\GenerateRepairOrderEstimateAction;
+use App\Domain\Estimates\Actions\GenerateRepairOrderEstimateAction;
 use App\Http\Requests\GenerateRepairOrderEstimateRequest;
 use App\Models\RepairOrder;
 use DomainException;
