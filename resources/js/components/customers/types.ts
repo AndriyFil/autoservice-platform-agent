@@ -40,7 +40,7 @@ export type CustomerBookingRequest = {
 export type CustomerRepairOrder = {
     id: number;
     status: {
-        value: 'draft' | 'estimated' | 'in_progress' | 'completed' | 'cancelled';
+        value: 'draft' | 'in_progress' | 'completed' | 'cancelled';
         label: string;
     };
     problemDescription: string | null;

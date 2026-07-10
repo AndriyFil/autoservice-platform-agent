@@ -155,14 +155,14 @@ A repair order:
 - may belong to a customer
 - may reference a vehicle
 - may contain staff-authored estimate lines
-- may be marked `estimated` after at least one estimate line exists
+- may generate estimate snapshots after at least one estimate line exists
+- can move directly from `draft` to `in_progress`
 
 A repair order is not:
 
 - the intake aggregate
 - an AI diagnosis
 - a customer approval portal
-- a separate Estimate entity
 - an invoice
 - a payment record
 - an accounting record
@@ -171,13 +171,13 @@ A repair order is not:
 
 Estimate lines belong to a repair order.
 
-For the current MVP, an estimate is represented by:
+For the current MVP, estimate snapshots are represented separately from the repair order workflow:
 
 ```txt
-RepairOrder + RepairOrderLines + RepairOrderStatus::Estimated
+RepairOrder + RepairOrderLines + Estimate
 ```
 
-Do not introduce a separate `Estimate` model until approval, versioning, or customer-facing estimate rules create a real responsibility that `RepairOrder` should not own.
+RepairOrderStatus represents only operational workshop order state. Estimate approval flow will be modeled separately in the Estimate domain later.
 
 Supported foundation line types:
 
@@ -212,7 +212,7 @@ Owner and staff can see data for the active workshop:
 - cancelled requests
 - create repair orders from reviewed booking requests
 - add, edit, and delete repair order estimate lines
-- mark draft repair orders with lines as estimated
+- generate estimate PDFs for draft and in-progress repair orders with lines
 - repair order estimate totals from staff-entered lines
 
 ## Public Intake

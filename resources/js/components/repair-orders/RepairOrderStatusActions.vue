@@ -27,7 +27,7 @@ const submitEstimate = () => {
 <template>
     <div class="space-y-2">
         <div class="flex flex-wrap gap-2">
-            <Button v-if="actions.canMarkEstimated" type="button" size="sm" :disabled="anyProcessing()" @click="submitEstimate">
+            <Button v-if="actions.canGenerateEstimate" type="button" size="sm" :disabled="anyProcessing()" @click="submitEstimate">
                 <FileText class="size-4" />
                 {{ t(actions.hasEstimate ? 'repair_orders.actions.regenerate_estimate_pdf' : 'repair_orders.actions.create_estimate_pdf') }}
             </Button>

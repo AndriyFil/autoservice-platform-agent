@@ -26,10 +26,6 @@ class ChangeRepairOrderStatusAction
                 throw new DomainException('This repair order cannot move to the selected status.');
             }
 
-            if ($targetStatus === RepairOrderStatus::Estimated) {
-                throw new DomainException('Generate an estimate PDF to mark this repair order as estimated.');
-            }
-
             $repairOrder->status = $targetStatus;
 
             if ($targetStatus->isFinal()) {

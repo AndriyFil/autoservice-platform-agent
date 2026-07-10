@@ -93,10 +93,16 @@ return [
 
     'repair_order_statuses' => [
         'draft' => 'Чернетка',
-        'estimated' => 'Оцінено',
-        'in_progress' => 'У роботі',
+        'in_progress' => 'В роботі',
         'completed' => 'Завершено',
         'cancelled' => 'Скасовано',
+    ],
+
+    'status_actions' => [
+        'draft' => 'Повернути в чернетку',
+        'in_progress' => 'Почати роботу',
+        'completed' => 'Завершити замовлення',
+        'cancelled' => 'Скасувати замовлення',
     ],
 
     'sections' => [

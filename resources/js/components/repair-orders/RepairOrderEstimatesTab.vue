@@ -12,12 +12,12 @@ defineProps<{
 <template>
     <section class="space-y-4">
         <div
-            v-if="repairOrder.statusActions.canMarkEstimated || statusError"
+            v-if="repairOrder.statusActions.canGenerateEstimate || statusError"
             class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
         >
             <RepairOrderStatusActions
                 :repair-order-id="repairOrder.id"
-                :actions="{ canMarkEstimated: repairOrder.statusActions.canMarkEstimated, hasEstimate: repairOrder.statusActions.hasEstimate }"
+                :actions="{ canGenerateEstimate: repairOrder.statusActions.canGenerateEstimate, hasEstimate: repairOrder.statusActions.hasEstimate }"
                 :status-error="statusError"
             />
         </div>

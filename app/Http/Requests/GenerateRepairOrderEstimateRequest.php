@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-class MarkRepairOrderEstimatedRequest extends DashboardFormRequest
+class GenerateRepairOrderEstimateRequest extends DashboardFormRequest
 {
     /**
      * @return array<string, array<int, mixed>>

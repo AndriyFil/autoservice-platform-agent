@@ -93,10 +93,16 @@ return [
 
     'repair_order_statuses' => [
         'draft' => 'Wersja robocza',
-        'estimated' => 'Wyceniono',
         'in_progress' => 'W trakcie',
         'completed' => 'Zakończono',
         'cancelled' => 'Anulowano',
+    ],
+
+    'status_actions' => [
+        'draft' => 'Przenieś do wersji roboczej',
+        'in_progress' => 'Rozpocznij pracę',
+        'completed' => 'Zakończ zlecenie',
+        'cancelled' => 'Anuluj zlecenie',
     ],
 
     'sections' => [

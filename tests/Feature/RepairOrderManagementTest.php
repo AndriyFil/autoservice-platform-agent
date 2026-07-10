@@ -1128,7 +1128,7 @@ class RepairOrderManagementTest extends TestCase
                 ->where('repairOrder.bookingRequest.id', $bookingRequest->id)
                 ->where('repairOrder.bookingRequest.status.value', 'confirmed')
                 ->where('repairOrder.bookingRequest.preferredDate', '2026-06-20')
-                ->where('repairOrder.statusActions.canMarkEstimated', false)
+                ->where('repairOrder.statusActions.canGenerateEstimate', false)
                 ->where('repairOrder.statusActions.hasEstimate', false)
                 ->where('repairOrder.availableStatusTransitions.0.value', 'in_progress')
                 ->where('repairOrder.availableStatusTransitions.0.label', 'Start work')
@@ -1145,17 +1145,8 @@ class RepairOrderManagementTest extends TestCase
         $expectations = [
             RepairOrderStatus::Draft->value => [
                 'status' => RepairOrderStatus::Draft,
-                'canMarkEstimated' => true,
+                'canGenerateEstimate' => true,
                 'hasEstimate' => false,
-                'availableStatusTransitions' => [
-                    ['value' => 'in_progress', 'label' => 'Start work'],
-                    ['value' => 'cancelled', 'label' => 'Cancel order'],
-                ],
-            ],
-            RepairOrderStatus::Estimated->value => [
-                'status' => RepairOrderStatus::Estimated,
-                'canMarkEstimated' => true,
-                'hasEstimate' => true,
                 'availableStatusTransitions' => [
                     ['value' => 'in_progress', 'label' => 'Start work'],
                     ['value' => 'cancelled', 'label' => 'Cancel order'],
@@ -1163,22 +1154,23 @@ class RepairOrderManagementTest extends TestCase
             ],
             RepairOrderStatus::InProgress->value => [
                 'status' => RepairOrderStatus::InProgress,
-                'canMarkEstimated' => true,
+                'canGenerateEstimate' => true,
                 'hasEstimate' => true,
                 'availableStatusTransitions' => [
+                    ['value' => 'draft', 'label' => 'Move to draft'],
                     ['value' => 'completed', 'label' => 'Complete order'],
                     ['value' => 'cancelled', 'label' => 'Cancel order'],
                 ],
             ],
             RepairOrderStatus::Completed->value => [
                 'status' => RepairOrderStatus::Completed,
-                'canMarkEstimated' => false,
+                'canGenerateEstimate' => false,
                 'hasEstimate' => true,
                 'availableStatusTransitions' => [],
             ],
             RepairOrderStatus::Cancelled->value => [
                 'status' => RepairOrderStatus::Cancelled,
-                'canMarkEstimated' => false,
+                'canGenerateEstimate' => false,
                 'hasEstimate' => true,
                 'availableStatusTransitions' => [],
             ],
@@ -1216,7 +1208,7 @@ class RepairOrderManagementTest extends TestCase
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('repairOrder.status.value', $statusValue)
-                    ->where('repairOrder.statusActions.canMarkEstimated', $expectation['canMarkEstimated'])
+                    ->where('repairOrder.statusActions.canGenerateEstimate', $expectation['canGenerateEstimate'])
                     ->where('repairOrder.statusActions.hasEstimate', $expectation['hasEstimate'])
                     ->where('repairOrder.availableStatusTransitions', $expectation['availableStatusTransitions']));
         }
@@ -1332,32 +1324,7 @@ class RepairOrderManagementTest extends TestCase
                 ->where('canCreateRepairOrder', false));
     }
 
-    public function test_estimated_repair_order_cannot_complete_directly(): void
-    {
-        $user = User::factory()->create();
-        $workshop = Workshop::factory()->create();
-        $this->createMembership($user, $workshop);
-        $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
-            'status' => BookingRequestStatus::Confirmed,
-        ]), [
-            'status' => RepairOrderStatus::Estimated,
-        ]);
-
-        $this
-            ->actingAs($user)
-            ->withSession(['active_workshop_id' => $workshop->id])
-            ->from(route('dashboard.repair-orders.show', $repairOrder))
-            ->patch(route('dashboard.repair-orders.status', $repairOrder), [
-                'status' => RepairOrderStatus::Completed->value,
-            ])
-            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHasErrors('status');
-
-        $this->assertSame(RepairOrderStatus::Estimated, $repairOrder->refresh()->status);
-        $this->assertNull($repairOrder->closed_at);
-    }
-
-    public function test_draft_repair_order_cannot_be_marked_estimated_through_status_route(): void
+    public function test_estimated_status_is_rejected_through_status_route(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
@@ -1373,7 +1340,7 @@ class RepairOrderManagementTest extends TestCase
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
             ->patch(route('dashboard.repair-orders.status', $repairOrder), [
-                'status' => RepairOrderStatus::Estimated->value,
+                'status' => 'estimated',
             ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
             ->assertSessionHasErrors('status');
@@ -1407,7 +1374,7 @@ class RepairOrderManagementTest extends TestCase
         $this->assertNull($repairOrder->closed_at);
     }
 
-    public function test_estimated_repair_order_can_start_work(): void
+    public function test_in_progress_repair_order_can_move_to_draft(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
@@ -1415,7 +1382,7 @@ class RepairOrderManagementTest extends TestCase
         $repairOrder = $this->createRepairOrder($this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
         ]), [
-            'status' => RepairOrderStatus::Estimated,
+            'status' => RepairOrderStatus::InProgress,
         ]);
 
         $this
@@ -1423,12 +1390,12 @@ class RepairOrderManagementTest extends TestCase
             ->withSession(['active_workshop_id' => $workshop->id])
             ->from(route('dashboard.repair-orders.show', $repairOrder))
             ->patch(route('dashboard.repair-orders.status', $repairOrder), [
-                'status' => RepairOrderStatus::InProgress->value,
+                'status' => RepairOrderStatus::Draft->value,
             ])
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder))
-            ->assertSessionHas('status', 'Repair order started.');
+            ->assertSessionHas('status', 'Repair order moved to draft.');
 
-        $this->assertSame(RepairOrderStatus::InProgress, $repairOrder->refresh()->status);
+        $this->assertSame(RepairOrderStatus::Draft, $repairOrder->refresh()->status);
         $this->assertNull($repairOrder->closed_at);
     }
 
@@ -1461,7 +1428,7 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame('2026-06-12 11:00:00', $repairOrder->closed_at->toDateTimeString());
     }
 
-    public function test_estimated_repair_order_can_be_cancelled(): void
+    public function test_draft_repair_order_can_be_cancelled(): void
     {
         Carbon::setTestNow('2026-06-12 12:00:00');
 
@@ -1473,7 +1440,7 @@ class RepairOrderManagementTest extends TestCase
                 'status' => BookingRequestStatus::Confirmed,
             ]),
             [
-                'status' => RepairOrderStatus::Estimated,
+                'status' => RepairOrderStatus::Draft,
             ],
         );
 
@@ -1535,7 +1502,7 @@ class RepairOrderManagementTest extends TestCase
             'closed_at' => Carbon::parse('2026-06-12 12:00:00'),
         ]);
 
-        foreach ([RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress, RepairOrderStatus::Completed] as $targetStatus) {
+        foreach ([RepairOrderStatus::Draft, RepairOrderStatus::InProgress, RepairOrderStatus::Completed, RepairOrderStatus::Cancelled] as $targetStatus) {
             $this
                 ->actingAs($user)
                 ->withSession(['active_workshop_id' => $workshop->id])

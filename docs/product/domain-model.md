@@ -130,9 +130,9 @@ Relationships:
 - May reference one vehicle.
 - Has many repair order lines.
 - May record the staff user who created it.
-- Represents the current MVP estimate when it has staff-authored lines and status `estimated`.
+- Represents operational workshop order state only.
+- May have staff-authored estimate lines and generated estimate snapshots.
 - Does not represent customer approval, invoice, payment, PDF export, or accounting.
-- Does not require a separate `Estimate` entity for the current MVP.
 
 MVP: yes
 
@@ -155,7 +155,7 @@ Rules:
 - Money is stored as integer cents.
 - The system may calculate totals from staff-entered values.
 - Discount lines reduce repair order totals.
-- A draft repair order can be marked `estimated` only after it has at least one line.
+- A draft or in-progress repair order can generate an estimate snapshot when it has at least one line.
 - AI must not diagnose repairs, recommend work, or generate prices.
 - Repair order lines are not invoices and do not record payment.
 - Invoice generation comes later, after approval or completion rules exist.
@@ -191,13 +191,13 @@ Domain entity: no
 
 Purpose:
 
-- Tracks staff-owned repair order workflow state.
+- Tracks staff-owned operational repair order workflow state.
+- Estimate lifecycle belongs to the Estimate domain, not RepairOrderStatus.
+- Operators can start work directly from draft.
 
 MVP statuses:
 
 - `draft`
-- `estimated`
-- `approved`
 - `in_progress`
 - `completed`
 - `cancelled`

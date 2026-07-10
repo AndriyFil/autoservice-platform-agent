@@ -27,7 +27,7 @@ class PrepareEstimateForPdfActionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_draft_repair_order_with_lines_creates_first_estimate_and_becomes_estimated(): void
+    public function test_draft_repair_order_with_lines_creates_first_estimate_without_status_change(): void
     {
         [$workshopUser, $repairOrder] = $this->buildRepairOrderWithLine();
 
@@ -35,7 +35,7 @@ class PrepareEstimateForPdfActionTest extends TestCase
 
         $this->assertSame(EstimateStatus::Generated, $estimate->status);
         $this->assertNotNull($estimate->generated_at);
-        $this->assertSame(RepairOrderStatus::Estimated, $repairOrder->refresh()->status);
+        $this->assertSame(RepairOrderStatus::Draft, $repairOrder->refresh()->status);
         $this->assertSame(1, $estimate->version);
         $this->assertSame('Original repair order line', $estimate->lines->sole()->description);
         $this->assertSame(9000, $estimate->total_cents);
@@ -234,7 +234,7 @@ class PrepareEstimateForPdfActionTest extends TestCase
      */
     private function buildRegenerableEstimate(
         EstimateStatus $estimateStatus = EstimateStatus::Generated,
-        RepairOrderStatus $repairOrderStatus = RepairOrderStatus::Estimated,
+        RepairOrderStatus $repairOrderStatus = RepairOrderStatus::Draft,
     ): array {
         [$workshopUser, $repairOrder] = $this->buildRepairOrderWithLine($repairOrderStatus);
 

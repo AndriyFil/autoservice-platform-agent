@@ -46,7 +46,7 @@ class GenerateRepairOrderEstimateActionTest extends TestCase
     {
         Storage::fake('documents_local');
 
-        [$workshopUser, $repairOrder] = $this->buildRepairOrderWithLine(RepairOrderStatus::Estimated);
+        [$workshopUser, $repairOrder] = $this->buildRepairOrderWithLine(RepairOrderStatus::Draft);
 
         $estimate = Estimate::factory()->create([
             'repair_order_id' => $repairOrder->id,

@@ -20,7 +20,7 @@ export type RepairOrderFormCustomer = {
     vehicles?: RepairOrderFormVehicle[];
 };
 
-export type RepairOrderStatusValue = 'draft' | 'estimated' | 'in_progress' | 'completed' | 'cancelled';
+export type RepairOrderStatusValue = 'draft' | 'in_progress' | 'completed' | 'cancelled';
 
 export type RepairOrderStatus = {
     value: RepairOrderStatusValue;
@@ -127,7 +127,7 @@ export type RepairOrderEstimate = {
 };
 
 export type RepairOrderStatusActions = {
-    canMarkEstimated: boolean;
+    canGenerateEstimate: boolean;
     hasEstimate: boolean;
 };
 

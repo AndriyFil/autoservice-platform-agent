@@ -10,7 +10,7 @@ import { computed, ref } from 'vue';
 
 type BookingRequestStatus = 'new' | 'confirmed' | 'rejected' | 'cancelled';
 type StatusAction = 'confirmed' | 'rejected' | 'cancelled';
-type RepairOrderStatus = 'draft' | 'estimated' | 'in_progress' | 'completed' | 'cancelled';
+type RepairOrderStatus = 'draft' | 'in_progress' | 'completed' | 'cancelled';
 type TriageTab = 'overview' | 'customer' | 'vehicle';
 
 type StatusOption<T extends string = string> = {

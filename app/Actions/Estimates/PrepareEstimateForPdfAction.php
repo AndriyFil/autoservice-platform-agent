@@ -45,12 +45,6 @@ class PrepareEstimateForPdfAction
                 version: $nextVersion,
             );
 
-            if ($repairOrder->status === RepairOrderStatus::Draft) {
-                $repairOrder->update([
-                    'status' => RepairOrderStatus::Estimated,
-                ]);
-            }
-
             return $estimate->refresh()->load([
                 'lines',
                 'repairOrder.customer',
@@ -62,7 +56,7 @@ class PrepareEstimateForPdfAction
 
     private function repairOrderAllowsEstimateGeneration(RepairOrderStatus $status): bool
     {
-        return in_array($status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress], true);
+        return in_array($status, [RepairOrderStatus::Draft, RepairOrderStatus::InProgress], true);
     }
 
     private function createEstimate(WorkshopUser $activeWorkshopUser, RepairOrder $repairOrder, int $version): Estimate

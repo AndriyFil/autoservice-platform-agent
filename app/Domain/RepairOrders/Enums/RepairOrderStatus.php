@@ -5,7 +5,6 @@ namespace App\Domain\RepairOrders\Enums;
 enum RepairOrderStatus: string
 {
     case Draft = 'draft';
-    case Estimated = 'estimated';
     case InProgress = 'in_progress';
     case Completed = 'completed';
     case Cancelled = 'cancelled';
@@ -17,11 +16,18 @@ enum RepairOrderStatus: string
 
     public function canTransitionTo(self $status): bool
     {
+        return in_array($status, $this->manualTransitions(), true);
+    }
+
+    /**
+     * @return array<int, self>
+     */
+    public function manualTransitions(): array
+    {
         return match ($this) {
-            self::Draft => in_array($status, [self::Estimated, self::InProgress, self::Cancelled], true),
-            self::Estimated => in_array($status, [self::InProgress, self::Cancelled], true),
-            self::InProgress => in_array($status, [self::Completed, self::Cancelled], true),
-            self::Completed, self::Cancelled => false,
+            self::Draft => [self::InProgress, self::Cancelled],
+            self::InProgress => [self::Draft, self::Completed, self::Cancelled],
+            self::Completed, self::Cancelled => [],
         };
     }
 

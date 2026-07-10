@@ -125,10 +125,10 @@ class DashboardRepairOrderController extends Controller
     private function statusChangeMessage(RepairOrderStatus $status): string
     {
         return match ($status) {
+            RepairOrderStatus::Draft => 'Repair order moved to draft.',
             RepairOrderStatus::InProgress => 'Repair order started.',
             RepairOrderStatus::Completed => 'Repair order completed.',
             RepairOrderStatus::Cancelled => 'Repair order cancelled.',
-            default => 'Repair order status updated.',
         };
     }
 }

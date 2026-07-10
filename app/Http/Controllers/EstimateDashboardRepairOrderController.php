@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Estimates\GenerateRepairOrderEstimateAction;
-use App\Http\Requests\MarkRepairOrderEstimatedRequest;
+use App\Http\Requests\GenerateRepairOrderEstimateRequest;
 use App\Models\RepairOrder;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +11,7 @@ use Illuminate\Http\RedirectResponse;
 class EstimateDashboardRepairOrderController extends Controller
 {
     public function store(
-        MarkRepairOrderEstimatedRequest $request,
+        GenerateRepairOrderEstimateRequest $request,
         RepairOrder $repairOrder,
         GenerateRepairOrderEstimateAction $generateRepairOrderEstimate,
     ): RedirectResponse {

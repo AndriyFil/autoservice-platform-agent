@@ -34,7 +34,7 @@ class RepairOrderShowQuery
      *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string}|null}>,
      *     documents: array<int, array{id: int, filename: string, type: array{value: string, label: string}, status: array{value: string, label: string}, generatedAt: string|null, downloadUrl: string|null}>,
      *     availableLineTypes: array<int, array{value: string, label: string}>,
-     *     statusActions: array{canMarkEstimated: bool, hasEstimate: bool},
+     *     statusActions: array{canGenerateEstimate: bool, hasEstimate: bool},
      *     availableStatusTransitions: array<int, array{value: string, label: string}>,
      *     customer: array{id: int, name: string, phone: string}|null,
      *     vehicle: array{id: int, brand: string|null, model: string|null, licensePlate: string|null}|null,
@@ -186,14 +186,14 @@ class RepairOrderShowQuery
     }
 
     /**
-     * @return array{canMarkEstimated: bool, hasEstimate: bool}
+     * @return array{canGenerateEstimate: bool, hasEstimate: bool}
      */
     private function statusActions(RepairOrder $repairOrder): array
     {
         $hasEstimate = $repairOrder->estimates->isNotEmpty();
 
         return [
-            'canMarkEstimated' => in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::Estimated, RepairOrderStatus::InProgress], true)
+            'canGenerateEstimate' => in_array($repairOrder->status, [RepairOrderStatus::Draft, RepairOrderStatus::InProgress], true)
                 && $repairOrder->lines->isNotEmpty(),
             'hasEstimate' => $hasEstimate,
         ];

@@ -93,10 +93,16 @@ return [
 
     'repair_order_statuses' => [
         'draft' => 'Draft',
-        'estimated' => 'Estimated',
-        'in_progress' => 'In Progress',
+        'in_progress' => 'In progress',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
+    ],
+
+    'status_actions' => [
+        'draft' => 'Move to draft',
+        'in_progress' => 'Start work',
+        'completed' => 'Complete order',
+        'cancelled' => 'Cancel order',
     ],
 
     'sections' => [

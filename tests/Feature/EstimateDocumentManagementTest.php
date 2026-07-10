@@ -258,7 +258,7 @@ class EstimateDocumentManagementTest extends TestCase
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
         $repairOrder = $this->createRepairOrder($workshop, [
-            'status' => 'estimated',
+            'status' => 'draft',
         ]);
         RepairOrderLine::factory()->create([
             'repair_order_id' => $repairOrder->id,

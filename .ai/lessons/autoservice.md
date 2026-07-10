@@ -139,3 +139,9 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: Do not add extra UI props or user-visible steps for confirm-then-create behavior.
 - Lesson: Keep booking-request triage simple: staff opens the request, calls the customer, clarifies details, and clicks one `Create order` action. For `new` requests, that one action may auto-confirm internally before opening the repair-order form. Use `canCreateRepairOrder` for whether the Create order action should be available; do not add separate confirm-then-create flags unless there is a separate user-visible action.
 - Applies when: Implementing or reviewing booking-request triage, status transitions, repair-order conversion, dashboard action buttons, or BookingRequest show props.
+
+## 2026-07-10 - RepairOrder Estimated Status Removed
+
+- Correction: `estimated` is not a real RepairOrder operational status; it belongs conceptually to the Estimate domain.
+- Lesson: Keep RepairOrderStatus limited to `draft`, `in_progress`, `completed`, and `cancelled`. Operators can start work directly from draft; estimate generation must not move a repair order to `estimated` or block starting work.
+- Applies when: Implementing or reviewing repair-order lifecycle, status transitions, estimate generation, dropdown status actions, translations, tests, or product docs.
