@@ -6,12 +6,12 @@ use App\Domain\BookingRequests\Actions\CreateRepairOrderFromBookingRequestAction
 use App\Domain\RepairOrders\Actions\ChangeRepairOrderStatusAction;
 use App\Domain\RepairOrders\Actions\CreateRepairOrderAction;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
+use App\Domain\RepairOrders\Queries\RepairOrderFormQuery;
 use App\Domain\RepairOrders\Queries\RepairOrderIndexQuery;
 use App\Domain\RepairOrders\Queries\RepairOrderShowQuery;
 use App\Http\Requests\StoreRepairOrderRequest;
 use App\Http\Requests\UpdateRepairOrderStatusRequest;
 use App\Models\RepairOrder;
-use App\Queries\Dashboard\DashboardRepairOrderFormQuery;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,7 +39,7 @@ class DashboardRepairOrderController extends Controller
 
     public function create(
         Request $request,
-        DashboardRepairOrderFormQuery $repairOrderFormQuery,
+        RepairOrderFormQuery $repairOrderFormQuery,
     ): Response|RedirectResponse {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
         $activeWorkshop = $activeWorkshopUser->workshop;

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Queries\Dashboard;
+namespace App\Domain\RepairOrders\Queries;
 
 use App\Domain\BookingRequests\Services\CustomerMatcher;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\WorkshopUser;
 
-class DashboardRepairOrderFormQuery
+class RepairOrderFormQuery
 {
     public function __construct(
         private readonly CustomerMatcher $customerMatcher,
