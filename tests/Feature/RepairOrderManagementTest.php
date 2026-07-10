@@ -956,6 +956,8 @@ class RepairOrderManagementTest extends TestCase
         $bookingRequest = $this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::New,
         ]);
+        $customerCount = Customer::query()->count();
+        $vehicleCount = Vehicle::query()->count();
 
         $this
             ->actingAs($user)
@@ -971,6 +973,8 @@ class RepairOrderManagementTest extends TestCase
             ->assertSessionHasErrors('repair_order');
 
         $this->assertDatabaseCount('repair_orders', 0);
+        $this->assertSame($customerCount, Customer::query()->count());
+        $this->assertSame($vehicleCount, Vehicle::query()->count());
     }
 
     public function test_cross_workshop_booking_request_cannot_create_repair_order(): void

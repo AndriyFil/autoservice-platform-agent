@@ -18,7 +18,7 @@ class CustomerMatcher
         );
     }
 
-    public function matchByWorkshopAndPhone(Workshop $workshop, ?string $phone): ?Customer
+    private function matchByWorkshopAndPhone(Workshop $workshop, ?string $phone): ?Customer
     {
         $phone = trim((string) $phone);
 

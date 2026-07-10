@@ -2,97 +2,112 @@
 
 ## Goal
 
-Continue the practical DDD-lite modular monolith migration by moving the Customers business slice into `app/Domain/Customers` and moving shared phone normalization into `app/Domain/Shared/ValueObjects`.
+Continue the practical DDD-lite modular monolith migration by moving BookingRequest status, public intake, dashboard read models, customer matching, and repair-order conversion logic into `app/Domain/BookingRequests`.
 
 ## Files Changed
 
-- `app/Domain/Shared/ValueObjects/Phone.php`
-- `app/Domain/Customers/Actions/CreateCustomerVehicleAction.php`
-- `app/Domain/Customers/Actions/UpdateCustomerAction.php`
-- `app/Domain/Customers/Actions/UpdateCustomerVehicleAction.php`
-- `app/Domain/Customers/Data/.gitkeep`
-- `app/Domain/Customers/Exceptions/.gitkeep`
-- `app/Domain/Customers/Queries/CustomerIndexQuery.php`
-- `app/Domain/Customers/Queries/CustomerShowQuery.php`
-- `app/Http/Controllers/CustomerController.php`
-- `app/Models/Customer.php`
+- `app/Domain/BookingRequests/Enums/BookingRequestStatus.php`
+- `app/Domain/BookingRequests/Actions/SubmitPublicIntakeAction.php`
+- `app/Domain/BookingRequests/Actions/CreatePublicBookingRequestAction.php`
+- `app/Domain/BookingRequests/Actions/ChangeBookingRequestStatusAction.php`
+- `app/Domain/BookingRequests/Actions/CreateRepairOrderFromBookingRequestAction.php`
+- `app/Domain/BookingRequests/Queries/BookingRequestIndexQuery.php`
+- `app/Domain/BookingRequests/Queries/BookingRequestShowQuery.php`
+- `app/Domain/BookingRequests/Services/CustomerMatcher.php`
+- `app/Domain/BookingRequests/Data/.gitkeep`
+- `app/Domain/BookingRequests/Exceptions/.gitkeep`
+- `app/Http/Controllers/DashboardBookingRequestController.php`
+- `app/Http/Controllers/DashboardController.php`
+- `app/Http/Controllers/DashboardRepairOrderController.php`
+- `app/Http/Controllers/PublicBookingRequestController.php`
+- `app/Http/Controllers/PublicIntakeController.php`
+- `app/Http/Requests/UpdateDashboardBookingRequestStatusRequest.php`
 - `app/Models/BookingRequest.php`
-- `app/Actions/BookingRequests/CreatePublicBookingRequestAction.php`
-- `app/Actions/BookingRequests/ResolveBookingRequestCustomerAction.php`
-- `app/Actions/BookingRequests/SubmitIntakeRequestAction.php`
-- `app/Actions/RepairOrders/CreateRepairOrderFromBookingRequestAction.php`
-- `app/Queries/Dashboard/DashboardBookingRequestDetailsQuery.php`
 - `app/Queries/Dashboard/DashboardRepairOrderFormQuery.php`
-- `app/Http/Requests/StorePublicIntakeRequest.php`
-- `app/Support/Intake/ManualFallbackIntakeExtractor.php`
-- `database/factories/CustomerFactory.php`
 - `database/factories/BookingRequestFactory.php`
 - `database/seeders/DatabaseSeeder.php`
-- `tests/Unit/PhoneTest.php`
+- `resources/js/pages/Dashboard/BookingRequests/Show.vue`
 - `tests/Feature/CustomerManagementTest.php`
-- Deleted old paths under `app/Actions/Customers`, `app/Queries/Customers`, and `app/Support/Phone.php`
+- `tests/Feature/DashboardBookingRequestManagementTest.php`
+- `tests/Feature/DashboardTest.php`
+- `tests/Feature/PublicBookingRequestFlowTest.php`
+- `tests/Feature/PublicIntakeSubmissionTest.php`
+- `tests/Feature/RepairOrderManagementTest.php`
+- `tests/Feature/RepairOrderTest.php`
+- Deleted old booking-request paths under `app/Actions/BookingRequests`, `app/Actions/RepairOrders/CreateRepairOrderFromBookingRequestAction.php`, `app/Enums/BookingRequestStatus.php`, and dashboard booking-request query paths under `app/Queries/Dashboard`.
 
 ## Implementation Summary
 
-Moved the shared `Phone` value object from `App\Support` to `App\Domain\Shared\ValueObjects` without changing normalization behavior.
+Moved `BookingRequestStatus` into the BookingRequests domain and updated models, requests, seeders, factories, controllers, and tests to import the new enum namespace.
 
-Moved customer update and vehicle create/update use cases into `App\Domain\Customers\Actions`. These Actions keep active-workshop checks, prevent cross-workshop mutation, prevent moving vehicles between customers, keep customer phone normalization in sync, and block duplicate customer phones inside the same workshop.
+Moved public intake and booking-request status actions into `Domain\BookingRequests\Actions`. The chat-first `SubmitPublicIntakeAction` continues to create a workshop-scoped `BookingRequest`, stores the original message and normalized phone, and lets optional extraction fail without blocking creation.
 
-Moved customer list/show read flows into `App\Domain\Customers\Queries` as `CustomerIndexQuery` and `CustomerShowQuery`. The index query still scopes to the active workshop, keeps counts/latest booking request data, and now normalizes formatted phone search input before searching normalized columns. The show query eager loads vehicles, booking requests, and repair orders with vehicles while scoping customer-owned records to the active workshop.
+Moved dashboard booking-request list/show read flows into `Domain\BookingRequests\Queries` as `BookingRequestIndexQuery` and `BookingRequestShowQuery`. The show query still scopes by active workshop, includes original/extracted data, linked repair order, status transitions, and create-repair-order availability.
 
-Updated imports in controllers, models, factories, seeders, tests, booking-request conversion, repair-order creation, public intake validation, and dashboard queries.
+Moved `CreateRepairOrderFromBookingRequestAction` into the BookingRequests domain because the use case starts from a triaged booking request. It still enforces active-workshop scope, confirmed status, duplicate conversion prevention, customer resolution by workshop plus normalized phone, optional vehicle selection/creation, and default per-order estimate approval.
 
-Added regression coverage for formatted phone search and blocking vehicle creation for a customer outside the active workshop.
+Added `CustomerMatcher` to centralize active-workshop customer matching by normalized booking-request phone. `BookingRequestShowQuery` and `DashboardRepairOrderFormQuery` now share that rule.
+
+Updated legacy `/book/{workshop}` public booking submission behavior so it preserves the route but creates only a `BookingRequest`; it no longer creates or links `Customer` or `Vehicle` records during public submission.
+
+Kept the create-order surface intentionally simple: one `canCreateRepairOrder` prop controls whether staff sees the Create order action. For `new` requests, that action auto-confirms internally before opening the repair-order form.
 
 ## Architecture Decisions
 
-Controllers remain HTTP orchestration only. `CustomerController` resolves the active workshop user and delegates writes to `Domain\Customers\Actions` and reads to `Domain\Customers\Queries`.
+Controllers remain HTTP orchestration only. They resolve route models/active workshop context, call domain actions or queries, and return redirects/Inertia responses.
 
-Eloquent models stayed in `app/Models` as required. The customer domain classes coordinate use cases around those models without adding repositories or mappers.
+Eloquent models stayed in `app/Models`. The BookingRequests domain coordinates use cases around existing Laravel models without adding repositories or mappers.
 
-`Phone` lives in `Domain\Shared\ValueObjects` because phone normalization is used by Customers, BookingRequests, public intake, factories, and repair-order conversion.
+`CustomerMatcher` is a focused service because phone-based customer matching was duplicated in multiple read flows and must always stay workshop-scoped. Broader customer creation behavior stays in the conversion action where the business use case needs it.
 
-Customer remains distinct from User. No customer action creates or mutates `User` records.
+Data classes were deferred because the current validated arrays are small and local to one action each. Domain exceptions were deferred because existing `DomainException` handling already maps cleanly to current dashboard form errors.
 
 ## Tradeoffs
 
-Data classes were deferred. The current customer and vehicle payloads are small validated arrays used once per Action, so DTOs would add churn without reducing duplication or risk.
+The legacy public booking route still accepts vehicle fields for compatibility with the existing form request, but those fields no longer create vehicles. Staff should confirm or create vehicle details during triage/repair-order creation.
 
-Domain exceptions were deferred. Existing customer form flows already use `ValidationException` for duplicate phone errors and `firstOrFail()`/404 behavior for cross-workshop access. Adding custom exceptions now would mostly require adapter code without improving the current HTTP behavior.
+For staff UX, `new -> confirmed -> create repair order form` remains one user action. No separate confirm-then-create prop is used because there is no separate user-visible action.
 
-No `Services` folder was created because no shared customer service was needed.
+`CreateRepairOrderFromBookingRequestAction` still lives near booking-request conversion even though it writes a repair order. This keeps the source business use case and duplicate-conversion invariant together while leaving normal repair-order creation in the RepairOrders actions.
 
-`email`, `notes`, and `vin` were not added because the current `customers` and `vehicles` schemas/models do not expose those fields.
+Empty `Data` and `Exceptions` folders were kept with `.gitkeep` to match the existing domain folder convention and leave room for future classes only when they pay rent.
 
 ## Tests
 
-Passed:
+Passed syntax checks:
 
 ```sh
-php -l app/Domain/Shared/ValueObjects/Phone.php
-php -l app/Domain/Customers/Actions/UpdateCustomerAction.php
-php -l app/Domain/Customers/Actions/CreateCustomerVehicleAction.php
-php -l app/Domain/Customers/Actions/UpdateCustomerVehicleAction.php
-php -l app/Domain/Customers/Queries/CustomerIndexQuery.php
-php -l app/Domain/Customers/Queries/CustomerShowQuery.php
-php -l app/Http/Controllers/CustomerController.php
-php -l tests/Feature/CustomerManagementTest.php
-php artisan test tests/Unit/PhoneTest.php tests/Feature/CustomerManagementTest.php
-php artisan test tests/Feature/RepairOrderManagementTest.php tests/Feature/DashboardBookingRequestManagementTest.php tests/Feature/PublicBookingRequestFlowTest.php
+php -l app/Domain/BookingRequests/Actions/SubmitPublicIntakeAction.php
+php -l app/Domain/BookingRequests/Actions/CreatePublicBookingRequestAction.php
+php -l app/Domain/BookingRequests/Actions/ChangeBookingRequestStatusAction.php
+php -l app/Domain/BookingRequests/Actions/CreateRepairOrderFromBookingRequestAction.php
+php -l app/Domain/BookingRequests/Queries/BookingRequestIndexQuery.php
+php -l app/Domain/BookingRequests/Queries/BookingRequestShowQuery.php
+php -l app/Domain/BookingRequests/Services/CustomerMatcher.php
+php -l app/Queries/Dashboard/DashboardRepairOrderFormQuery.php
+php -l app/Http/Controllers/DashboardBookingRequestController.php
+php -l app/Http/Controllers/DashboardController.php
+php -l app/Http/Controllers/DashboardRepairOrderController.php
+php -l app/Models/BookingRequest.php
+php -l tests/Feature/PublicBookingRequestFlowTest.php
+php -l tests/Feature/DashboardBookingRequestManagementTest.php
+php -l tests/Feature/RepairOrderManagementTest.php
 ```
 
-Focused behavior results:
+Not run due project workflow unless explicitly requested:
 
-- `PhoneTest` and `CustomerManagementTest`: 24 tests, 177 assertions passed.
-- Repair-order and booking-request related suites: 79 tests, 877 assertions passed.
+```sh
+php artisan test tests/Feature/PublicIntakeSubmissionTest.php tests/Feature/PublicBookingRequestFlowTest.php tests/Feature/DashboardBookingRequestManagementTest.php tests/Feature/RepairOrderManagementTest.php tests/Feature/CustomerManagementTest.php tests/Feature/DashboardTest.php tests/Feature/RepairOrderTest.php
+```
 
 ## Risks
 
-Only the focused customer, phone, repair-order, and booking-request suites were run, not the full backend test suite.
+The full feature suite was not executed in this turn. Public legacy booking tests were updated to the new hard rule, but the Vue page still exposes vehicle fields; that is compatible at the HTTP boundary but may be confusing until the legacy form is retired or simplified.
 
-The old customer action/query and support `Phone` files were deleted rather than kept as wrappers. Current local references were updated and checked with `rg`, but any untracked external code importing old namespaces would need the new imports.
+The booking-request migration is committed as `8c2cf96 move booking request to domain`, while this task report update remains uncommitted.
 
 ## Follow Ups
 
-- Run the full backend suite before merging if this branch includes broader unrelated changes.
+- Run the focused feature suites above before merging.
+- Consider simplifying or retiring the legacy `/book/{workshop}` form so it no longer asks for vehicle details that public submission intentionally does not persist.
 - Consider `docs/learning/laravel-domain-modules.md` if future agents need a practical learning note for DDD-lite Laravel module boundaries.

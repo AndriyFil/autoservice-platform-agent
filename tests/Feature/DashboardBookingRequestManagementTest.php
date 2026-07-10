@@ -82,7 +82,8 @@ class DashboardBookingRequestManagementTest extends TestCase
                 ->where('bookingRequest.status.value', 'new')
                 ->where('bookingRequest.vehicle.brand', 'Honda')
                 ->where('bookingRequest.vehicle.model', 'Civic')
-                ->where('bookingRequest.vehicle.licensePlate', 'AA1234BB'));
+                ->where('bookingRequest.vehicle.licensePlate', 'AA1234BB')
+                ->where('canCreateRepairOrder', true));
     }
 
     public function test_staff_can_view_booking_request_details(): void
