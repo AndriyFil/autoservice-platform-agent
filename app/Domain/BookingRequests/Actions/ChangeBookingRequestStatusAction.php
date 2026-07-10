@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Actions\BookingRequests;
+namespace App\Domain\BookingRequests\Actions;
 
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\WorkshopUser;
 use DomainException;

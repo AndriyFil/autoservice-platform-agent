@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
-use App\Enums\BookingRequestStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Enums\EstimateStatus;

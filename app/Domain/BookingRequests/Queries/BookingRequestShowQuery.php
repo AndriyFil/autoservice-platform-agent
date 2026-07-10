@@ -1,15 +1,18 @@
 <?php
 
-namespace App\Queries\Dashboard;
+namespace App\Domain\BookingRequests\Queries;
 
-use App\Domain\Shared\ValueObjects\Phone;
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Services\CustomerMatcher;
 use App\Models\BookingRequest;
-use App\Models\Customer;
 use App\Models\WorkshopUser;
 
-class DashboardBookingRequestDetailsQuery
+class BookingRequestShowQuery
 {
+    public function __construct(
+        private readonly CustomerMatcher $customerMatcher,
+    ) {}
+
     /**
      * @return array{
      *     bookingRequest: array{
@@ -43,7 +46,7 @@ class DashboardBookingRequestDetailsQuery
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->firstOrFail();
 
-        $matchedCustomer = $this->findCustomerByBookingRequestPhone($activeWorkshopUser, $bookingRequest);
+        $matchedCustomer = $this->customerMatcher->matchBookingRequest($activeWorkshopUser, $bookingRequest);
         $linkedRepairOrder = $bookingRequest->repairOrder;
 
         return [
@@ -113,28 +116,6 @@ class DashboardBookingRequestDetailsQuery
                 ? null
                 : 'No existing customer found. A new customer will be created when a repair order is created.',
         ];
-    }
-
-    private function findCustomerByBookingRequestPhone(
-        WorkshopUser $activeWorkshopUser,
-        BookingRequest $bookingRequest,
-    ): ?Customer {
-        $phone = trim((string) $bookingRequest->customer_phone);
-
-        if ($phone === '') {
-            return null;
-        }
-
-        return Customer::query()
-            ->with(['vehicles' => fn ($query) => $query
-                ->orderBy('brand')
-                ->orderBy('model')
-                ->orderBy('id'),
-            ])
-            ->where('workshop_id', $activeWorkshopUser->workshop_id)
-            ->where('phone_normalized', $bookingRequest->customer_phone_normalized
-                ?: (new Phone($phone))->normalize())
-            ->first();
     }
 
     private function canCreateRepairOrder(BookingRequest $bookingRequest): bool

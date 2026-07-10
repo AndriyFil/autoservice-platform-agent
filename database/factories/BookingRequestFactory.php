@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Domain\Shared\ValueObjects\Phone;
-use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\Workshop;

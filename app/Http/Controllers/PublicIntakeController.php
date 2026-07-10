@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\BookingRequests\SubmitIntakeRequestAction;
+use App\Domain\BookingRequests\Actions\SubmitPublicIntakeAction;
 use App\Http\Requests\StorePublicIntakeRequest;
 use App\Models\Workshop;
 use Illuminate\Http\RedirectResponse;
@@ -25,9 +25,9 @@ class PublicIntakeController extends Controller
     public function store(
         StorePublicIntakeRequest $request,
         Workshop $workshop,
-        SubmitIntakeRequestAction $submitIntakeRequest,
+        SubmitPublicIntakeAction $submitPublicIntake,
     ): RedirectResponse {
-        $submitIntakeRequest->handle($workshop, $request->message(), $request->phone());
+        $submitPublicIntake->handle($workshop, $request->message(), $request->phone());
 
         return to_route('public-intake.create', $workshop)->with('intake_submitted', true);
     }

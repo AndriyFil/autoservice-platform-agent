@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Actions\BookingRequests;
+namespace App\Domain\BookingRequests\Actions;
 
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Domain\Shared\ValueObjects\Phone;
-use App\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
 use App\Support\Intake\IntakeExtractorInterface;
 use Throwable;
 
-class SubmitIntakeRequestAction
+class SubmitPublicIntakeAction
 {
     public function __construct(
         private readonly IntakeExtractorInterface $intakeExtractor,

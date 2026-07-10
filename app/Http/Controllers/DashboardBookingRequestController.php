@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\BookingRequests\ChangeBookingRequestStatusAction;
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Actions\ChangeBookingRequestStatusAction;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Queries\BookingRequestShowQuery;
 use App\Http\Requests\UpdateDashboardBookingRequestStatusRequest;
 use App\Models\BookingRequest;
-use App\Queries\Dashboard\DashboardBookingRequestDetailsQuery;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +18,7 @@ class DashboardBookingRequestController extends Controller
     public function show(
         Request $request,
         BookingRequest $bookingRequest,
-        DashboardBookingRequestDetailsQuery $bookingRequestDetailsQuery,
+        BookingRequestShowQuery $bookingRequestDetailsQuery,
     ): Response {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
         $activeWorkshop = $activeWorkshopUser->workshop;

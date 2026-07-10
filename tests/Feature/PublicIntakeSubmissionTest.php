@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
 use App\Support\Intake\IntakeExtractionResult;

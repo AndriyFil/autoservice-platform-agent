@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\RepairOrders\ChangeRepairOrderStatusAction;
 use App\Actions\RepairOrders\CreateRepairOrderAction;
-use App\Actions\RepairOrders\CreateRepairOrderFromBookingRequestAction;
+use App\Domain\BookingRequests\Actions\CreateRepairOrderFromBookingRequestAction;
 use App\Enums\RepairOrderStatus;
 use App\Http\Requests\StoreRepairOrderRequest;
 use App\Http\Requests\UpdateRepairOrderStatusRequest;

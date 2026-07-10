@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Queries\Dashboard;
+namespace App\Domain\BookingRequests\Queries;
 
 use App\Models\BookingRequest;
 use App\Models\WorkshopUser;
 
-class DashboardBookingRequestsQuery
+class BookingRequestIndexQuery
 {
     /**
      * @return array<int, array{

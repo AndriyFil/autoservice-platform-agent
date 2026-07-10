@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\BookingRequests\CreatePublicBookingRequestAction;
+use App\Domain\BookingRequests\Actions\CreatePublicBookingRequestAction;
 use App\Http\Requests\StorePublicBookingRequestRequest;
 use App\Models\Workshop;
 use Illuminate\Http\RedirectResponse;

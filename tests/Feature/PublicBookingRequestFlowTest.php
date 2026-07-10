@@ -2,10 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Customer;
-use App\Models\Vehicle;
 use App\Models\Workshop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -48,7 +47,7 @@ class PublicBookingRequestFlowTest extends TestCase
         $this->assertDatabaseCount('booking_requests', 0);
     }
 
-    public function test_public_submission_creates_customer_and_booking_request_without_vehicle_when_vehicle_fields_are_empty(): void
+    public function test_public_submission_creates_booking_request_without_customer_or_vehicle(): void
     {
         $workshop = Workshop::factory()->create(['slug' => 'main-auto']);
 
@@ -68,36 +67,30 @@ class PublicBookingRequestFlowTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/book/main-auto/success');
 
-        $customer = Customer::first();
         $bookingRequest = BookingRequest::first();
 
-        $this->assertNotNull($customer);
-        $this->assertSame($workshop->id, $customer->workshop_id);
-        $this->assertSame('Jane Driver', $customer->name);
-        $this->assertSame('+1 (555) 123-4567', $customer->phone);
-        $this->assertSame('+15551234567', $customer->phone_normalized);
-        $this->assertSame('15551234567', $customer->normalized_phone);
-
-        $this->assertDatabaseCount('customers', 1);
+        $this->assertDatabaseCount('customers', 0);
         $this->assertDatabaseCount('vehicles', 0);
         $this->assertDatabaseCount('booking_requests', 1);
 
         $this->assertNotNull($bookingRequest);
         $this->assertSame($workshop->id, $bookingRequest->workshop_id);
-        $this->assertSame($customer->id, $bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->customer_id);
         $this->assertNull($bookingRequest->vehicle_id);
         $this->assertNull($bookingRequest->created_by_user_id);
         $this->assertSame('Jane Driver', $bookingRequest->customer_name);
         $this->assertSame('+1 (555) 123-4567', $bookingRequest->customer_phone);
+        $this->assertSame('+15551234567', $bookingRequest->customer_phone_normalized);
         $this->assertSame('Brake noise on cold start.', $bookingRequest->problem_description);
+        $this->assertSame('Brake noise on cold start.', $bookingRequest->original_message);
         $this->assertNull($bookingRequest->preferred_date);
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
     }
 
-    public function test_phone_is_normalized_for_customer_lookup(): void
+    public function test_phone_is_normalized_on_booking_request_without_customer_lookup(): void
     {
         $workshop = Workshop::factory()->create(['slug' => 'main-auto']);
-        $customer = Customer::factory()->create([
+        Customer::factory()->create([
             'workshop_id' => $workshop->id,
             'name' => 'Existing Driver',
             'phone' => '380501112233',
@@ -117,15 +110,15 @@ class PublicBookingRequestFlowTest extends TestCase
 
         $this->assertDatabaseCount('customers', 1);
         $this->assertNotNull($bookingRequest);
-        $this->assertSame($customer->id, $bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->customer_id);
         $this->assertSame('+38 (050) 111-22-33', $bookingRequest->customer_phone);
         $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
     }
 
-    public function test_existing_customer_is_reused_by_workshop_id_and_normalized_phone(): void
+    public function test_existing_customer_is_not_linked_during_public_submission(): void
     {
         $workshop = Workshop::factory()->create(['slug' => 'main-auto']);
-        $customer = Customer::factory()->create([
+        Customer::factory()->create([
             'workshop_id' => $workshop->id,
             'phone' => '380501112233',
             'phone_normalized' => '+380501112233',
@@ -145,12 +138,12 @@ class PublicBookingRequestFlowTest extends TestCase
         $this->assertDatabaseCount('customers', 1);
         $this->assertDatabaseCount('booking_requests', 1);
         $this->assertNotNull($bookingRequest);
-        $this->assertSame($customer->id, $bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->customer_id);
         $this->assertSame($workshop->id, $bookingRequest->workshop_id);
         $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
     }
 
-    public function test_ukrainian_phone_variants_reuse_same_customer_inside_workshop(): void
+    public function test_ukrainian_phone_variants_are_normalized_without_creating_customer(): void
     {
         Workshop::factory()->create(['slug' => 'main-auto']);
 
@@ -166,16 +159,12 @@ class PublicBookingRequestFlowTest extends TestCase
             ]))->assertSessionHasNoErrors();
         }
 
-        $customer = Customer::sole();
-
-        $this->assertDatabaseCount('customers', 1);
+        $this->assertDatabaseCount('customers', 0);
         $this->assertDatabaseCount('booking_requests', 5);
-        $this->assertSame('0685620040', $customer->phone);
-        $this->assertSame('+380685620040', $customer->phone_normalized);
         $this->assertSame(
             5,
             BookingRequest::query()
-                ->where('customer_id', $customer->id)
+                ->whereNull('customer_id')
                 ->where('customer_phone_normalized', '+380685620040')
                 ->count(),
         );
@@ -207,13 +196,13 @@ class PublicBookingRequestFlowTest extends TestCase
         $this->assertSame('+380501112233', $customer->phone);
         $this->assertSame('+380501112233', $customer->phone_normalized);
         $this->assertNotNull($bookingRequest);
-        $this->assertSame($customer->id, $bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->customer_id);
         $this->assertSame('Later Name', $bookingRequest->customer_name);
         $this->assertSame('380 50 111 22 33', $bookingRequest->customer_phone);
         $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
     }
 
-    public function test_vehicle_is_created_when_any_vehicle_field_is_present(): void
+    public function test_vehicle_fields_do_not_create_vehicle_during_public_submission(): void
     {
         $workshop = Workshop::factory()->create(['slug' => 'main-auto']);
 
@@ -229,21 +218,14 @@ class PublicBookingRequestFlowTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/book/main-auto/success');
 
-        $customer = Customer::first();
-        $vehicle = Vehicle::first();
         $bookingRequest = BookingRequest::first();
 
-        $this->assertDatabaseCount('customers', 1);
-        $this->assertDatabaseCount('vehicles', 1);
-        $this->assertNotNull($customer);
-        $this->assertNotNull($vehicle);
-        $this->assertSame($workshop->id, $vehicle->workshop_id);
-        $this->assertSame($customer->id, $vehicle->customer_id);
-        $this->assertNull($vehicle->brand);
-        $this->assertSame('Civic', $vehicle->model);
-        $this->assertNull($vehicle->license_plate);
+        $this->assertDatabaseCount('customers', 0);
+        $this->assertDatabaseCount('vehicles', 0);
         $this->assertNotNull($bookingRequest);
-        $this->assertSame($vehicle->id, $bookingRequest->vehicle_id);
+        $this->assertNull($bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->vehicle_id);
+        $this->assertSame('Brake noise on cold start.', $bookingRequest->problem_description);
     }
 
     public function test_booking_request_persists_expected_public_submission_fields(): void
@@ -266,25 +248,25 @@ class PublicBookingRequestFlowTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/book/main-auto/success');
 
-        $customer = Customer::first();
-        $vehicle = Vehicle::first();
         $bookingRequest = BookingRequest::first();
 
-        $this->assertNotNull($customer);
-        $this->assertNotNull($vehicle);
+        $this->assertDatabaseCount('customers', 0);
+        $this->assertDatabaseCount('vehicles', 0);
         $this->assertNotNull($bookingRequest);
         $this->assertSame($workshop->id, $bookingRequest->workshop_id);
-        $this->assertSame($customer->id, $bookingRequest->customer_id);
-        $this->assertSame($vehicle->id, $bookingRequest->vehicle_id);
+        $this->assertNull($bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->vehicle_id);
         $this->assertNull($bookingRequest->created_by_user_id);
         $this->assertSame('Jane Driver', $bookingRequest->customer_name);
         $this->assertSame('+1 555 123 4567', $bookingRequest->customer_phone);
+        $this->assertSame('+15551234567', $bookingRequest->customer_phone_normalized);
         $this->assertSame('Engine warning light is on.', $bookingRequest->problem_description);
+        $this->assertSame('Engine warning light is on.', $bookingRequest->original_message);
         $this->assertSame('2026-06-20', $bookingRequest->preferred_date->toDateString());
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
     }
 
-    public function test_same_phone_in_different_workshops_creates_separate_customers(): void
+    public function test_same_phone_in_different_workshops_creates_separate_booking_requests(): void
     {
         $firstWorkshop = Workshop::factory()->create(['slug' => 'main-auto']);
         $secondWorkshop = Workshop::factory()->create(['slug' => 'second-auto']);
@@ -304,27 +286,18 @@ class PublicBookingRequestFlowTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/book/second-auto/success');
 
-        $firstCustomer = Customer::query()
-            ->where('workshop_id', $firstWorkshop->id)
-            ->first();
-        $secondCustomer = Customer::query()
-            ->where('workshop_id', $secondWorkshop->id)
-            ->first();
-
-        $this->assertDatabaseCount('customers', 2);
-        $this->assertNotNull($firstCustomer);
-        $this->assertNotNull($secondCustomer);
-        $this->assertNotSame($firstCustomer->id, $secondCustomer->id);
-        $this->assertSame('+380501112233', $firstCustomer->phone_normalized);
-        $this->assertSame('+380501112233', $secondCustomer->phone_normalized);
+        $this->assertDatabaseCount('customers', 0);
+        $this->assertDatabaseCount('booking_requests', 2);
 
         $this->assertDatabaseHas('booking_requests', [
             'workshop_id' => $firstWorkshop->id,
-            'customer_id' => $firstCustomer->id,
+            'customer_id' => null,
+            'customer_phone_normalized' => '+380501112233',
         ]);
         $this->assertDatabaseHas('booking_requests', [
             'workshop_id' => $secondWorkshop->id,
-            'customer_id' => $secondCustomer->id,
+            'customer_id' => null,
+            'customer_phone_normalized' => '+380501112233',
         ]);
     }
 

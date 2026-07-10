@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Domain\BookingRequests\Enums;
 
 enum BookingRequestStatus: string
 {

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Queries\Dashboard\DashboardBookingRequestsQuery;
+use App\Domain\BookingRequests\Queries\BookingRequestIndexQuery;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,7 +11,7 @@ class DashboardController extends Controller
 {
     public function show(
         Request $request,
-        DashboardBookingRequestsQuery $bookingRequestsQuery,
+        BookingRequestIndexQuery $bookingRequestsQuery,
     ): Response {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
         $activeWorkshop = $activeWorkshopUser->workshop;

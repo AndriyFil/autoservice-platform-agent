@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use Illuminate\Validation\Rule;
 
 class UpdateDashboardBookingRequestStatusRequest extends DashboardFormRequest

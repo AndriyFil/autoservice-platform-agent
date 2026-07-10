@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Actions\RepairOrders;
+namespace App\Domain\BookingRequests\Actions;
 
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Domain\Shared\ValueObjects\Phone;
-use App\Enums\BookingRequestStatus;
 use App\Enums\RepairOrderStatus;
 use App\Models\BookingRequest;
 use App\Models\Customer;

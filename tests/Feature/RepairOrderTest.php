@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\BookingRequestStatus;
+use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Enums\RepairOrderLineType;
 use App\Enums\RepairOrderStatus;
 use App\Models\BookingRequest;

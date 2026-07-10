@@ -2,13 +2,17 @@
 
 namespace App\Queries\Dashboard;
 
-use App\Domain\Shared\ValueObjects\Phone;
+use App\Domain\BookingRequests\Services\CustomerMatcher;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\WorkshopUser;
 
 class DashboardRepairOrderFormQuery
 {
+    public function __construct(
+        private readonly CustomerMatcher $customerMatcher,
+    ) {}
+
     /**
      * @return array{
      *     customers: array<int, array{
@@ -60,7 +64,7 @@ class DashboardRepairOrderFormQuery
             ])
             ->all();
         $existingCustomer = $sourceBookingRequest
-            ? $this->findCustomerByBookingRequestPhone($activeWorkshopUser, $sourceBookingRequest)
+            ? $this->customerMatcher->matchBookingRequest($activeWorkshopUser, $sourceBookingRequest)
             : null;
         $existingCustomerVehiclesCount = $existingCustomer?->vehicles->count() ?? 0;
 
@@ -96,28 +100,6 @@ class DashboardRepairOrderFormQuery
                 : null,
             'existingRepairOrderId' => $sourceBookingRequest?->repairOrder?->id,
         ];
-    }
-
-    private function findCustomerByBookingRequestPhone(
-        WorkshopUser $activeWorkshopUser,
-        BookingRequest $bookingRequest,
-    ): ?Customer {
-        $phone = trim((string) $bookingRequest->customer_phone);
-
-        if ($phone === '') {
-            return null;
-        }
-
-        return Customer::query()
-            ->with(['vehicles' => fn ($query) => $query
-                ->orderBy('brand')
-                ->orderBy('model')
-                ->orderBy('id'),
-            ])
-            ->where('workshop_id', $activeWorkshopUser->workshop_id)
-            ->where('phone_normalized', $bookingRequest->customer_phone_normalized
-                ?: (new Phone($phone))->normalize())
-            ->first();
     }
 
     private function bookingRequestProblemDescription(BookingRequest $bookingRequest): ?string
