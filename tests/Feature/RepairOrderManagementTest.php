@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Domain\BookingRequests\Enums\BookingRequestStatus;
+use App\Domain\Documents\Enums\DocumentStatus;
+use App\Domain\Documents\Enums\DocumentType;
 use App\Domain\Estimates\Enums\EstimateStatus;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
 use App\Models\BookingRequest;
 use App\Models\Customer;
 use App\Models\Estimate;

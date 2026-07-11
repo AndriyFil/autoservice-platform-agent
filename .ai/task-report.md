@@ -2,67 +2,72 @@
 
 ## Goal
 
-Migrate the existing Estimates domain logic into `app/Domain/Estimates` without adding approval flow, notifications, or changing the RepairOrder status workflow.
+Clean up the DDD migration by removing the thin repair-order status transition service and moving existing document code into `app/Domain/Documents` without changing behavior, migrations, or UI.
 
 ## Files Changed
 
+- `app/Domain/Documents/Enums/DocumentStatus.php`
+- `app/Domain/Documents/Enums/DocumentType.php`
+- `app/Domain/Documents/Services/WorkshopDocumentStorage.php`
+- `app/Domain/RepairOrders/Queries/RepairOrderIndexQuery.php`
+- `app/Domain/RepairOrders/Queries/RepairOrderShowQuery.php`
+- `app/Domain/RepairOrders/Services/RepairOrderStatusTransitionService.php`
+- `app/Enums/DocumentStatus.php`
+- `app/Enums/DocumentType.php`
+- `app/Support/Documents/WorkshopDocumentStorage.php`
 - `app/Domain/Estimates/Actions/GenerateEstimatePdfAction.php`
-- `app/Domain/Estimates/Actions/GenerateRepairOrderEstimateAction.php`
-- `app/Domain/Estimates/Actions/GenerateRepairOrderEstimateResult.php`
-- `app/Domain/Estimates/Actions/PrepareEstimateForPdfAction.php`
-- `app/Domain/Estimates/Enums/EstimateStatus.php`
-- `app/Actions/Estimates/GenerateEstimatePdfAction.php`
-- `app/Actions/Estimates/GenerateRepairOrderEstimateAction.php`
-- `app/Actions/Estimates/GenerateRepairOrderEstimateResult.php`
-- `app/Actions/Estimates/PrepareEstimateForPdfAction.php`
-- `app/Enums/EstimateStatus.php`
-- `app/Http/Controllers/EstimateDashboardRepairOrderController.php`
+- `app/Models/Document.php`
 - `app/Models/Estimate.php`
-- `database/factories/EstimateFactory.php`
+- `database/factories/DocumentFactory.php`
 - `tests/Feature/EstimateDocumentManagementTest.php`
 - `tests/Feature/GenerateEstimatePdfActionTest.php`
 - `tests/Feature/GenerateRepairOrderEstimateActionTest.php`
 - `tests/Feature/PrepareEstimateForPdfActionTest.php`
 - `tests/Feature/RepairOrderManagementTest.php`
-- `tests/Unit/EstimateStatusTest.php`
 - `.ai/task-report.md`
 
 ## Implementation Summary
 
-Moved the existing estimate generation, PDF rendering, result object, and estimate status enum from the old global `app/Actions/Estimates` and `app/Enums` locations into `app/Domain/Estimates`.
+Moved the existing document status enum, document type enum, and workshop document storage class into the new `app/Domain/Documents` context.
 
-Updated controllers, models, factories, and tests to import the new domain namespaces.
+Updated application code, models, factory, and feature tests to import the new document namespaces.
 
-No new estimate approval flow, notifications, repair-order status changes, migrations, or database branching were added.
+Removed `RepairOrderStatusTransitionService` and now build `availableStatusTransitions` directly in the repair-order index and show query classes from `RepairOrderStatus::manualTransitions()`.
 
 ## Architecture Decisions
 
-Kept Eloquent models in `app/Models`, as required by `docs/architecture/autoservice-ddd-rules.md`.
+Kept Eloquent models in `app/Models` and HTTP code untouched, matching `docs/architecture/autoservice-ddd-rules.md`.
 
-Kept HTTP controllers in `app/Http` and changed only their action imports, preserving the controller-as-orchestrator boundary.
+Kept document label behavior unchanged inside the moved enums because this task was a namespace/domain ownership cleanup, not a label refactor.
 
-Moved `EstimateStatus` into `app/Domain/Estimates/Enums` because estimate state and transitions are estimate-domain language, matching the existing migrated domain structure.
-
-Left `UpdateRepairOrderApprovalRequirementAction` in `app/Domain/RepairOrders` because it mutates a per-repair-order flag and does not create or transition an `Estimate`.
+Kept repair-order transition rules only on `RepairOrderStatus`; the query/application layer now translates transition labels for props.
 
 ## Tradeoffs
 
-This is a namespace and ownership migration only. Existing status cases such as `approved` and `rejected` remain because they already existed, but no new approval behavior was introduced.
+The available status transition mapping now appears in two query classes. That keeps the removed service from coming back as a fake domain service, but a future repeated read-model helper could be considered if more repair-order query props need the same mapping.
 
-Tests still rely on PostgreSQL for feature coverage because the project is PostgreSQL-only and the current migrations use PostgreSQL constraint syntax.
+No new document actions, notifications, approval links, database branches, migrations, or UI changes were added.
 
 ## Tests
 
-- Passed: `APP_ENV=testing DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=autoservice_testing DB_USERNAME=autoservice DB_PASSWORD=autoservice SESSION_DRIVER=array CACHE_STORE=array QUEUE_CONNECTION=sync php artisan test tests/Unit/EstimateStatusTest.php tests/Feature/PrepareEstimateForPdfActionTest.php tests/Feature/GenerateEstimatePdfActionTest.php tests/Feature/GenerateRepairOrderEstimateActionTest.php tests/Feature/EstimateDocumentManagementTest.php`
-  - 26 passed, 159 assertions.
-- Passed: `APP_ENV=testing DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=autoservice_testing DB_USERNAME=autoservice DB_PASSWORD=autoservice SESSION_DRIVER=array CACHE_STORE=array QUEUE_CONNECTION=sync php artisan test tests/Feature/RepairOrderManagementTest.php --filter=estimate`
-  - 9 passed, 40 assertions.
-- Reference check: no stale `App\Actions\Estimates` or `App\Enums\EstimateStatus` references remain under `app`, `tests`, `database`, `resources`, or `routes`.
+- Failed: `php artisan test tests/Feature/GenerateEstimatePdfActionTest.php`
+  - 2 failed, 0 assertions.
+  - Blocked during migration setup by SQLite failing on `ALTER TABLE repair_orders ADD CONSTRAINT ...` in `database/migrations/2026_07_10_000001_remove_estimated_repair_order_status.php`.
+- Failed: `php artisan test tests/Feature/RepairOrderManagementTest.php`
+  - 51 failed, 0 assertions.
+  - Same SQLite migration setup failure.
+- Failed: `php artisan test`
+  - 39 passed, 225 failed, 141 assertions.
+  - Same SQLite migration setup failure across database-backed tests.
+- Passed: `composer analyse`
+  - PHPStan checked 120 files with no errors.
 
 ## Risks
 
-Because this moved class namespaces, any unsearched external code or pending branches that import the old namespaces will need to update imports.
+The requested Laravel tests cannot complete in the current default SQLite test setup while the PostgreSQL-style repair-order check-constraint migration is present. That migration was explicitly left untouched.
+
+External or pending-branch code importing the old document namespaces will need matching import updates.
 
 ## Follow Ups
 
-- Consider updating `phpunit.xml` to default to the PostgreSQL testing connection so PostgreSQL-only migrations do not fail under SQLite.
+- Consider aligning the test environment with the documented PostgreSQL-only project direction so feature tests do not run migrations against SQLite.

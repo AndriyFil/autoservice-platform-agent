@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Documents\Enums\DocumentStatus;
+use App\Domain\Documents\Enums\DocumentType;
 use App\Domain\Estimates\Actions\GenerateEstimatePdfAction;
 use App\Domain\Estimates\Enums\EstimateStatus;
 use App\Domain\RepairOrders\Enums\RepairOrderLineType;
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\EstimateLine;

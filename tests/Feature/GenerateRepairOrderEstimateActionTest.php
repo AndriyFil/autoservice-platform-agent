@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Documents\Enums\DocumentStatus;
+use App\Domain\Documents\Enums\DocumentType;
 use App\Domain\Estimates\Actions\GenerateRepairOrderEstimateAction;
 use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Domain\Workshops\Enums\WorkshopUserRole;
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\EstimateLine;

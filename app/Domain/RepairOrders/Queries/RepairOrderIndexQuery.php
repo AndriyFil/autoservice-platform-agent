@@ -2,16 +2,12 @@
 
 namespace App\Domain\RepairOrders\Queries;
 
-use App\Domain\RepairOrders\Services\RepairOrderStatusTransitionService;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Models\RepairOrder;
 use App\Models\WorkshopUser;
 
 class RepairOrderIndexQuery
 {
-    public function __construct(
-        private readonly RepairOrderStatusTransitionService $statusTransitionService,
-    ) {}
-
     /**
      * @return array<int, array{
      *     id: int,
@@ -40,7 +36,7 @@ class RepairOrderIndexQuery
                     'value' => $repairOrder->status->value,
                     'label' => $repairOrder->status->label(),
                 ],
-                'availableStatusTransitions' => $this->statusTransitionService->availableManualTransitions($repairOrder->status),
+                'availableStatusTransitions' => $this->availableStatusTransitions($repairOrder->status),
                 'vehicle' => $repairOrder->vehicle
                     ? [
                         'brand' => $repairOrder->vehicle->brand,
@@ -51,6 +47,20 @@ class RepairOrderIndexQuery
                 'openedAt' => $repairOrder->opened_at->toISOString(),
                 'closedAt' => $repairOrder->closed_at?->toISOString(),
             ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function availableStatusTransitions(RepairOrderStatus $status): array
+    {
+        return collect($status->manualTransitions())
+            ->map(fn (RepairOrderStatus $targetStatus): array => [
+                'value' => $targetStatus->value,
+                'label' => __("repair_orders.status_actions.{$targetStatus->value}"),
+            ])
+            ->values()
             ->all();
     }
 }

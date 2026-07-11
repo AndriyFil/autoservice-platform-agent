@@ -2,10 +2,9 @@
 
 namespace App\Domain\RepairOrders\Queries;
 
+use App\Domain\Documents\Enums\DocumentStatus;
 use App\Domain\RepairOrders\Enums\RepairOrderLineType;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
-use App\Domain\RepairOrders\Services\RepairOrderStatusTransitionService;
-use App\Enums\DocumentStatus;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\RepairOrder;
@@ -14,10 +13,6 @@ use App\Models\WorkshopUser;
 
 class RepairOrderShowQuery
 {
-    public function __construct(
-        private readonly RepairOrderStatusTransitionService $statusTransitionService,
-    ) {}
-
     /**
      * @return array{
      *     id: int,
@@ -153,7 +148,7 @@ class RepairOrderShowQuery
                 RepairOrderLineType::cases(),
             ),
             'statusActions' => $this->statusActions($repairOrder),
-            'availableStatusTransitions' => $this->statusTransitionService->availableManualTransitions($repairOrder->status),
+            'availableStatusTransitions' => $this->availableStatusTransitions($repairOrder->status),
             'customer' => $repairOrder->customer
                 ? [
                     'id' => $repairOrder->customer->id,
@@ -197,5 +192,19 @@ class RepairOrderShowQuery
                 && $repairOrder->lines->isNotEmpty(),
             'hasEstimate' => $hasEstimate,
         ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function availableStatusTransitions(RepairOrderStatus $status): array
+    {
+        return collect($status->manualTransitions())
+            ->map(fn (RepairOrderStatus $targetStatus): array => [
+                'value' => $targetStatus->value,
+                'label' => __("repair_orders.status_actions.{$targetStatus->value}"),
+            ])
+            ->values()
+            ->all();
     }
 }

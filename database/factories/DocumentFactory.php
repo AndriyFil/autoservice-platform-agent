@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
+use App\Domain\Documents\Enums\DocumentStatus;
+use App\Domain\Documents\Enums\DocumentType;
 use App\Models\Document;
 use App\Models\Estimate;
 use App\Models\Workshop;

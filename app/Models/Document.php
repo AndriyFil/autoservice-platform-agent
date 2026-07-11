@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
+use App\Domain\Documents\Enums\DocumentStatus;
+use App\Domain\Documents\Enums\DocumentType;
 use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

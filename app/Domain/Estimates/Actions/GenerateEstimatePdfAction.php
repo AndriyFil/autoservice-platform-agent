@@ -2,11 +2,11 @@
 
 namespace App\Domain\Estimates\Actions;
 
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
+use App\Domain\Documents\Enums\DocumentStatus;
+use App\Domain\Documents\Enums\DocumentType;
+use App\Domain\Documents\Services\WorkshopDocumentStorage;
 use App\Models\Document;
 use App\Models\Estimate;
-use App\Support\Documents\WorkshopDocumentStorage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class GenerateEstimatePdfAction
