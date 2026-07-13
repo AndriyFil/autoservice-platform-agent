@@ -2,72 +2,65 @@
 
 ## Goal
 
-Clean up the DDD migration by removing the thin repair-order status transition service and moving existing document code into `app/Domain/Documents` without changing behavior, migrations, or UI.
+Add a clear but deliberately low-emphasis Customer Portal preview entry to the public homepage without displacing the workshop-focused SaaS hero or promising request-history functionality that is not implemented yet.
 
 ## Files Changed
 
-- `app/Domain/Documents/Enums/DocumentStatus.php`
-- `app/Domain/Documents/Enums/DocumentType.php`
-- `app/Domain/Documents/Services/WorkshopDocumentStorage.php`
-- `app/Domain/RepairOrders/Queries/RepairOrderIndexQuery.php`
-- `app/Domain/RepairOrders/Queries/RepairOrderShowQuery.php`
-- `app/Domain/RepairOrders/Services/RepairOrderStatusTransitionService.php`
-- `app/Enums/DocumentStatus.php`
-- `app/Enums/DocumentType.php`
-- `app/Support/Documents/WorkshopDocumentStorage.php`
-- `app/Domain/Estimates/Actions/GenerateEstimatePdfAction.php`
-- `app/Models/Document.php`
-- `app/Models/Estimate.php`
-- `database/factories/DocumentFactory.php`
-- `tests/Feature/EstimateDocumentManagementTest.php`
-- `tests/Feature/GenerateEstimatePdfActionTest.php`
-- `tests/Feature/GenerateRepairOrderEstimateActionTest.php`
-- `tests/Feature/PrepareEstimateForPdfActionTest.php`
-- `tests/Feature/RepairOrderManagementTest.php`
+- `resources/js/pages/Welcome.vue`
+- `resources/js/pages/Welcome.test.ts`
 - `.ai/task-report.md`
 
 ## Implementation Summary
 
-Moved the existing document status enum, document type enum, and workshop document storage class into the new `app/Domain/Documents` context.
-
-Updated application code, models, factory, and feature tests to import the new document namespaces.
-
-Removed `RepairOrderStatusTransitionService` and now build `availableStatusTransitions` directly in the repair-order index and show query classes from `RepairOrderStatus::manualTransitions()`.
+- Added an always-visible `My requests` link to the primary homepage navigation.
+- Linked customer access to `customer-portal.index`, allowing verified customers through and unverified customers to follow the existing access redirect.
+- Kept `Create workshop account` and `Staff login` as the primary workshop-facing hero actions.
+- Replaced the ambiguous customer sentence with explicit new-request guidance:
+  - `Need to send a new request? Use the workshop-specific link provided by your workshop.`
+- Added a subtle `Customer access preview` panel beneath the workshop actions.
+- Explained that access uses phone verification with no account or password.
+- Explicitly disclosed that request history is not available yet.
+- Added a `Verify phone access` CTA without presenting the preview as a finished request portal.
+- Made the header/navigation wrap on narrow screens.
+- Kept the global customer link inside an always-rendered, labelled navigation landmark.
+- Connected the preview `aside` to an accessible `h2` heading.
 
 ## Architecture Decisions
 
-Kept Eloquent models in `app/Models` and HTTP code untouched, matching `docs/architecture/autoservice-ddd-rules.md`.
-
-Kept document label behavior unchanged inside the moved enums because this task was a namespace/domain ownership cleanup, not a label refactor.
-
-Kept repair-order transition rules only on `RepairOrderStatus`; the query/application layer now translates transition labels for props.
+- This is a presentation-only change. It reuses the existing Customer Portal route and middleware instead of adding backend props, controllers, stores, or duplicated access logic.
+- The workshop acquisition hero remains visually and structurally primary because the root page is still the AutoService SaaS marketing surface.
+- New request intake and returning customer access remain distinct: new requests use workshop-specific links; returning access uses the global verified-phone portal.
+- The preview copy is intentionally honest about the current placeholder scope.
 
 ## Tradeoffs
 
-The available status transition mapping now appears in two query classes. That keeps the removed service from coming back as a fake domain service, but a future repeated read-model helper could be considered if more repair-order query props need the same mapping.
-
-No new document actions, notifications, approval links, database branches, migrations, or UI changes were added.
+- Customer Portal access is visible before request history exists, so the panel is styled and worded as a preview rather than a primary product promise.
+- The page test is a source-level regression test, consistent with the existing Welcome page test style. It verifies copy, route references, and semantic markers but does not mount the Vue component.
+- Staff/account links remain repeated in the header and hero because they serve different navigation and conversion contexts; this task did not redesign the broader marketing page.
 
 ## Tests
 
-- Failed: `php artisan test tests/Feature/GenerateEstimatePdfActionTest.php`
-  - 2 failed, 0 assertions.
-  - Blocked during migration setup by SQLite failing on `ALTER TABLE repair_orders ADD CONSTRAINT ...` in `database/migrations/2026_07_10_000001_remove_estimated_repair_order_status.php`.
-- Failed: `php artisan test tests/Feature/RepairOrderManagementTest.php`
-  - 51 failed, 0 assertions.
-  - Same SQLite migration setup failure.
-- Failed: `php artisan test`
-  - 39 passed, 225 failed, 141 assertions.
-  - Same SQLite migration setup failure across database-backed tests.
-- Passed: `composer analyse`
-  - PHPStan checked 120 files with no errors.
+TDD evidence:
+
+- Initial targeted run: expected RED with `3` failures and `1` passing test because the customer link, preview, and new-request distinction did not exist.
+- Semantic-review run: expected RED with `2` failures and `2` passing tests because the customer link was outside the navigation landmark and the preview lacked an associated heading.
+
+Final commands:
+
+- `npm run test -- resources/js/pages/Welcome.test.ts`
+  - Passed: `1` file, `4` tests.
+- `npm run build`
+  - Passed: Vite production build completed successfully with `2081` modules transformed.
+  - Non-blocking warning: installed `caniuse-lite` browser data is stale.
+- `git diff --check -- resources/js/pages/Welcome.vue resources/js/pages/Welcome.test.ts`
+  - Passed with no whitespace errors.
 
 ## Risks
 
-The requested Laravel tests cannot complete in the current default SQLite test setup while the PostgreSQL-style repair-order check-constraint migration is present. That migration was explicitly left untouched.
-
-External or pending-branch code importing the old document namespaces will need matching import updates.
+- The preview does not provide request history; the limitation is stated directly in the UI.
+- Existing unrelated worktree changes were preserved.
 
 ## Follow Ups
 
-- Consider aligning the test environment with the documented PostgreSQL-only project direction so feature tests do not run migrations against SQLite.
+- When customer request listing is implemented, replace preview wording with the final `View my requests` product language and reconsider the panel's visual priority.
+- A mounted Vue interaction test can be added later if the homepage navigation gains client-side state or behavior.

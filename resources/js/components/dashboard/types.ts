@@ -54,7 +54,7 @@ export type DashboardProps = {
     errors?: DashboardErrors;
 };
 
-export type StatusAction = 'confirmed' | 'rejected' | 'cancelled';
+export type StatusAction = 'rejected' | 'cancelled';
 
 export type PendingStatusChange = {
     bookingRequestId: number;

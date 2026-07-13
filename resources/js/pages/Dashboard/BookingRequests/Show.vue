@@ -5,11 +5,11 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, Ban, CalendarClock, ClipboardList, Phone, UserRound, Wrench, X } from 'lucide-vue-next';
+import { ArrowLeft, Ban, ClipboardList, Phone, UserRound, Wrench, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type BookingRequestStatus = 'new' | 'confirmed' | 'rejected' | 'cancelled';
-type StatusAction = 'confirmed' | 'rejected' | 'cancelled';
+type StatusAction = 'rejected' | 'cancelled';
 type RepairOrderStatus = 'draft' | 'in_progress' | 'completed' | 'cancelled';
 type TriageTab = 'overview' | 'customer' | 'vehicle';
 
@@ -120,19 +120,12 @@ const repairOrderCreateUrl = computed(() =>
     }),
 );
 
-const visibleSecondaryTransitions = computed(() => props.availableStatusTransitions.filter((transition) => transition.value !== 'confirmed'));
+const visibleSecondaryTransitions = computed(() => props.availableStatusTransitions);
 
-const canOpenCreateFlow = computed(() => props.canCreateRepairOrder && props.bookingRequest.status.value === 'confirmed');
-const canConfirmThenCreate = computed(() => props.canCreateRepairOrder && props.bookingRequest.status.value === 'new');
+const canOpenCreateFlow = computed(() => props.canCreateRepairOrder);
 
 const statusActionDetails = (status: StatusAction) =>
     ({
-        confirmed: {
-            label: 'Create repair order',
-            description:
-                'This confirms the request and opens a prefilled repair order form. The repair order is created only after that form is saved.',
-            confirmButtonClass: 'bg-green-600 text-white hover:bg-green-700',
-        },
         rejected: {
             label: 'Reject request',
             description: 'This marks the request as rejected. There is no valid transition back from rejected.',
@@ -411,13 +404,6 @@ const submitPendingStatus = () => {
                             </Button>
                         </div>
 
-                        <div v-else-if="canConfirmThenCreate" class="mt-4">
-                            <Button type="button" class="w-full" :disabled="form.processing" @click="openStatusDialog('confirmed')">
-                                <Wrench class="size-4" />
-                                Create repair order
-                            </Button>
-                        </div>
-
                         <p v-else class="mt-4 text-sm text-muted-foreground">This request cannot be converted from its current state.</p>
                     </section>
 
@@ -482,8 +468,7 @@ const submitPendingStatus = () => {
                             :disabled="form.processing"
                             @click="submitPendingStatus"
                         >
-                            <CalendarClock v-if="pendingStatusChange?.status === 'confirmed'" class="size-4" />
-                            <Ban v-else-if="pendingStatusChange?.status === 'cancelled'" class="size-4" />
+                            <Ban v-if="pendingStatusChange?.status === 'cancelled'" class="size-4" />
                             <X v-else class="size-4" />
                             {{ pendingStatusChange?.label }}
                         </Button>

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerPortalAccessController;
+use App\Http\Controllers\CustomerPortalController;
 use App\Http\Controllers\Dashboard\WorkshopSettingsController;
 use App\Http\Controllers\Dashboard\WorkshopStaffController;
 use App\Http\Controllers\DashboardBookingRequestController;
@@ -15,12 +17,36 @@ use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\PublicIntakeController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use App\Http\Middleware\EnsureActiveWorkshop;
+use App\Http\Middleware\EnsureVerifiedCustomerPhone;
+use App\Http\Middleware\RedirectIfCustomerPhoneVerified;
 use App\Support\Urls\AppUrl;
 use Illuminate\Support\Facades\Route;
 
 $registerPublicSurface = static function (): void {
     // Public surface: marketing homepage and workshop customer intake pages.
     Route::get('/', PublicHomeController::class)->name('home');
+
+    Route::get('my-requests/access', [CustomerPortalAccessController::class, 'create'])
+        ->middleware(RedirectIfCustomerPhoneVerified::class)
+        ->name('customer-portal.access.create');
+
+    Route::post('my-requests/access', [CustomerPortalAccessController::class, 'store'])
+        ->middleware([
+            RedirectIfCustomerPhoneVerified::class,
+            'throttle:customer-portal-code-request',
+        ])
+        ->name('customer-portal.access.store');
+
+    Route::get('my-requests/verify', [CustomerPortalAccessController::class, 'verifyCreate'])
+        ->name('customer-portal.verify.create');
+
+    Route::post('my-requests/verify', [CustomerPortalAccessController::class, 'verifyStore'])
+        ->middleware('throttle:customer-portal-code-verification')
+        ->name('customer-portal.verify.store');
+
+    Route::get('my-requests', CustomerPortalController::class)
+        ->middleware(EnsureVerifiedCustomerPhone::class)
+        ->name('customer-portal.index');
 
     Route::get('w/{workshop:slug}', [PublicIntakeController::class, 'create'])
         ->name('public-intake.create');

@@ -94,6 +94,7 @@ export type RepairOrderEstimateDocument = {
     id: number;
     filename: string;
     downloadUrl: string;
+    viewUrl: string;
 };
 
 export type RepairOrderDocument = {

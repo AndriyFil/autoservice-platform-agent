@@ -14,7 +14,7 @@ defineProps<{
     <Head title="AutoService" />
 
     <main class="min-h-screen bg-[#f7f3ea] text-slate-900">
-        <header class="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-5 sm:px-6">
+        <header class="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6">
             <Link :href="route('home')" class="flex items-center gap-3" aria-label="AutoService home">
                 <span class="flex size-9 items-center justify-center rounded-lg bg-[#2f6471] text-white shadow-sm">
                     <Wrench class="size-5" aria-hidden="true" />
@@ -22,18 +22,30 @@ defineProps<{
                 <span class="text-base font-semibold tracking-tight">AutoService</span>
             </Link>
 
-            <nav v-if="canLogin" class="flex items-center gap-2 text-sm">
-                <Link :href="adminLoginUrl" class="rounded-md px-3 py-2 font-medium text-slate-600 transition hover:bg-white/60 hover:text-slate-950">
-                    Staff login
+            <nav aria-label="Primary" class="flex flex-wrap items-center justify-end gap-2 text-sm">
+                <Link
+                    :href="route('customer-portal.index')"
+                    class="rounded-md px-3 py-2 font-medium text-slate-600 transition hover:bg-white/60 hover:text-slate-950"
+                >
+                    My requests
                 </Link>
 
-                <Link
-                    v-if="canRegister"
-                    :href="adminRegisterUrl"
-                    class="rounded-md border border-slate-300 bg-white/50 px-3 py-2 font-medium text-slate-700 shadow-sm transition hover:border-[#2f6471]/40 hover:bg-white hover:text-slate-950"
-                >
-                    Create workshop account
-                </Link>
+                <template v-if="canLogin">
+                    <Link
+                        :href="adminLoginUrl"
+                        class="rounded-md px-3 py-2 font-medium text-slate-600 transition hover:bg-white/60 hover:text-slate-950"
+                    >
+                        Staff login
+                    </Link>
+
+                    <Link
+                        v-if="canRegister"
+                        :href="adminRegisterUrl"
+                        class="rounded-md border border-slate-300 bg-white/50 px-3 py-2 font-medium text-slate-700 shadow-sm transition hover:border-[#2f6471]/40 hover:bg-white hover:text-slate-950"
+                    >
+                        Create workshop account
+                    </Link>
+                </template>
             </nav>
         </header>
 
@@ -47,7 +59,9 @@ defineProps<{
                     AutoService helps workshops collect customer requests from their own public page and review new intake requests in a tenant-scoped
                     dashboard.
                 </p>
-                <p class="mt-4 max-w-2xl text-sm leading-6 text-slate-600">Customer of a workshop? Use the booking link provided by your workshop.</p>
+                <p class="mt-4 max-w-2xl text-sm leading-6 text-slate-600">
+                    Need to send a new request? Use the workshop-specific link provided by your workshop.
+                </p>
                 <div class="mt-8 flex flex-wrap gap-3">
                     <Link
                         v-if="canRegister"
@@ -64,6 +78,22 @@ defineProps<{
                         Staff login
                     </Link>
                 </div>
+
+                <aside aria-labelledby="customer-access-preview-title" class="mt-8 max-w-2xl rounded-lg border border-[#2f6471]/20 bg-white/45 p-5">
+                    <h2 id="customer-access-preview-title" class="text-xs font-semibold uppercase tracking-wide text-[#2f6471]">
+                        Customer access preview
+                    </h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">
+                        Verify your phone to securely access customer services. No account or password required.
+                    </p>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">Request history is not available yet.</p>
+                    <Link
+                        :href="route('customer-portal.index')"
+                        class="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-[#2f6471]/30 bg-white/70 px-4 text-sm font-semibold text-[#2f6471] shadow-sm transition hover:border-[#2f6471]/50 hover:bg-white"
+                    >
+                        Verify phone access
+                    </Link>
+                </aside>
             </div>
 
             <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-32px_rgba(47,100,113,0.55)]">

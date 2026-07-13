@@ -31,6 +31,8 @@ const tabs = computed(() => [
     { value: 'timeline' as const, label: t('repair_orders.tabs.timeline') },
 ]);
 
+const latestEstimate = computed(() => props.repairOrder.estimates[0] ?? null);
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: t('repair_orders.navigation.repair_orders'),
@@ -72,7 +74,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                         :status-error="errors?.status"
                     />
 
-                    <RepairOrderStatusActions :repair-order-id="repairOrder.id" :actions="repairOrder.statusActions" />
+                    <RepairOrderStatusActions
+                        :repair-order-id="repairOrder.id"
+                        :actions="repairOrder.statusActions"
+                        :latest-estimate="latestEstimate"
+                    />
                 </div>
             </div>
 

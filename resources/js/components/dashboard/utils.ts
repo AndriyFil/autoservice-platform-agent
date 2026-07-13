@@ -1,18 +1,11 @@
 import type { DashboardBookingRequestStatusValue, DashboardBookingRequestVehicle, StatusAction } from './types';
 
-export const canConfirmBookingRequest = (status: DashboardBookingRequestStatusValue) => status === 'new';
-
 export const canRejectBookingRequest = (status: DashboardBookingRequestStatusValue) => status === 'new';
 
 export const canCancelBookingRequest = (status: DashboardBookingRequestStatusValue) => ['new', 'confirmed'].includes(status);
 
 export const statusActionDetails = (status: StatusAction) =>
     ({
-        confirmed: {
-            label: 'Confirm request',
-            description: 'This marks the request as confirmed. You can still cancel it later if needed.',
-            confirmButtonClass: 'bg-green-600 text-white hover:bg-green-700',
-        },
         rejected: {
             label: 'Reject request',
             description: 'This marks the request as rejected. There is no valid transition back from rejected.',
