@@ -26,7 +26,7 @@ class RepairOrderShowQuery
      *     lines: array<int, array{id: int, type: array{value: string, label: string}, description: string, quantity: string, unitPriceCents: int, taxRate: string, sortOrder: int, subtotalCents: int, taxCents: int, totalCents: int}>,
      *     workingTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
      *     estimateTotals: array{subtotalCents: int, taxCents: int, totalCents: int},
-     *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string}|null}>,
+     *     estimates: array<int, array{id: int, version: int, status: array{value: string, label: string}, subtotalCents: int, taxCents: int, totalCents: int, currency: string, generatedAt: string|null, document: array{id: int, filename: string, downloadUrl: string, viewUrl: string}|null}>,
      *     documents: array<int, array{id: int, filename: string, type: array{value: string, label: string}, status: array{value: string, label: string}, generatedAt: string|null, downloadUrl: string|null}>,
      *     availableLineTypes: array<int, array{value: string, label: string}>,
      *     statusActions: array{canGenerateEstimate: bool, hasEstimate: bool},
@@ -113,6 +113,10 @@ class RepairOrderShowQuery
                                 'id' => $document->id,
                                 'filename' => $document->filename,
                                 'downloadUrl' => route('dashboard.documents.download', $document),
+                                'viewUrl' => route('dashboard.documents.download', [
+                                    'document' => $document,
+                                    'disposition' => 'inline',
+                                ]),
                             ]
                             : null,
                     ];
