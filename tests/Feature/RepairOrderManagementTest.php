@@ -131,6 +131,88 @@ class RepairOrderManagementTest extends TestCase
                 ->where('sourceBookingRequest.preferredDate', '2026-06-20'));
     }
 
+    public function test_staff_can_open_repair_order_create_page_from_new_booking_request(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::New,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '+1 555 777 0000',
+            'problem_description' => 'Brake noise.',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/RepairOrders/Create')
+                ->where('defaults.booking_request_id', (string) $bookingRequest->id)
+                ->where('defaults.problem_description', 'Brake noise.')
+                ->where('sourceBookingRequest.id', $bookingRequest->id)
+                ->where('sourceBookingRequest.existingCustomer', null));
+
+        $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->refresh()->status);
+    }
+
+    public function test_staff_can_open_repair_order_create_page_from_confirmed_booking_request(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'problem_description' => 'Oil leak.',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/RepairOrders/Create')
+                ->where('defaults.booking_request_id', (string) $bookingRequest->id)
+                ->where('defaults.problem_description', 'Oil leak.'));
+
+        $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->refresh()->status);
+    }
+
+    public function test_opening_repair_order_create_page_from_new_booking_request_does_not_create_customer_user(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::New,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => 'Phone Customer',
+            'customer_phone' => '+1 555 444 3333',
+        ]);
+        $usersBefore = User::query()->count();
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertOk();
+
+        $this->assertSame($usersBefore, User::query()->count());
+        $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->refresh()->status);
+    }
+
     public function test_repair_order_create_page_prefills_problem_from_original_message_when_problem_description_is_blank(): void
     {
         $user = User::factory()->create();
@@ -234,6 +316,27 @@ class RepairOrderManagementTest extends TestCase
             ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder));
     }
 
+    public function test_repair_order_create_page_redirects_to_existing_order_for_new_booking_request(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::New,
+        ]);
+        $repairOrder = $this->createRepairOrder($bookingRequest);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder));
+
+        $this->assertSame(BookingRequestStatus::New, $bookingRequest->refresh()->status);
+    }
+
     public function test_confirmed_booking_request_reuses_existing_customer_by_phone_in_active_workshop(): void
     {
         Carbon::setTestNow('2026-06-12 10:00:00');
@@ -299,6 +402,43 @@ class RepairOrderManagementTest extends TestCase
         $this->assertSame('2026-06-12 10:00:00', $repairOrder->opened_at->toDateTimeString());
         $this->assertNull($repairOrder->closed_at);
         $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->status);
+    }
+
+    public function test_new_booking_request_is_confirmed_when_repair_order_is_created(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::New,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '+1 555 111 2222',
+            'problem_description' => 'Check engine light.',
+        ]);
+        $usersBefore = User::query()->count();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => 'Check engine light.',
+                'requires_estimate_approval' => true,
+            ]);
+
+        $repairOrder = RepairOrder::query()->first();
+
+        $this->assertNotNull($repairOrder);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('dashboard.repair-orders.show', $repairOrder));
+
+        $this->assertSame(BookingRequestStatus::Confirmed, $bookingRequest->refresh()->status);
+        $this->assertSame($bookingRequest->id, $repairOrder->booking_request_id);
+        $this->assertSame($usersBefore, User::query()->count());
     }
 
     public function test_repair_order_model_casts_requires_estimate_approval_as_boolean(): void
@@ -718,14 +858,15 @@ class RepairOrderManagementTest extends TestCase
         $this->assertDatabaseCount('repair_orders', 0);
     }
 
-    public function test_repair_order_from_booking_request_copies_booking_request_problem_description(): void
+    public function test_repair_order_from_booking_request_persists_edited_problem_description(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
         $bookingRequest = $this->createBookingRequest($workshop, [
             'status' => BookingRequestStatus::Confirmed,
-            'problem_description' => 'Original safe customer problem.',
+            'problem_description' => 'Original customer problem.',
+            'original_message' => 'Customer raw intake stays unchanged.',
         ]);
 
         $this
@@ -735,16 +876,19 @@ class RepairOrderManagementTest extends TestCase
                 'customer_id' => $bookingRequest->customer_id,
                 'vehicle_id' => $bookingRequest->vehicle_id,
                 'booking_request_id' => $bookingRequest->id,
-                'problem_description' => 'Posted replacement should not win.',
+                'problem_description' => 'Staff refined internal work description.',
             ])
             ->assertSessionHasNoErrors();
 
         $repairOrder = RepairOrder::query()->firstOrFail();
+        $bookingRequest->refresh();
 
-        $this->assertSame('Original safe customer problem.', $repairOrder->problem_description);
+        $this->assertSame('Staff refined internal work description.', $repairOrder->problem_description);
+        $this->assertSame('Original customer problem.', $bookingRequest->problem_description);
+        $this->assertSame('Customer raw intake stays unchanged.', $bookingRequest->original_message);
     }
 
-    public function test_repair_order_from_booking_request_uses_original_message_when_problem_description_is_blank(): void
+    public function test_repair_order_from_booking_request_persists_default_prefilled_problem_description(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
@@ -760,7 +904,7 @@ class RepairOrderManagementTest extends TestCase
             ->withSession(['active_workshop_id' => $workshop->id])
             ->post(route('dashboard.repair-orders.store'), [
                 'booking_request_id' => $bookingRequest->id,
-                'problem_description' => 'Posted fallback should not win.',
+                'problem_description' => 'Customer wrote the whole initial intake here.',
             ])
             ->assertSessionHasNoErrors();
 
@@ -948,13 +1092,13 @@ class RepairOrderManagementTest extends TestCase
         $this->assertDatabaseCount('repair_orders', 0);
     }
 
-    public function test_unconfirmed_booking_request_cannot_create_repair_order(): void
+    public function test_rejected_booking_request_cannot_create_repair_order(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create();
         $this->createMembership($user, $workshop);
         $bookingRequest = $this->createBookingRequest($workshop, [
-            'status' => BookingRequestStatus::New,
+            'status' => BookingRequestStatus::Rejected,
         ]);
         $customerCount = Customer::query()->count();
         $vehicleCount = Vehicle::query()->count();
