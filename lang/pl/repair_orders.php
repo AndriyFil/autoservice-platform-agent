@@ -12,7 +12,7 @@ return [
         'download' => 'Pobierz',
         'edit' => 'Edytuj',
         'save' => 'Zapisz',
-        'regenerate_estimate_pdf' => 'Wygeneruj PDF kosztorysu ponownie',
+        'create_new_estimate_pdf' => 'Utwórz nowy PDF kosztorysu',
         'start_work' => 'Rozpocznij pracę',
         'view_booking_request' => 'Zobacz zgłoszenie',
     ],
@@ -36,6 +36,7 @@ return [
         'preferred_date' => 'Preferowana data',
         'problem' => 'Problem',
         'quantity' => 'Ilość',
+        'requires_estimate_approval' => 'Wymagaj akceptacji kosztorysu przez klienta',
         'source' => 'Źródło',
         'source_request' => 'Zgłoszenie źródłowe',
         'status' => 'Status',
@@ -57,12 +58,17 @@ return [
 
     'messages' => [
         'booking_request_source' => 'Zgłoszenie',
+        'estimate_approval_behavior' => 'Ustawienia akceptacji kosztorysu dla tego zlecenia naprawy.',
+        'estimate_approval_locked' => 'Nie można zmienić tego ustawienia po zakończeniu lub anulowaniu zlecenia naprawy.',
         'manual_repair_order' => 'Ręczne zlecenie naprawy',
         'no_documents' => 'Brak dostępnych dokumentów.',
         'no_estimate_pdfs' => 'Nie utworzono jeszcze PDF-ów kosztorysu.',
         'no_estimate_summary' => 'Nie utworzono jeszcze kosztorysu.',
         'no_vehicle' => 'Brak pojazdu',
         'no_working_lines' => 'Brak pozycji roboczych.',
+        'requires_estimate_approval_help' => 'Jeśli włączone, klient powinien zaakceptować kosztorys przed rozpoczęciem pracy. Wyłącz dla prostych prac potwierdzonych poza systemem.',
+        'saved' => 'Zapisano.',
+        'saving' => 'Zapisywanie...',
     ],
 
     'navigation' => [
@@ -108,6 +114,7 @@ return [
     'sections' => [
         'estimates' => 'Kosztorysy',
         'latest_estimate' => 'Najnowszy kosztorys',
+        'order_settings' => 'Ustawienia zlecenia',
         'timeline' => 'Oś czasu',
         'work_document' => 'Dokument roboczy',
         'working_lines' => 'Robocze pozycje zlecenia naprawy',

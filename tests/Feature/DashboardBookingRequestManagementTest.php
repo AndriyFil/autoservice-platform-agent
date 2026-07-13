@@ -83,7 +83,31 @@ class DashboardBookingRequestManagementTest extends TestCase
                 ->where('bookingRequest.vehicle.brand', 'Honda')
                 ->where('bookingRequest.vehicle.model', 'Civic')
                 ->where('bookingRequest.vehicle.licensePlate', 'AA1234BB')
-                ->where('canCreateRepairOrder', true));
+                ->where('canCreateRepairOrder', true)
+                ->where('availableStatusTransitions.0.value', 'rejected')
+                ->where('availableStatusTransitions.1.value', 'cancelled'));
+    }
+
+    public function test_booking_request_show_exposes_one_create_action_without_confirm_transition(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop, WorkshopUserRole::Staff);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::New,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('canCreateRepairOrder', true)
+                ->where('linkedRepairOrder', null)
+                ->where('availableStatusTransitions.0.value', 'rejected')
+                ->where('availableStatusTransitions.1.value', 'cancelled')
+                ->missing('availableStatusTransitions.2'));
     }
 
     public function test_staff_can_view_booking_request_details(): void

@@ -130,7 +130,8 @@ class BookingRequestShowQuery
     private function availableStatusTransitions(BookingRequestStatus $status): array
     {
         return collect(BookingRequestStatus::cases())
-            ->filter(fn (BookingRequestStatus $targetStatus): bool => $status->canTransitionTo($targetStatus))
+            ->filter(fn (BookingRequestStatus $targetStatus): bool => $targetStatus !== BookingRequestStatus::Confirmed
+                && $status->canTransitionTo($targetStatus))
             ->map(fn (BookingRequestStatus $targetStatus): array => [
                 'value' => $targetStatus->value,
                 'label' => $targetStatus->label(),

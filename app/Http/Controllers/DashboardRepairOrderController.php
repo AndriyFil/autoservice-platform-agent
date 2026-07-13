@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\BookingRequests\Actions\CreateRepairOrderFromBookingRequestAction;
+use App\Domain\BookingRequests\Actions\OpenRepairOrderCreateFromBookingRequestAction;
 use App\Domain\RepairOrders\Actions\ChangeRepairOrderStatusAction;
 use App\Domain\RepairOrders\Actions\CreateRepairOrderAction;
 use App\Domain\RepairOrders\Enums\RepairOrderStatus;
@@ -40,12 +41,29 @@ class DashboardRepairOrderController extends Controller
     public function create(
         Request $request,
         RepairOrderFormQuery $repairOrderFormQuery,
+        OpenRepairOrderCreateFromBookingRequestAction $openRepairOrderCreateFromBookingRequest,
     ): Response|RedirectResponse {
         $activeWorkshopUser = $request->attributes->get('activeWorkshopUser');
         $activeWorkshop = $activeWorkshopUser->workshop;
+        $bookingRequestId = $request->integer('booking_request') ?: null;
+
+        if ($bookingRequestId) {
+            try {
+                $bookingRequest = $openRepairOrderCreateFromBookingRequest->handle($activeWorkshopUser, $bookingRequestId);
+            } catch (DomainException $exception) {
+                return back()->withErrors([
+                    'repair_order' => $exception->getMessage(),
+                ]);
+            }
+
+            if ($bookingRequest->repairOrder) {
+                return to_route('dashboard.repair-orders.show', $bookingRequest->repairOrder);
+            }
+        }
+
         $formData = $repairOrderFormQuery->handle(
             $activeWorkshopUser,
-            $request->integer('booking_request') ?: null,
+            $bookingRequestId,
         );
 
         if ($formData['existingRepairOrderId']) {

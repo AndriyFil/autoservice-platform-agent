@@ -245,6 +245,16 @@ class EstimateDocumentManagementTest extends TestCase
 
         $this
             ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.documents.download', [
+                'document' => $document,
+                'disposition' => 'inline',
+            ]))
+            ->assertOk()
+            ->assertHeader('content-disposition', 'inline; filename='.$document->filename);
+
+        $this
+            ->actingAs($user)
             ->withSession(['active_workshop_id' => $otherWorkshop->id])
             ->get(route('dashboard.documents.download', $document))
             ->assertNotFound();

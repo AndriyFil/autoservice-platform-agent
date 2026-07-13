@@ -145,3 +145,9 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: `estimated` is not a real RepairOrder operational status; it belongs conceptually to the Estimate domain.
 - Lesson: Keep RepairOrderStatus limited to `draft`, `in_progress`, `completed`, and `cancelled`. Operators can start work directly from draft; estimate generation must not move a repair order to `estimated` or block starting work.
 - Applies when: Implementing or reviewing repair-order lifecycle, status transitions, estimate generation, dropdown status actions, translations, tests, or product docs.
+
+## 2026-07-12 - Estimate UI Actions Must Be Direct
+
+- Correction: The latest estimate shown near estimate generation must be a real link to the generated PDF when a document exists, and estimate approval should save directly on checkbox toggle without a separate Save button.
+- Lesson: Treat compact estimate summaries as actionable controls, not static text. For per-order boolean settings like estimate approval, prefer direct checkbox autosave with translated saving/saved feedback.
+- Applies when: Implementing or reviewing repair-order estimate action areas, estimate PDF links, approval requirement UI, or dashboard boolean settings.

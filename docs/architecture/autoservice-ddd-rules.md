@@ -33,6 +33,7 @@ Migrated or agreed domain contexts:
 
 - `Workshops`
 - `Customers`
+- `CustomerPortal`
 - `BookingRequests`
 - `RepairOrders`
 - `Shared/ValueObjects/Phone`
@@ -47,6 +48,7 @@ Future domain contexts:
 
 - A `Customer` is not a `User`.
 - `Customer` records are workshop-scoped.
+- Customer Portal access verifies possession of a normalized phone through a short-lived session. It does not create Customer `User` accounts, passwords, or credentials.
 - A `Vehicle` belongs to a `Customer`.
 - Public intake creates a `BookingRequest`, not a `RepairOrder`.
 - A `RepairOrder` is an internal workshop order.
@@ -78,6 +80,7 @@ Estimate approval does not block moving a repair order to `in_progress` for now.
 
 - Public and Admin are UI surfaces, not domain modules.
 - Public/admin controllers and pages may differ, but they must share the same domain rules.
+- Customer Portal is a planned global public surface. Its access boundary is a short-lived verified-phone session; future portal reads must resolve workshop-scoped records only after phone verification and must not turn a `Customer` into a `User`.
 - `Estimates` will handle quote and approval state later.
 - `Notifications` will be added later when needed.
 - Do not introduce RabbitMQ, Redis, Go services, or other async infrastructure yet.
@@ -86,11 +89,11 @@ Estimate approval does not block moving a repair order to `in_progress` for now.
 
 Do not add these unless a task explicitly asks for them:
 
-- customer login or customer cabinet
+- Customer User accounts, customer passwords, or credential-based customer login
+- Customer Portal request/detail features beyond an explicitly requested verified-phone slice
 - billing
 - RabbitMQ, Redis, or Go services
 - Telegram or email notifications
 - broad UI redesign
 - moving Eloquent models out of `app/Models`
 - migrating unrelated domains during focused tasks
-

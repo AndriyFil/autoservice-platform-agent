@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/vue3';
-import { Ban, Check, ClipboardList, Eye, Wrench, X } from 'lucide-vue-next';
+import { Ban, ClipboardList, Eye, Wrench, X } from 'lucide-vue-next';
 import BookingRequestEmptyState from './BookingRequestEmptyState.vue';
 import BookingRequestStatusBadge from './BookingRequestStatusBadge.vue';
 import type { DashboardBookingRequest, StatusAction } from './types';
-import { canCancelBookingRequest, canConfirmBookingRequest, canRejectBookingRequest, formatDate, formatDateTime, vehicleSummary } from './utils';
+import { canCancelBookingRequest, canRejectBookingRequest, formatDate, formatDateTime, vehicleSummary } from './utils';
 
 defineProps<{
     bookingRequests: DashboardBookingRequest[];
@@ -17,7 +17,7 @@ defineEmits<{
 }>();
 
 const canCreateRepairOrder = (bookingRequest: DashboardBookingRequest) =>
-    bookingRequest.status.value === 'confirmed' && bookingRequest.repairOrder === null;
+    ['new', 'confirmed'].includes(bookingRequest.status.value) && bookingRequest.repairOrder === null;
 </script>
 
 <template>
@@ -71,20 +71,6 @@ const canCreateRepairOrder = (bookingRequest: DashboardBookingRequest) =>
                         </td>
                         <td class="w-44 min-w-44 whitespace-nowrap px-4 py-3 text-right align-top">
                             <div class="inline-flex min-w-40 flex-nowrap items-center justify-end gap-1.5">
-                                <Button
-                                    v-if="canConfirmBookingRequest(bookingRequest.status.value)"
-                                    type="button"
-                                    size="icon"
-                                    class="h-8 w-8 bg-green-600 text-white hover:bg-green-700"
-                                    :disabled="processing"
-                                    :aria-label="`Confirm request for ${bookingRequest.customerName}`"
-                                    :title="`Confirm request for ${bookingRequest.customerName}`"
-                                    @click="$emit('statusAction', bookingRequest.id, bookingRequest.customerName, 'confirmed')"
-                                >
-                                    <Check class="size-4" />
-                                    <span class="sr-only">Confirm request</span>
-                                </Button>
-
                                 <Button
                                     v-if="canRejectBookingRequest(bookingRequest.status.value)"
                                     type="button"

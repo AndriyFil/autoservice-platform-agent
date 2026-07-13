@@ -12,7 +12,7 @@ return [
         'download' => 'Завантажити',
         'edit' => 'Редагувати',
         'save' => 'Зберегти',
-        'regenerate_estimate_pdf' => 'Повторно створити PDF кошторису',
+        'create_new_estimate_pdf' => 'Створити новий PDF кошторису',
         'start_work' => 'Почати роботу',
         'view_booking_request' => 'Переглянути заявку',
     ],
@@ -36,6 +36,7 @@ return [
         'preferred_date' => 'Бажана дата',
         'problem' => 'Проблема',
         'quantity' => 'К-сть',
+        'requires_estimate_approval' => 'Потрібне підтвердження кошторису клієнтом',
         'source' => 'Джерело',
         'source_request' => 'Вихідна заявка',
         'status' => 'Статус',
@@ -57,12 +58,17 @@ return [
 
     'messages' => [
         'booking_request_source' => 'Заявка',
+        'estimate_approval_behavior' => 'Поведінка підтвердження кошторису для цього замовлення на ремонт.',
+        'estimate_approval_locked' => 'Це налаштування не можна змінити після завершення або скасування замовлення на ремонт.',
         'manual_repair_order' => 'Ручне замовлення на ремонт',
         'no_documents' => 'Документів ще немає.',
         'no_estimate_pdfs' => 'PDF кошторису ще не створено.',
         'no_estimate_summary' => 'Кошторис ще не створено.',
         'no_vehicle' => 'Авто не вказано',
         'no_working_lines' => 'Робочих позицій ще немає.',
+        'requires_estimate_approval_help' => 'Якщо увімкнено, клієнт має підтвердити кошторис перед початком роботи. Вимкніть для простих робіт, підтверджених поза системою.',
+        'saved' => 'Збережено.',
+        'saving' => 'Збереження...',
     ],
 
     'navigation' => [
@@ -108,6 +114,7 @@ return [
     'sections' => [
         'estimates' => 'Кошториси',
         'latest_estimate' => 'Останній кошторис',
+        'order_settings' => 'Налаштування замовлення',
         'timeline' => 'Хронологія',
         'work_document' => 'Робочий документ',
         'working_lines' => 'Робочі позиції замовлення на ремонт',

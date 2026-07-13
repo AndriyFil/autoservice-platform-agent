@@ -20,6 +20,7 @@ class CreateRepairOrderFromBookingRequestAction
      *     customer_name?: string|null,
      *     vehicle_id?: int|null,
      *     booking_request_id: int,
+     *     problem_description?: string|null,
      *     requires_estimate_approval?: bool,
      *     notes?: string|null,
      *     new_vehicle?: array{make?: string|null, model?: string|null, year?: int|null, plate?: string|null}
@@ -41,7 +42,7 @@ class CreateRepairOrderFromBookingRequestAction
                 'requires_estimate_approval' => $data['requires_estimate_approval'] ?? true,
                 'notes' => $data['notes'] ?? null,
                 'created_by_user_id' => $activeWorkshopUser->user_id,
-                'problem_description' => $this->bookingRequestProblemDescription($bookingRequest),
+                'problem_description' => $this->repairOrderProblemDescription($data, $bookingRequest),
                 'opened_at' => now(),
                 'closed_at' => null,
             ]);
@@ -54,14 +55,20 @@ class CreateRepairOrderFromBookingRequestAction
             ->with('repairOrder')
             ->whereKey($bookingRequestId)
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
+            ->lockForUpdate()
             ->firstOrFail();
 
-        if ($bookingRequest->status !== BookingRequestStatus::Confirmed) {
-            throw new DomainException('Repair order can be created only from a confirmed booking request.');
+        if (! in_array($bookingRequest->status, [BookingRequestStatus::New, BookingRequestStatus::Confirmed], true)) {
+            throw new DomainException('Repair order can be created only from a new or confirmed booking request.');
         }
 
         if ($bookingRequest->repairOrder) {
             throw new DomainException('This booking request already has a repair order.');
+        }
+
+        if ($bookingRequest->status === BookingRequestStatus::New) {
+            $bookingRequest->status = BookingRequestStatus::Confirmed;
+            $bookingRequest->save();
         }
 
         return $bookingRequest;
@@ -148,6 +155,15 @@ class CreateRepairOrderFromBookingRequestAction
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * @param  array{problem_description?: string|null}  $data
+     */
+    private function repairOrderProblemDescription(array $data, BookingRequest $bookingRequest): string
+    {
+        return $this->nullableTrim($data['problem_description'] ?? null)
+            ?? $this->bookingRequestProblemDescription($bookingRequest);
     }
 
     private function bookingRequestProblemDescription(BookingRequest $bookingRequest): string

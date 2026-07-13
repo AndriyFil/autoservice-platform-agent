@@ -18,10 +18,15 @@ class DashboardDocumentDownloadController extends Controller
             ->where('workshop_id', $activeWorkshopUser->workshop_id)
             ->firstOrFail();
 
-        return Storage::disk($document->disk)->download(
+        $disposition = $request->query('disposition') === 'inline'
+            ? 'inline'
+            : 'attachment';
+
+        return Storage::disk($document->disk)->response(
             $document->path,
             $document->filename,
             ['Content-Type' => $document->mime_type],
+            $disposition,
         );
     }
 }
