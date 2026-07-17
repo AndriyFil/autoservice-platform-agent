@@ -44,6 +44,19 @@ describe('PublicWorkspaceLayout', () => {
         expect(mountLayout().get('[aria-label="Open navigation"]').exists()).toBe(true);
     });
 
+    it('describes the mobile navigation dialog without accessibility warnings', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const wrapper = mountLayout();
+
+        await wrapper.get('[aria-label="Open navigation"]').trigger('click');
+        await wrapper.vm.$nextTick();
+
+        expect(warn.mock.calls.flat().join(' ')).not.toContain('Missing `Description`');
+
+        wrapper.unmount();
+        warn.mockRestore();
+    });
+
     it.each(['How it works', 'Prices', 'Help'])('opens and closes %s without navigation', async (label) => {
         const wrapper = mountLayout();
         await wrapper.get(`button[aria-label="Open ${label}"]`).trigger('click');

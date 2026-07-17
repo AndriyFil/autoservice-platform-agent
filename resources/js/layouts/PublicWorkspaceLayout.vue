@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PublicBrand from '@/components/public/PublicBrand.vue';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Link } from '@inertiajs/vue3';
 import { CircleHelp, ClipboardList, Menu, Plus, Store, Tag, UserRound, Workflow, X } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -123,6 +123,7 @@ const closeInfoPanel = () => {
                     </SheetTrigger>
                     <SheetContent side="left" class="w-[min(21rem,88vw)] overflow-y-auto bg-white p-5">
                         <SheetTitle class="sr-only">Navigation</SheetTitle>
+                        <SheetDescription class="sr-only">Public navigation and workshop account links.</SheetDescription>
                         <PublicBrand />
                         <nav aria-label="Mobile public navigation" class="mt-8 flex flex-col gap-2">
                             <Link
