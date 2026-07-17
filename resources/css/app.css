@@ -4,7 +4,15 @@
 
 body,
 html {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --public-ivory: #f7f4ed;
+    --public-surface: #ffffff;
+    --public-navy: #0b1f33;
+    --public-brand: #0e7c86;
+    --public-brand-soft: #e9f3f2;
+    --public-border: #dfe4e4;
+    --public-muted: #607086;
 }
 
 @layer base {
@@ -77,6 +85,127 @@ html {
         --sidebar-accent-foreground: 240 4.8% 95.9%;
         --sidebar-border: 0 0% 15.9%;
         --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+}
+
+@layer components {
+    .public-page {
+        min-height: 100vh;
+        background: var(--public-ivory);
+        color: var(--public-navy);
+    }
+
+    .public-card {
+        border: 1px solid var(--public-border);
+        border-radius: 1.75rem;
+        background: var(--public-surface);
+        box-shadow: 0 22px 70px -48px rgb(11 31 51 / 45%);
+    }
+
+    .public-field {
+        min-height: 3rem;
+        width: 100%;
+        border: 1px solid #ccd5d7;
+        border-radius: 0.875rem;
+        background: var(--public-surface);
+        padding: 0.75rem 1rem;
+        color: var(--public-navy);
+        transition:
+            border-color 160ms ease,
+            box-shadow 160ms ease;
+    }
+
+    .public-field::placeholder {
+        color: #8a98a8;
+    }
+
+    .public-field:focus,
+    .public-field:focus-visible {
+        border-color: var(--public-brand);
+        outline: none;
+        box-shadow: 0 0 0 3px rgb(14 124 134 / 16%);
+    }
+
+    .public-button-primary,
+    .public-button-secondary {
+        display: inline-flex;
+        min-height: 2.875rem;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: 0.875rem;
+        padding: 0.7rem 1.15rem;
+        font-size: 0.875rem;
+        font-weight: 650;
+        transition:
+            background-color 160ms ease,
+            border-color 160ms ease,
+            color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .public-button-primary {
+        border: 1px solid var(--public-navy);
+        background: var(--public-navy);
+        color: white;
+        box-shadow: 0 10px 24px -16px rgb(11 31 51 / 80%);
+    }
+
+    .public-button-primary:hover {
+        background: #102c47;
+    }
+
+    .public-button-secondary {
+        border: 1px solid #c7d1d3;
+        background: white;
+        color: var(--public-navy);
+    }
+
+    .public-button-secondary:hover {
+        border-color: var(--public-brand);
+        color: var(--public-brand);
+    }
+
+    .public-button-primary:focus-visible,
+    .public-button-secondary:focus-visible,
+    .public-focus:focus-visible {
+        outline: none;
+        box-shadow:
+            0 0 0 2px var(--public-ivory),
+            0 0 0 4px var(--public-brand);
+    }
+
+    .public-button-primary:disabled,
+    .public-button-secondary:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    .public-kicker {
+        color: var(--public-brand);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .intake-reveal-enter-active,
+    .intake-reveal-leave-active {
+        transition:
+            opacity 240ms ease,
+            transform 240ms ease;
+    }
+
+    .intake-reveal-enter-from,
+    .intake-reveal-leave-to {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .intake-reveal-enter-active,
+        .intake-reveal-leave-active {
+            transition: none;
+        }
     }
 }
 

@@ -236,58 +236,59 @@ const submit = () => {
         <h1 id="public-intake-title" class="sr-only">Request car service</h1>
         <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</p>
 
-        <form
-            :data-testid="chatExpanded ? 'intake-chat' : 'intake-starter'"
-            :class="
-                chatExpanded
-                    ? 'public-card flex h-[calc(100dvh-7rem)] max-h-[48rem] min-h-[32rem] flex-col overflow-hidden'
-                    : 'mx-auto w-full max-w-3xl'
-            "
-            @submit.prevent="submit"
-        >
+        <form data-testid="intake-workspace" class="intake-workspace mx-auto flex w-full max-w-3xl flex-col" @submit.prevent="submit">
             <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden" />
 
-            <section v-if="!chatExpanded" data-testid="intake-intro" aria-labelledby="intake-starter-title" class="mb-7 text-center sm:mb-9">
-                <p class="public-kicker">Start a service request</p>
-                <h2 id="intake-starter-title" class="mt-3 text-3xl font-semibold tracking-[-0.035em] text-[#0b1f33] sm:text-4xl">
-                    What is happening with your car?
-                </h2>
-                <p class="mx-auto mt-4 max-w-2xl text-sm leading-6 text-[#607086] sm:text-base">
-                    Describe the issue in your own words. The selected workshop will confirm the details with you.
-                </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-2">
-                    <button
-                        v-for="prompt in problemPrompts"
-                        :key="prompt"
-                        type="button"
-                        class="public-focus rounded-full border border-[#dfe4e4] bg-white px-4 py-2.5 text-sm font-medium text-[#43566c] shadow-sm transition hover:border-[#0e7c86]/50 hover:text-[#0e7c86]"
-                        @click="selectProblemPrompt(prompt)"
-                    >
-                        {{ prompt }}
-                    </button>
+            <Transition name="intake-reveal" mode="out-in">
+                <section
+                    v-if="!chatExpanded"
+                    key="starter"
+                    data-testid="intake-intro"
+                    aria-labelledby="intake-starter-title"
+                    class="mb-7 text-center sm:mb-9"
+                >
+                    <span data-testid="intake-starter" class="sr-only">New request starter</span>
+                    <p class="public-kicker">Start a service request</p>
+                    <h2 id="intake-starter-title" class="mt-3 text-3xl font-semibold tracking-[-0.035em] text-[#0b1f33] sm:text-4xl">
+                        What is happening with your car?
+                    </h2>
+                    <p class="mx-auto mt-4 max-w-2xl text-sm leading-6 text-[#607086] sm:text-base">
+                        Describe the issue in your own words. The selected workshop will confirm the details with you.
+                    </p>
+                    <div class="mt-6 flex flex-wrap justify-center gap-2">
+                        <button
+                            v-for="prompt in problemPrompts"
+                            :key="prompt"
+                            type="button"
+                            class="public-focus rounded-full border border-[#dfe4e4] bg-white px-4 py-2.5 text-sm font-medium text-[#43566c] shadow-sm transition hover:border-[#0e7c86]/50 hover:text-[#0e7c86]"
+                            @click="selectProblemPrompt(prompt)"
+                        >
+                            {{ prompt }}
+                        </button>
+                    </div>
+                </section>
+                <div
+                    v-else
+                    key="conversation"
+                    ref="transcriptViewport"
+                    data-testid="intake-transcript"
+                    class="max-h-[24rem] min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-7 lg:px-9"
+                >
+                    <div data-testid="intake-chat" class="flex min-h-full flex-col justify-end">
+                        <PublicIntakeTranscript
+                            :completed="completedConversation"
+                            :active-state="activeState"
+                            :message="form.message"
+                            :phone="form.phone"
+                            :customer-name="form.customer_name"
+                            :vehicle-summary="vehicleSummary"
+                            :selected-workshop-name="selectedWorkshop?.name"
+                            :editing-answer="editContext?.answer"
+                            @edit="editAnswer"
+                        />
+                    </div>
                 </div>
-            </section>
-
-            <div
-                v-if="chatExpanded"
-                ref="transcriptViewport"
-                data-testid="intake-transcript"
-                class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-7 lg:px-9"
-            >
-                <div class="flex min-h-full flex-col justify-end">
-                    <PublicIntakeTranscript
-                        :completed="completedConversation"
-                        :active-state="activeState"
-                        :message="form.message"
-                        :phone="form.phone"
-                        :customer-name="form.customer_name"
-                        :vehicle-summary="vehicleSummary"
-                        :selected-workshop-name="selectedWorkshop?.name"
-                        :editing-answer="editContext?.answer"
-                        @edit="editAnswer"
-                    />
-                </div>
-            </div>
+            </Transition>
 
             <div
                 id="active-response"

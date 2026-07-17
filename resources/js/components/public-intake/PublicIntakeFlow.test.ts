@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive } from 'vue';
 import PublicIntakeFlow from './PublicIntakeFlow.vue';
+
+const appCssSource = readFileSync(resolve(__dirname, '../../../css/app.css'), 'utf8');
 
 const inertia = vi.hoisted(() => ({
     post: vi.fn(),
@@ -194,6 +198,23 @@ describe('PublicIntakeFlow', () => {
         expect(wrapper.get('[data-testid="intake-chat"]').classes()).toContain('flex-col');
         expect(wrapper.get('[data-testid="intake-transcript"]').classes()).toContain('overflow-y-auto');
         expect(wrapper.get('[data-testid="intake-composer"]').classes()).toContain('shrink-0');
+    });
+
+    it('keeps one bounded workspace shell before and after expansion', async () => {
+        const wrapper = mount(PublicIntakeFlow, { props: { workshops: [{ id: 1, name: 'Main Auto' }] } });
+        const shell = wrapper.get('[data-testid="intake-workspace"]');
+
+        await wrapper.get('#message').setValue('Brake noise');
+        await buttonWithText(wrapper, 'Send')?.trigger('click');
+
+        expect(wrapper.get('[data-testid="intake-workspace"]').element).toBe(shell.element);
+        expect(wrapper.get('[data-testid="intake-transcript"]').classes()).toContain('overflow-y-auto');
+        expect(wrapper.get('[data-testid="intake-composer"]').classes()).toContain('shrink-0');
+    });
+
+    it('defines motion-safe intake reveal styles', () => {
+        expect(appCssSource).toContain('.intake-reveal-enter-active');
+        expect(appCssSource).toContain('@media (prefers-reduced-motion: reduce)');
     });
 
     it('scrolls the transcript instead of the browser page after advancing', async () => {
