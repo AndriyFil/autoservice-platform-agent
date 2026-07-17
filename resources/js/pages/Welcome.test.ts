@@ -1,43 +1,65 @@
-import { readFileSync } from 'node:fs';
+// @vitest-environment jsdom
+
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const source = readFileSync(resolve(__dirname, 'Welcome.vue'), 'utf8');
+const readSource = (path: string) => {
+    const absolutePath = resolve(__dirname, path);
 
-describe('Welcome page copy', () => {
-    it('presents admin access as workshop/staff actions', () => {
-        expect(source).toContain('Create workshop account');
-        expect(source).toContain('Staff login');
-        expect(source).toContain('adminLoginUrl');
-        expect(source).toContain('adminRegisterUrl');
-        expect(source).not.toContain('>Login<');
-        expect(source).not.toContain('>Register<');
+    return existsSync(absolutePath) ? readFileSync(absolutePath, 'utf8') : '';
+};
+
+const welcomeSource = readSource('Welcome.vue');
+const flowSource = readSource('../components/public-intake/PublicIntakeFlow.vue');
+const successSource = readSource('../components/public-intake/PublicIntakeSuccess.vue');
+const layoutSource = readSource('../layouts/PublicWorkspaceLayout.vue');
+
+describe('global customer intake', () => {
+    it('uses one stable public workspace composition', () => {
+        expect(welcomeSource).toContain('PublicWorkspaceLayout');
+        expect(welcomeSource).not.toContain('PublicHeader');
+        expect(welcomeSource).not.toContain('PublicTrustPanel');
+        expect(welcomeSource).not.toContain('intakeExpanded');
+        expect(welcomeSource).not.toContain('lg:grid-cols-[minmax(0,1fr)_18rem]');
     });
 
-    it('keeps customer portal access available independently of staff login', () => {
-        const primaryNavigation = source.indexOf('<nav aria-label="Primary"');
-        const customerPortalLink = source.indexOf(`:href="route('customer-portal.index')"`);
-        const conditionalStaffLinks = source.indexOf('<template v-if="canLogin">');
-
-        expect(primaryNavigation).toBeGreaterThan(-1);
-        expect(customerPortalLink).toBeGreaterThan(-1);
-        expect(primaryNavigation).toBeLessThan(customerPortalLink);
-        expect(customerPortalLink).toBeLessThan(conditionalStaffLinks);
-        expect(source).not.toContain('<nav v-if="canLogin"');
-        expect(source).toContain('My requests');
+    it('keeps customer and staff actions in the workspace navigation', () => {
+        expect(layoutSource).toContain('My requests');
+        expect(layoutSource).toContain('Staff login');
+        expect(layoutSource).toContain('For workshops');
+        expect(layoutSource).toContain(`route('customer-portal.index')`);
+        expect(layoutSource).toContain('adminLoginUrl');
+        expect(layoutSource).toContain('adminRegisterUrl');
     });
 
-    it('presents phone verification as a limited customer access preview', () => {
-        expect(source).toContain('aria-labelledby="customer-access-preview-title"');
-        expect(source).toContain('<h2 id="customer-access-preview-title"');
-        expect(source).toContain('Customer access preview</h2>');
-        expect(source).toContain('Verify your phone to securely access customer services. No account or password required.');
-        expect(source).toContain('Request history is not available yet');
-        expect(source).toContain('Verify phone access');
+    it('uses the shared public shell and truthful intake controls', () => {
+        expect(welcomeSource).toContain('PublicWorkspaceLayout');
+        expect(flowSource).toContain('public-button-primary');
+        expect(flowSource).toContain('border-[#0e7c86]');
+        expect(flowSource).toContain('bg-[#e9f3f2]');
+        expect(flowSource).toContain('sm:grid-cols-2');
+        expect(flowSource).not.toMatch(/rating|available today|reply within/i);
     });
 
-    it('distinguishes a new workshop request from customer portal access', () => {
-        expect(source).toContain('Need to send a new request? Use the workshop-specific link provided by your workshop.');
-        expect(source).not.toContain('Customer of a workshop?');
+    it('keeps the intake in one responsive public card', () => {
+        expect(flowSource).toContain('data-testid="intake-chat"');
+        expect(flowSource).toContain('data-testid="intake-starter"');
+        expect(flowSource).toContain('data-testid="intake-workspace"');
+        expect(flowSource).toContain('data-testid="intake-transcript"');
+        expect(flowSource).toContain("'intake-composer'");
+        expect(flowSource).not.toMatch(/Step \d of \d/);
+        expect(flowSource).not.toContain('Request progress');
+        expect(flowSource).not.toContain('router.visit');
+        expect(flowSource).not.toContain('window.location');
+    });
+
+    it('shows the workshop-specific success state and follow-up actions', () => {
+        expect(welcomeSource).toContain('intakeWorkshopName?: string');
+        expect(successSource).toContain('Request sent');
+        expect(successSource).toContain('workshopName');
+        expect(successSource).toContain('will contact you');
+        expect(successSource).toContain('My requests');
+        expect(successSource).toContain('Create another request');
     });
 });
