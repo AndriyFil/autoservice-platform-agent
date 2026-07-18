@@ -12,6 +12,12 @@ export type CustomerRequestSummary = {
     updatedAt: string;
 };
 
+export type CustomerRequestDetail = CustomerRequestSummary & {
+    problemDescription: string | null;
+    customerName: string | null;
+    vehicle: Partial<{ brand: string; model: string; year: number; licensePlate: string }>;
+};
+
 export type Paginated<T> = {
     data: T[];
     current_page: number;
