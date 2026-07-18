@@ -40,33 +40,36 @@ class PublicAdminDomainRoutingTest extends TestCase
                 ->where('adminRegisterUrl', 'http://admin.autoservice.test:8080/register'));
     }
 
-    public function test_public_workshop_intake_page_works_on_public_host(): void
+    public function test_public_homepage_exposes_workshops_on_public_host(): void
     {
-        Workshop::factory()->create([
+        $workshop = Workshop::factory()->create([
             'name' => 'Main Auto',
             'slug' => 'main-auto',
         ]);
 
-        $this->get('http://autoservice.test:8080/w/main-auto')
+        $this->get('http://autoservice.test:8080/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('PublicIntake')
-                ->where('workshop.name', 'Main Auto')
-                ->where('workshop.slug', 'main-auto'));
+                ->component('Welcome')
+                ->where('workshops', [[
+                    'id' => $workshop->id,
+                    'name' => 'Main Auto',
+                ]]));
     }
 
     public function test_public_intake_post_stays_public_on_public_host(): void
     {
-        Workshop::factory()->create([
+        $workshop = Workshop::factory()->create([
             'slug' => 'main-auto',
         ]);
 
-        $this->post('http://autoservice.test:8080/w/main-auto/intake', [
+        $this->post('http://autoservice.test:8080/intake', [
             'message' => 'Opel Insignia, check engine light came on.',
             'phone' => '+1 (555) 123-4567',
+            'workshop_id' => $workshop->id,
         ])
             ->assertSessionHasNoErrors()
-            ->assertRedirect('http://autoservice.test:8080/w/main-auto');
+            ->assertRedirect('http://autoservice.test:8080');
 
         $this->assertGuest();
         $this->assertDatabaseHas('booking_requests', [
@@ -113,7 +116,7 @@ class PublicAdminDomainRoutingTest extends TestCase
         $this->get('http://autoservice.test:8080/dashboard')->assertNotFound();
     }
 
-    public function test_workshop_settings_public_intake_link_uses_public_app_url(): void
+    public function test_workshop_settings_do_not_expose_obsolete_public_intake_link(): void
     {
         $user = User::factory()->create();
         $workshop = Workshop::factory()->create([
@@ -134,7 +137,7 @@ class PublicAdminDomainRoutingTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/Workshop/Settings')
-                ->where('workshop.publicIntakePath', '/w/main-auto')
-                ->where('workshop.publicIntakeUrl', 'http://autoservice.test:8080/w/main-auto'));
+                ->missing('workshop.publicIntakePath')
+                ->missing('workshop.publicIntakeUrl'));
     }
 }

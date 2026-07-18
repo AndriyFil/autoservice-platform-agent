@@ -44,7 +44,7 @@ class BookingRequestIndexQuery
                         'model' => $bookingRequest->vehicle->model,
                         'licensePlate' => $bookingRequest->vehicle->license_plate,
                     ]
-                    : null,
+                    : $this->vehicleSnapshot($bookingRequest),
                 'repairOrder' => $bookingRequest->repairOrder
                     ? [
                         'id' => $bookingRequest->repairOrder->id,
@@ -57,5 +57,23 @@ class BookingRequestIndexQuery
                 'createdAt' => $bookingRequest->created_at->toISOString(),
             ])
             ->all();
+    }
+
+    /**
+     * @return array{brand: string|null, model: string|null, licensePlate: string|null}|null
+     */
+    private function vehicleSnapshot(BookingRequest $bookingRequest): ?array
+    {
+        if (! filled($bookingRequest->vehicle_brand)
+            && ! filled($bookingRequest->vehicle_model)
+            && ! filled($bookingRequest->vehicle_license_plate)) {
+            return null;
+        }
+
+        return [
+            'brand' => $bookingRequest->vehicle_brand,
+            'model' => $bookingRequest->vehicle_model,
+            'licensePlate' => $bookingRequest->vehicle_license_plate,
+        ];
     }
 }

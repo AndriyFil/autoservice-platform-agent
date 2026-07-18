@@ -31,7 +31,7 @@ const submit = () => {
                     <Input
                         id="password"
                         type="password"
-                        class="mt-1 block w-full"
+                        class="public-field"
                         v-model="form.password"
                         required
                         autocomplete="current-password"
@@ -42,7 +42,7 @@ const submit = () => {
                 </div>
 
                 <div class="flex items-center">
-                    <Button class="w-full" :disabled="form.processing">
+                    <Button class="public-button-primary min-h-12 w-full" :disabled="form.processing">
                         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                         Confirm Password
                     </Button>

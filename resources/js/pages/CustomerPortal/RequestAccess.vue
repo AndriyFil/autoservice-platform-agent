@@ -30,14 +30,14 @@ const submit = () => {
     <Head title="Access your service requests" />
 
     <CustomerPortalLayout :can-login="canLogin" :can-register="canRegister" :admin-login-url="adminLoginUrl" :admin-register-url="adminRegisterUrl">
-        <div class="flex size-11 items-center justify-center rounded-lg bg-[#2f6471]/10 text-[#2f6471]">
+        <div class="flex size-12 items-center justify-center rounded-2xl bg-[#e9f3f2] text-[#0e7c86]">
             <Phone class="size-5" aria-hidden="true" />
         </div>
 
         <div class="mt-6">
-            <p class="text-sm font-medium text-[#2f6471]">Customer portal</p>
-            <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Access your service requests</h1>
-            <p class="mt-3 text-sm leading-6 text-slate-600">Enter your phone number. We’ll send a short one-time code to verify access.</p>
+            <p class="public-kicker">Customer portal</p>
+            <h1 class="mt-2 text-[1.75rem] font-bold leading-tight tracking-[-0.035em] text-[#0b1f33]">Access your service requests</h1>
+            <p class="mt-3 text-[0.95rem] leading-6 text-[#607086]">Enter your phone number. We’ll send a short one-time code to verify access.</p>
         </div>
 
         <div
@@ -63,6 +63,7 @@ const submit = () => {
                     required
                     aria-describedby="phone-help phone-error"
                     :aria-invalid="form.errors.phone ? true : undefined"
+                    class="public-field"
                 />
                 <p id="phone-help" class="text-xs leading-5 text-slate-500">Use the number you shared with the workshop.</p>
                 <div id="phone-error" aria-live="polite">
@@ -70,7 +71,7 @@ const submit = () => {
                 </div>
             </div>
 
-            <Button type="submit" class="min-h-11 w-full bg-[#2f6471] font-semibold text-white hover:bg-[#285864]" :disabled="form.processing">
+            <Button type="submit" class="public-button-primary min-h-12 w-full" :disabled="form.processing">
                 <LoaderCircle v-if="form.processing" class="size-4 animate-spin" aria-hidden="true" />
                 <ArrowRight v-else class="size-4" aria-hidden="true" />
                 Send verification code

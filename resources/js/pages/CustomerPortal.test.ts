@@ -72,6 +72,15 @@ describe('Customer Portal public pages', () => {
         expect(verifyCode).toContain('CustomerPortalLayout');
     });
 
+    it('shares premium fields and actions across the complete verification journey', () => {
+        expect(requestAccess).toContain('public-field');
+        expect(requestAccess).toContain('public-button-primary');
+        expect(verifyCode).toContain('public-field');
+        expect(verifyCode).toContain('public-button-primary');
+        expect(verifyCode).toContain('tracking-[0.32em]');
+        expect(index).toContain('public-button-primary');
+    });
+
     it('requests only a phone number without account or record-existence language', () => {
         expect(requestAccess).toContain('Access your service requests');
         expect(requestAccess).toContain('Phone number');

@@ -385,7 +385,8 @@ const submitPendingStatus = () => {
 
                         <div v-if="linkedRepairOrder" class="mt-4 space-y-3">
                             <div class="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
-                                This request is linked to repair order #{{ linkedRepairOrder.id }}.
+                                <div>This request is linked to repair order #{{ linkedRepairOrder.id }}.</div>
+                                <div class="mt-1 font-medium">Repair order status: {{ linkedRepairOrder.status.label }}</div>
                             </div>
                             <Button as-child class="w-full">
                                 <Link :href="linkedRepairOrder.showUrl">

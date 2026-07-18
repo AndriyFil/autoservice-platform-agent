@@ -238,6 +238,32 @@ class DashboardTest extends TestCase
                 ->where('bookingRequests.1.vehicle', null));
     }
 
+    public function test_dashboard_uses_public_vehicle_snapshot_without_linked_vehicle(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop);
+        $bookingRequest->update([
+            'vehicle_id' => null,
+            'vehicle_brand' => 'Opel',
+            'vehicle_model' => 'Insignia',
+            'vehicle_license_plate' => 'AA 1234 BB',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('bookingRequests.0.vehicle', [
+                    'brand' => 'Opel',
+                    'model' => 'Insignia',
+                    'licensePlate' => 'AA 1234 BB',
+                ]));
+    }
+
     public function test_dashboard_includes_new_public_intake_requests_for_active_workshop(): void
     {
         $user = User::factory()->create();

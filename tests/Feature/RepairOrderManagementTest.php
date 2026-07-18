@@ -131,6 +131,130 @@ class RepairOrderManagementTest extends TestCase
                 ->where('sourceBookingRequest.preferredDate', '2026-06-20'));
     }
 
+    public function test_repair_order_create_page_prefills_a_new_vehicle_when_request_vehicle_does_not_match(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Opel Driver',
+            'phone' => '+1 555 123 4567',
+            'normalized_phone' => '15551234567',
+        ]);
+        Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'Opel',
+            'model' => 'Insignia',
+            'year' => 1999,
+            'license_plate' => null,
+        ]);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => 'Opel Driver',
+            'customer_phone' => '+1 555 123 4567',
+        ]);
+        $bookingRequest->update([
+            'vehicle_brand' => 'Opel',
+            'vehicle_model' => 'Insignia',
+            'vehicle_year' => 2010,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('defaults.customer_id', (string) $customer->id)
+                ->where('defaults.vehicle_id', '')
+                ->where('defaults.new_vehicle.make', 'Opel')
+                ->where('defaults.new_vehicle.model', 'Insignia')
+                ->where('defaults.new_vehicle.year', 2010)
+                ->where('defaults.new_vehicle.plate', ''));
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->post(route('dashboard.repair-orders.store'), [
+                'booking_request_id' => $bookingRequest->id,
+                'problem_description' => $bookingRequest->problem_description,
+                'new_vehicle' => [
+                    'make' => 'Opel',
+                    'model' => 'Insignia',
+                    'year' => 2010,
+                    'plate' => '',
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $repairOrder = RepairOrder::query()->firstOrFail();
+
+        $this->assertDatabaseCount('vehicles', 2);
+        $this->assertSame(2010, $repairOrder->vehicle?->year);
+    }
+
+    public function test_repair_order_create_page_selects_an_exact_request_vehicle_match(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $customer = Customer::create([
+            'workshop_id' => $workshop->id,
+            'name' => 'Opel Driver',
+            'phone' => '+1 555 123 4567',
+            'normalized_phone' => '15551234567',
+        ]);
+        Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'Opel',
+            'model' => 'Insignia',
+            'year' => 1999,
+            'license_plate' => null,
+        ]);
+        $matchingVehicle = Vehicle::create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $customer->id,
+            'brand' => 'opel',
+            'model' => 'insignia',
+            'year' => 2010,
+            'license_plate' => 'AA 1234 BB',
+        ]);
+        $bookingRequest = $this->createBookingRequest($workshop, [
+            'status' => BookingRequestStatus::Confirmed,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'customer_name' => 'Opel Driver',
+            'customer_phone' => '+1 555 123 4567',
+        ]);
+        $bookingRequest->update([
+            'vehicle_brand' => 'Opel',
+            'vehicle_model' => 'Insignia',
+            'vehicle_year' => 2010,
+            'vehicle_license_plate' => 'AA1234BB',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.repair-orders.create', [
+                'booking_request' => $bookingRequest->id,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('defaults.vehicle_id', (string) $matchingVehicle->id)
+                ->where('defaults.new_vehicle.make', '')
+                ->where('defaults.new_vehicle.model', '')
+                ->where('defaults.new_vehicle.year', null)
+                ->where('defaults.new_vehicle.plate', ''));
+    }
+
     public function test_staff_can_open_repair_order_create_page_from_new_booking_request(): void
     {
         $user = User::factory()->create();

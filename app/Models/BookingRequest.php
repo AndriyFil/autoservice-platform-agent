@@ -31,6 +31,10 @@ class BookingRequest extends Model
         'problem_description',
         'original_message',
         'preferred_date',
+        'vehicle_brand',
+        'vehicle_model',
+        'vehicle_year',
+        'vehicle_license_plate',
         'status',
     ];
 
@@ -55,6 +59,7 @@ class BookingRequest extends Model
     {
         return [
             'preferred_date' => 'date',
+            'vehicle_year' => 'integer',
             'status' => BookingRequestStatus::class,
         ];
     }

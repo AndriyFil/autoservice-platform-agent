@@ -33,12 +33,7 @@ const form = useForm({
     booking_request_id: props.defaults.booking_request_id,
     problem_description: props.defaults.problem_description,
     requires_estimate_approval: props.defaults.requires_estimate_approval,
-    new_vehicle: {
-        make: '',
-        model: '',
-        year: '',
-        plate: '',
-    },
+    new_vehicle: { ...props.defaults.new_vehicle },
 });
 
 const selectedCustomer = computed(() => props.customers.find((customer) => customer.id === Number(form.customer_id)) ?? null);

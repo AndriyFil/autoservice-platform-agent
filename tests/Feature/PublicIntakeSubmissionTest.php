@@ -5,9 +5,8 @@ namespace Tests\Feature;
 use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Models\BookingRequest;
 use App\Models\Workshop;
-use App\Support\Intake\IntakeExtractionResult;
-use App\Support\Intake\IntakeExtractorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -16,318 +15,316 @@ class PublicIntakeSubmissionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_home_page_is_not_a_workshop_less_intake_form(): void
+    public function test_homepage_contains_global_intake_with_available_workshops(): void
     {
+        $second = Workshop::factory()->create(['name' => 'Second Auto']);
+        $first = Workshop::factory()->create(['name' => 'Alpha Auto']);
+
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Welcome')
-                ->has('canLogin')
-                ->has('canRegister')
-                ->missing('intakeSubmitted')
-                ->missing('workshops'));
+                ->where('intakeSubmitted', false)
+                ->where('workshops', [
+                    ['id' => $first->id, 'name' => 'Alpha Auto'],
+                    ['id' => $second->id, 'name' => 'Second Auto'],
+                ]));
+
+        $this->assertDatabaseCount('booking_requests', 0);
     }
 
-    public function test_guest_can_open_workshop_public_intake_page(): void
+    public function test_homepage_exposes_verified_customer_history_without_phone_data(): void
     {
-        $workshop = Workshop::factory()->create([
-            'name' => 'Main Auto',
-            'slug' => 'main-auto',
+        $workshop = Workshop::factory()->create(['name' => 'Main Auto']);
+        $owned = BookingRequest::factory()->for($workshop)->create([
+            'customer_phone' => '+380501112233',
+            'problem_description' => 'Brake noise',
+        ]);
+        BookingRequest::factory()->for($workshop)->create([
+            'customer_phone' => '+380509999999',
+            'problem_description' => 'Private request',
         ]);
 
-        $this->get('/w/main-auto')
+        $this->withSession([
+            'customer_portal.verified_phone' => '+380501112233',
+            'customer_portal.verified_until' => now()->addMinutes(10)->timestamp,
+        ])->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('PublicIntake')
-                ->where('workshop.name', 'Main Auto')
-                ->where('workshop.slug', 'main-auto')
-                ->where('intakeSubmitted', false)
-                ->missing('workshops'));
+                ->component('Welcome')
+                ->has('recentRequests', 1)
+                ->where('recentRequests.0.id', $owned->id)
+                ->where('recentRequests.0.title', 'Brake noise')
+                ->where('recentRequests.0.workshopName', 'Main Auto')
+                ->where('hasMoreRequests', false)
+                ->missing('verifiedPhone')
+                ->missing('phone'));
     }
 
-    public function test_guest_can_submit_natural_message_to_route_workshop_without_account(): void
+    public function test_homepage_omits_verified_customer_history_for_an_expired_session(): void
     {
-        $workshop = Workshop::factory()->create([
-            'slug' => 'main-auto',
+        BookingRequest::factory()->create([
+            'customer_phone' => '+380501112233',
+            'problem_description' => 'Brake noise',
         ]);
-        $message = 'Opel Insignia, check engine light came on, maybe sensors, when can I come?';
+
+        $this->withSession([
+            'customer_portal.verified_phone' => '+380501112233',
+            'customer_portal.verified_until' => now()->subMinute()->timestamp,
+        ])->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Welcome')
+                ->missing('recentRequests')
+                ->missing('hasMoreRequests'));
+    }
+
+    public function test_workshop_is_required_on_final_submission(): void
+    {
+        Workshop::factory()->create();
+
+        $this->from('/')->post('/intake', $this->validPayload(['workshop_id' => null]))
+            ->assertSessionHasErrors('workshop_id')
+            ->assertRedirect('/');
+
+        $this->assertDatabaseCount('booking_requests', 0);
+    }
+
+    public function test_invalid_workshop_is_rejected(): void
+    {
+        $this->from('/')->post('/intake', $this->validPayload(['workshop_id' => 999999]))
+            ->assertSessionHasErrors('workshop_id')
+            ->assertRedirect('/');
+
+        $this->assertDatabaseCount('booking_requests', 0);
+    }
+
+    public function test_selected_workshop_receives_booking_request_with_vehicle_snapshots(): void
+    {
+        $otherWorkshop = Workshop::factory()->create();
+        $selectedWorkshop = Workshop::factory()->create();
+        $message = 'Opel Insignia, check engine light came on.';
         $phone = '+38 (050) 111-22-33';
 
-        $response = $this->post('/w/main-auto/intake', [
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $selectedWorkshop->id,
             'message' => $message,
             'phone' => $phone,
-        ]);
-
-        $response
+            'vehicle' => [
+                'brand' => ' Opel ',
+                'model' => ' Insignia ',
+                'year' => 2018,
+                'license_plate' => ' AA 1234 BB ',
+            ],
+        ]))
             ->assertSessionHasNoErrors()
             ->assertSessionHas('intake_submitted', true)
-            ->assertRedirect('/w/main-auto');
+            ->assertRedirect('/');
 
-        $bookingRequest = BookingRequest::first();
+        $bookingRequest = BookingRequest::query()->sole();
 
         $this->assertGuest();
-        $this->assertDatabaseCount('booking_requests', 1);
-        $this->assertDatabaseCount('vehicles', 0);
-        $this->assertDatabaseCount('repair_orders', 0);
-        $this->assertNotNull($bookingRequest);
-        $this->assertSame($workshop->id, $bookingRequest->workshop_id);
+        $this->assertSame($selectedWorkshop->id, $bookingRequest->workshop_id);
+        $this->assertNotSame($otherWorkshop->id, $bookingRequest->workshop_id);
+        $this->assertNull($bookingRequest->customer_id);
+        $this->assertNull($bookingRequest->vehicle_id);
+        $this->assertNull($bookingRequest->created_by_user_id);
         $this->assertSame($phone, $bookingRequest->customer_phone);
         $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame($message, $bookingRequest->problem_description);
+        $this->assertSame('Opel', $bookingRequest->vehicle_brand);
+        $this->assertSame('Insignia', $bookingRequest->vehicle_model);
+        $this->assertSame(2018, $bookingRequest->vehicle_year);
+        $this->assertSame('AA 1234 BB', $bookingRequest->vehicle_license_plate);
         $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
     }
 
-    public function test_public_intake_succeeds_with_message_and_phone_only(): void
+    public function test_original_message_preserves_customer_whitespace_exactly(): void
     {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
+        $workshop = Workshop::factory()->create();
+        $message = '  Opel Insignia, check engine light came on.  ';
 
-        $this->post('/w/main-auto/intake', [
-            'message' => 'Need help with a check engine light.',
-            'phone' => '+1 (555) 123-4567',
-        ])->assertSessionHasNoErrors();
-
-        $bookingRequest = BookingRequest::sole();
-
-        $this->assertSame('Need help with a check engine light.', $bookingRequest->original_message);
-        $this->assertSame('+1 (555) 123-4567', $bookingRequest->customer_phone);
-        $this->assertSame('+15551234567', $bookingRequest->customer_phone_normalized);
-        $this->assertNull($bookingRequest->customer_name);
-        $this->assertNull($bookingRequest->vehicle_id);
-        $this->assertNull($bookingRequest->preferred_date);
-    }
-
-    public function test_public_intake_fails_without_phone(): void
-    {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
-
-        $this->from('/w/main-auto')->post('/w/main-auto/intake', [
-            'message' => 'Need help with a check engine light.',
-        ])
-            ->assertSessionHasErrors('phone')
-            ->assertRedirect('/w/main-auto');
-
-        $this->assertDatabaseCount('booking_requests', 0);
-    }
-
-    public function test_blank_public_intake_message_is_rejected_without_creating_booking_request(): void
-    {
-        $workshop = Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
-
-        $response = $this->from('/w/main-auto')->post('/w/main-auto/intake', [
-            'message' => '     ',
-            'phone' => '+1 (555) 123-4567',
-        ]);
-
-        $response
-            ->assertSessionHasErrors('message')
-            ->assertRedirect('/w/main-auto');
-
-        $this->assertDatabaseCount('booking_requests', 0);
-    }
-
-    public function test_public_intake_stores_original_message_unchanged_with_new_status(): void
-    {
-        $workshop = Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
-        $message = '  Opel Insignia, check engine light came on. Call +38 (050) 111-22-33 please.  ';
-
-        $this->post('/w/main-auto/intake', [
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
             'message' => $message,
-            'phone' => '+38 (050) 111-22-33',
-        ])->assertSessionHasNoErrors();
+        ]))->assertSessionHasNoErrors();
 
-        $bookingRequest = BookingRequest::first();
+        $bookingRequest = BookingRequest::query()->sole();
 
-        $this->assertNotNull($bookingRequest);
-        $this->assertSame($workshop->id, $bookingRequest->workshop_id);
-        $this->assertNull($bookingRequest->customer_id);
-        $this->assertSame('+38 (050) 111-22-33', $bookingRequest->customer_phone);
-        $this->assertSame('+380501112233', $bookingRequest->customer_phone_normalized);
         $this->assertSame($message, $bookingRequest->original_message);
         $this->assertSame(trim($message), $bookingRequest->problem_description);
-        $this->assertSame(BookingRequestStatus::New, $bookingRequest->status);
-    }
-
-    public function test_intake_action_patches_optional_summary_without_creating_customer_vehicle_or_repair_order(): void
-    {
-        $workshop = Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
-        $message = 'Honda Civic makes noise. Call +1 (555) 123-4567.';
-
-        $this->app->bind(IntakeExtractorInterface::class, fn () => new class implements IntakeExtractorInterface
-        {
-            public function extract(string $message): IntakeExtractionResult
-            {
-                return new IntakeExtractionResult(
-                    phone: '15551234567',
-                    vehicleMake: 'Honda',
-                    vehicleModel: 'Civic',
-                    vehiclePlate: 'ABC123',
-                    preferredTimeText: 'Tomorrow',
-                    problemSummary: 'Honda Civic makes noise.',
-                    missingNextField: null,
-                    confidence: 0.9,
-                );
-            }
-        });
-
-        $this->post('/w/main-auto/intake', [
-            'message' => $message,
-            'phone' => '+1 (555) 765-4321',
-        ])->assertSessionHasNoErrors();
-
-        $bookingRequest = BookingRequest::first();
-
-        $this->assertNotNull($bookingRequest);
-        $this->assertSame($message, $bookingRequest->original_message);
-        $this->assertSame($workshop->id, $bookingRequest->workshop_id);
-        $this->assertNull($bookingRequest->customer_id);
-        $this->assertNull($bookingRequest->vehicle_id);
-        $this->assertNull($bookingRequest->created_by_user_id);
-        $this->assertSame('+1 (555) 765-4321', $bookingRequest->customer_phone);
-        $this->assertSame('+15557654321', $bookingRequest->customer_phone_normalized);
-        $this->assertSame('Honda Civic makes noise.', $bookingRequest->problem_description);
-        $this->assertNull($bookingRequest->preferred_date);
-        $this->assertDatabaseCount('repair_orders', 0);
-        $this->assertDatabaseCount('vehicles', 0);
-    }
-
-    public function test_public_intake_creates_booking_request_before_optional_enrichment_can_fail(): void
-    {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
-
-        $this->app->bind(IntakeExtractorInterface::class, fn () => new class implements IntakeExtractorInterface
-        {
-            public function extract(string $message): IntakeExtractionResult
-            {
-                throw new \RuntimeException('OpenAI unavailable');
-            }
-        });
-
-        $message = 'Mazda needs service next week.';
-
-        $this->post('/w/main-auto/intake', [
-            'message' => $message,
-            'phone' => '+1 (555) 123-4567',
-        ])->assertSessionHasNoErrors();
-
-        $bookingRequest = BookingRequest::sole();
-
-        $this->assertSame($message, $bookingRequest->original_message);
-        $this->assertSame($message, $bookingRequest->problem_description);
-        $this->assertSame('+1 (555) 123-4567', $bookingRequest->customer_phone);
-        $this->assertSame('+15551234567', $bookingRequest->customer_phone_normalized);
     }
 
     public function test_public_intake_never_creates_unassigned_booking_request(): void
     {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
+        $workshop = Workshop::factory()->create();
 
-        $this->post('/w/main-auto/intake', [
-            'message' => 'Toyota Corolla needs oil service next week.',
-            'phone' => '+1 (555) 123-4567',
-        ])->assertSessionHasNoErrors();
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
+        ]))->assertSessionHasNoErrors();
 
         $this->assertSame(0, BookingRequest::query()->whereNull('workshop_id')->count());
     }
 
-    public function test_public_intake_response_supports_inertia_submitted_state(): void
+    public function test_public_intake_does_not_create_related_domain_records(): void
     {
-        Workshop::factory()->create([
-            'name' => 'Main Auto',
-            'slug' => 'main-auto',
-        ]);
+        $workshop = Workshop::factory()->create();
 
-        $this->post('/w/main-auto/intake', [
-            'message' => 'Toyota Corolla needs oil service next week.',
-            'phone' => '+1 (555) 123-4567',
-        ])->assertRedirect('/w/main-auto');
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
+        ]))->assertSessionHasNoErrors();
 
-        $this->get('/w/main-auto')
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('PublicIntake')
-                ->where('workshop.name', 'Main Auto')
-                ->where('intakeSubmitted', true));
+        $this->assertDatabaseCount('customers', 0);
+        $this->assertDatabaseCount('users', 0);
+        $this->assertDatabaseCount('vehicles', 0);
+        $this->assertDatabaseCount('repair_orders', 0);
     }
 
-    public function test_public_intake_success_screen_uses_neutral_confirmation_message(): void
+    public function test_booking_request_workshop_column_is_not_nullable(): void
     {
-        $pageSource = file_get_contents(resource_path('js/pages/PublicIntake.vue'));
+        $isNullable = DB::table('information_schema.columns')
+            ->where('table_schema', 'public')
+            ->where('table_name', 'booking_requests')
+            ->where('column_name', 'workshop_id')
+            ->value('is_nullable');
 
-        $this->assertIsString($pageSource);
-        $this->assertStringContainsString(
-            'Заявку отримано. Менеджер звʼяжеться з вами, щоб уточнити деталі та домовитись про час візиту.',
-            $pageSource,
+        $this->assertSame('NO', $isNullable);
+    }
+
+    public function test_snapshot_migration_refuses_legacy_unassigned_booking_requests(): void
+    {
+        DB::statement('ALTER TABLE booking_requests ALTER COLUMN workshop_id DROP NOT NULL');
+        DB::table('booking_requests')->insert([
+            'workshop_id' => null,
+            'customer_id' => null,
+            'vehicle_id' => null,
+            'created_by_user_id' => null,
+            'customer_name' => null,
+            'customer_phone' => '+1 (555) 123-4567',
+            'customer_phone_normalized' => '+15551234567',
+            'problem_description' => 'Legacy unassigned request.',
+            'original_message' => 'Legacy unassigned request.',
+            'preferred_date' => null,
+            'status' => BookingRequestStatus::New->value,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $migration = require database_path(
+            'migrations/2026_07_13_000002_add_vehicle_snapshots_to_booking_requests_table.php'
         );
-        $this->assertStringNotContainsString('додати авто', $pageSource);
-        $this->assertStringNotContainsString('бажаний час', $pageSource);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Cannot enforce booking_requests.workshop_id NOT NULL because legacy unassigned booking requests exist.'
+        );
+
+        $migration->up();
     }
 
-    public function test_filled_honeypot_field_rejects_submission_without_creating_booking_request(): void
+    public function test_vehicle_details_are_optional(): void
     {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
+        $workshop = Workshop::factory()->create();
 
-        $response = $this->from('/w/main-auto')->post('/w/main-auto/intake', [
-            'message' => 'Toyota Corolla needs oil service next week.',
-            'phone' => '+1 (555) 123-4567',
-            'website' => 'https://spam.example',
-        ]);
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
+            'vehicle' => [],
+        ]))->assertSessionHasNoErrors();
 
-        $response
-            ->assertSessionHasErrors('website')
-            ->assertRedirect('/w/main-auto');
+        $bookingRequest = BookingRequest::query()->sole();
+
+        $this->assertNull($bookingRequest->vehicle_brand);
+        $this->assertNull($bookingRequest->vehicle_model);
+        $this->assertNull($bookingRequest->vehicle_year);
+        $this->assertNull($bookingRequest->vehicle_license_plate);
+    }
+
+    public function test_malformed_vehicle_payload_is_rejected(): void
+    {
+        $workshop = Workshop::factory()->create();
+
+        $this->from('/')->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
+            'vehicle' => 'Opel Insignia',
+        ]))
+            ->assertSessionHasErrors('vehicle')
+            ->assertRedirect('/');
 
         $this->assertDatabaseCount('booking_requests', 0);
     }
 
-    public function test_empty_honeypot_field_does_not_block_submission(): void
+    public function test_blank_message_and_invalid_phone_are_rejected(): void
     {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
+        $workshop = Workshop::factory()->create();
 
-        $this->post('/w/main-auto/intake', [
-            'message' => 'Toyota Corolla needs oil service next week.',
-            'phone' => '+1 (555) 123-4567',
+        $this->from('/')->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
+            'message' => '   ',
+            'phone' => '123',
+        ]))
+            ->assertSessionHasErrors(['message', 'phone'])
+            ->assertRedirect('/');
+
+        $this->assertDatabaseCount('booking_requests', 0);
+    }
+
+    public function test_honeypot_rejects_submission(): void
+    {
+        $workshop = Workshop::factory()->create();
+
+        $this->from('/')->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
+            'website' => 'https://spam.example',
+        ]))
+            ->assertSessionHasErrors('website')
+            ->assertRedirect('/');
+
+        $this->assertDatabaseCount('booking_requests', 0);
+    }
+
+    public function test_empty_honeypot_is_accepted_and_success_state_is_exposed(): void
+    {
+        $workshop = Workshop::factory()->create();
+
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
             'website' => '',
-        ])->assertSessionHasNoErrors();
+        ]))->assertRedirect('/');
 
-        $this->assertDatabaseCount('booking_requests', 1);
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Welcome')
+                ->where('intakeSubmitted', true));
+    }
+
+    public function test_workshop_specific_and_legacy_booking_routes_are_removed(): void
+    {
+        $workshop = Workshop::factory()->create(['slug' => 'main-auto']);
+
+        $this->get('/w/main-auto')->assertNotFound();
+        $this->post('/w/main-auto/intake', $this->validPayload(['workshop_id' => $workshop->id]))
+            ->assertNotFound();
+        $this->get('/book/main-auto')->assertNotFound();
+        $this->post('/book/main-auto', [])->assertNotFound();
     }
 
     public function test_public_intake_submission_is_rate_limited(): void
     {
-        Workshop::factory()->create([
-            'slug' => 'main-auto',
-        ]);
+        $workshop = Workshop::factory()->create();
 
         for ($attempt = 1; $attempt <= 10; $attempt++) {
-            $this->post('/w/main-auto/intake', [
+            $this->post('/intake', $this->validPayload([
+                'workshop_id' => $workshop->id,
                 'message' => "Toyota Corolla needs oil service, attempt {$attempt}.",
-                'phone' => '+1 (555) 123-4567',
-            ])->assertRedirect('/w/main-auto');
+            ]))->assertRedirect('/');
         }
 
-        $this->post('/w/main-auto/intake', [
+        $this->post('/intake', $this->validPayload([
+            'workshop_id' => $workshop->id,
             'message' => 'Toyota Corolla needs oil service, attempt 11.',
-            'phone' => '+1 (555) 123-4567',
-        ])->assertStatus(429);
+        ]))->assertStatus(429);
 
         $this->assertDatabaseCount('booking_requests', 10);
     }
@@ -341,5 +338,25 @@ class PublicIntakeSubmissionTest extends TestCase
         $this->assertNotContains('recommendation', $columns);
         $this->assertNotContains('recommended_repairs', $columns);
         $this->assertNotContains('estimated_price', $columns);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validPayload(array $overrides = []): array
+    {
+        return array_replace_recursive([
+            'message' => 'Need help with a check engine light.',
+            'phone' => '+1 (555) 123-4567',
+            'workshop_id' => null,
+            'vehicle' => [
+                'brand' => null,
+                'model' => null,
+                'year' => null,
+                'license_plate' => null,
+            ],
+            'website' => '',
+        ], $overrides);
     }
 }

@@ -12,7 +12,10 @@ class CustomerRequestShowQuery
         $request = BookingRequest::query()
             ->whereKey($bookingRequestId)
             ->where('customer_phone_normalized', $verifiedPhone)
-            ->with('workshop:id,name')
+            ->with([
+                'workshop:id,name',
+                'repairOrder:id,booking_request_id,status,opened_at,created_at,updated_at',
+            ])
             ->firstOrFail();
 
         $title = trim((string) ($request->problem_description ?: $request->original_message));
@@ -32,6 +35,17 @@ class CustomerRequestShowQuery
                 'year' => $request->vehicle_year,
                 'licensePlate' => $request->vehicle_license_plate,
             ], static fn ($value): bool => $value !== null && $value !== ''),
+            'repairOrder' => $request->repairOrder
+                ? [
+                    'id' => $request->repairOrder->id,
+                    'status' => [
+                        'value' => $request->repairOrder->status->value,
+                        'label' => $request->repairOrder->status->label(),
+                    ],
+                    'openedAt' => ($request->repairOrder->opened_at ?? $request->repairOrder->created_at)->toIso8601String(),
+                    'updatedAt' => $request->repairOrder->updated_at->toIso8601String(),
+                ]
+                : null,
         ];
     }
 }

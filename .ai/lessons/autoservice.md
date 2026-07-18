@@ -151,3 +151,9 @@ Agents must check this file before non-trivial tasks and apply any relevant less
 - Correction: The latest estimate shown near estimate generation must be a real link to the generated PDF when a document exists, and estimate approval should save directly on checkbox toggle without a separate Save button.
 - Lesson: Treat compact estimate summaries as actionable controls, not static text. For per-order boolean settings like estimate approval, prefer direct checkbox autosave with translated saving/saved feedback.
 - Applies when: Implementing or reviewing repair-order estimate action areas, estimate PDF links, approval requirement UI, or dashboard boolean settings.
+
+## 2026-07-13 - Public Intake Uses One Global Same-Page Flow
+
+- Correction: Public intake starts at `/`; customers select a workshop within the same multi-step flow before final submission, without redirecting to a workshop-specific page.
+- Lesson: Supersede the 2026-06-26 landing-page direction and the 2026-06-29 workshop-specific URL direction. Keep workshop selection in the global form, resolve it on the server, and create only a workshop-scoped `BookingRequest` on final submit. Do not restore `/w/{slug}` intake routes or create unassigned requests.
+- Applies when: Implementing or reviewing public intake routing, workshop selection, `BookingRequest` creation, workshop settings, product UX, architecture docs, or tests.

@@ -22,7 +22,7 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout title="Forgot password" description="Enter your email to receive a password reset link">
+    <AuthLayout title="Reset your password" description="Enter your staff email and we’ll send you a secure reset link.">
         <Head title="Forgot password" />
 
         <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
@@ -33,12 +33,21 @@ const submit = () => {
             <form @submit.prevent="submit">
                 <div class="grid gap-2">
                     <Label for="email">Email address</Label>
-                    <Input id="email" type="email" name="email" autocomplete="off" v-model="form.email" autofocus placeholder="email@example.com" />
+                    <Input
+                        id="email"
+                        v-model="form.email"
+                        class="public-field"
+                        type="email"
+                        name="email"
+                        autocomplete="off"
+                        autofocus
+                        placeholder="email@example.com"
+                    />
                     <InputError :message="form.errors.email" />
                 </div>
 
                 <div class="my-6 flex items-center justify-start">
-                    <Button class="w-full" :disabled="form.processing">
+                    <Button class="public-button-primary min-h-12 w-full" :disabled="form.processing">
                         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                         Email password reset link
                     </Button>

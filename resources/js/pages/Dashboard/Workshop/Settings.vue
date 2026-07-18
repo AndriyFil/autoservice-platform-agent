@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import PublicIntakeLink from '@/components/workshop/PublicIntakeLink.vue';
 import WorkshopSettingsForm from '@/components/workshop/WorkshopSettingsForm.vue';
 import WorkshopStaffManagement from '@/components/workshop/WorkshopStaffManagement.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -32,7 +31,6 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <WorkshopSettingsForm :workshop="workshop" />
-            <PublicIntakeLink :workshop="workshop" />
             <WorkshopStaffManagement :staff-members="staffMembers" :role-options="roleOptions" />
         </div>
     </AppLayout>

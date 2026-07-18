@@ -31,14 +31,14 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout title="Reset password" description="Please enter your new password below">
+    <AuthLayout title="Choose a new password" description="Use a strong password for your workshop staff account.">
         <Head title="Reset password" />
 
         <form @submit.prevent="submit">
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="email">Email</Label>
-                    <Input id="email" type="email" name="email" autocomplete="email" v-model="form.email" class="mt-1 block w-full" readonly />
+                    <Input id="email" v-model="form.email" class="public-field" type="email" name="email" autocomplete="email" readonly />
                     <InputError :message="form.errors.email" class="mt-2" />
                 </div>
 
@@ -50,7 +50,7 @@ const submit = () => {
                         name="password"
                         autocomplete="new-password"
                         v-model="form.password"
-                        class="mt-1 block w-full"
+                        class="public-field"
                         autofocus
                         placeholder="Password"
                     />
@@ -65,13 +65,13 @@ const submit = () => {
                         name="password_confirmation"
                         autocomplete="new-password"
                         v-model="form.password_confirmation"
-                        class="mt-1 block w-full"
+                        class="public-field"
                         placeholder="Confirm password"
                     />
                     <InputError :message="form.errors.password_confirmation" />
                 </div>
 
-                <Button type="submit" class="mt-4 w-full" :disabled="form.processing">
+                <Button type="submit" class="public-button-primary mt-2 min-h-12 w-full" :disabled="form.processing">
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     Reset password
                 </Button>

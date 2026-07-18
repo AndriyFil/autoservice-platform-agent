@@ -47,12 +47,13 @@ class AdminWorkflowTest extends TestCase
         $customerPhone = '+38 (050) 111-22-33';
 
         $this
-            ->post(route('public-intake.store', $workshop), [
+            ->post(route('public-intake.store'), [
                 'message' => $customerMessage,
                 'phone' => $customerPhone,
+                'workshop_id' => $workshop->id,
             ])
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('public-intake.create', $workshop));
+            ->assertRedirect(route('home'));
 
         $bookingRequest = BookingRequest::query()->sole();
 

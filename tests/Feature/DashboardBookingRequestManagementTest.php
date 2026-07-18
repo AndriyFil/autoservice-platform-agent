@@ -88,6 +88,35 @@ class DashboardBookingRequestManagementTest extends TestCase
                 ->where('availableStatusTransitions.1.value', 'cancelled'));
     }
 
+    public function test_booking_request_details_use_public_vehicle_snapshot_without_linked_vehicle(): void
+    {
+        $user = User::factory()->create();
+        $workshop = Workshop::factory()->create();
+        $this->createMembership($user, $workshop);
+        $bookingRequest = $this->createBookingRequest($workshop);
+        $bookingRequest->update([
+            'vehicle_id' => null,
+            'vehicle_brand' => 'Opel',
+            'vehicle_model' => 'Insignia',
+            'vehicle_year' => 2018,
+            'vehicle_license_plate' => 'AA 1234 BB',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['active_workshop_id' => $workshop->id])
+            ->get(route('dashboard.booking-requests.show', $bookingRequest))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('bookingRequest.vehicle', [
+                    'brand' => 'Opel',
+                    'model' => 'Insignia',
+                    'year' => 2018,
+                    'licensePlate' => 'AA 1234 BB',
+                ])
+                ->where('bookingRequest.extractedData.vehicle', 'Opel Insignia 2018 AA 1234 BB'));
+    }
+
     public function test_booking_request_show_exposes_one_create_action_without_confirm_transition(): void
     {
         $user = User::factory()->create();
@@ -299,6 +328,8 @@ class DashboardBookingRequestManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('linkedRepairOrder.id', $repairOrder->id)
+                ->where('linkedRepairOrder.status.value', RepairOrderStatus::Draft->value)
+                ->where('linkedRepairOrder.status.label', RepairOrderStatus::Draft->label())
                 ->where('linkedRepairOrder.showUrl', route('dashboard.repair-orders.show', $repairOrder))
                 ->where('canCreateRepairOrder', false));
     }

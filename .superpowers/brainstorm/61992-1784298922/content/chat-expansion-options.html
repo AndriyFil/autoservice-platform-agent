@@ -1,0 +1,100 @@
+<style>
+  .choice-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:18px; }
+  .choice-card { cursor:pointer; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--card); transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+  .choice-card:hover { transform:translateY(-2px); box-shadow:0 12px 28px color-mix(in srgb,var(--foreground) 10%,transparent); }
+  .choice-card.is-selected { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 22%,transparent); }
+  .preview { min-height:330px; padding:18px; background:color-mix(in srgb,var(--muted) 55%,var(--background)); display:flex; flex-direction:column; gap:14px; }
+  .browserbar { height:20px; border-radius:8px; background:color-mix(in srgb,var(--border) 70%,transparent); }
+  .stage { flex:1; border-radius:12px; background:var(--background); border:1px solid var(--border); padding:14px; display:flex; flex-direction:column; }
+  .brandline { height:12px; width:34%; border-radius:999px; background:color-mix(in srgb,var(--foreground) 18%,transparent); }
+  .mini-chat { width:82%; margin:auto; display:flex; flex-direction:column; gap:10px; }
+  .mini-chat.compact { margin-top:auto; margin-bottom:auto; }
+  .chat-shell { height:195px; border:1px solid var(--border); border-radius:16px; padding:12px; display:flex; flex-direction:column; justify-content:flex-end; gap:10px; background:var(--card); }
+  .chat-shell.short { height:145px; }
+  .bubble { height:22px; border-radius:10px; background:color-mix(in srgb,var(--primary) 14%,var(--card)); width:54%; }
+  .bubble.user { margin-left:auto; width:42%; background:color-mix(in srgb,var(--viz-series-1) 20%,var(--card)); }
+  .composer { height:38px; border:1px solid var(--input); border-radius:999px; background:var(--card); display:flex; align-items:center; padding:0 8px 0 14px; gap:8px; }
+  .composer-line { height:8px; flex:1; border-radius:999px; background:color-mix(in srgb,var(--muted-foreground) 25%,transparent); }
+  .send { width:25px; height:25px; border-radius:50%; background:var(--primary); }
+  .motion { display:flex; justify-content:center; align-items:center; gap:7px; color:var(--muted-foreground); font-size:12px; }
+  .motion-line { width:58px; height:2px; background:linear-gradient(90deg,transparent,var(--primary)); position:relative; }
+  .motion-line:after { content:'›'; position:absolute; right:-2px; top:-10px; color:var(--primary); font-size:17px; }
+  .inline-thread { flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:10px; width:82%; margin:0 auto; }
+  .dock { border-top:1px solid var(--border); padding-top:10px; }
+  .side-layout { flex:1; display:grid; grid-template-columns:minmax(0,1fr) 34%; gap:9px; margin-top:12px; }
+  .side-panel { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:10px; }
+  .side-line { height:8px; border-radius:999px; margin-bottom:9px; background:color-mix(in srgb,var(--muted-foreground) 18%,transparent); }
+  .card-copy { padding:14px; }
+  .card-copy h3 { margin:0 0 6px; }
+  .card-copy p { margin:0; color:var(--muted-foreground); }
+  .recommended { display:inline-flex; margin-bottom:8px; padding:3px 8px; border-radius:999px; background:color-mix(in srgb,var(--primary) 14%,transparent); color:var(--foreground); font-size:12px; font-weight:500; }
+  @media (max-width:900px) { .choice-grid { grid-template-columns:1fr; } .preview { min-height:300px; } }
+</style>
+
+<h2>Як має розкриватися чат після Send?</h2>
+<p class="subtitle">Усі варіанти прибирають різкий full-screen стрибок. Натисни на той, який виглядає правильним.</p>
+
+<div class="choice-grid">
+  <div class="choice-card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="browserbar"></div>
+      <div class="stage">
+        <div class="brandline"></div>
+        <div class="mini-chat compact">
+          <div class="composer"><div class="composer-line"></div><div class="send"></div></div>
+          <div class="motion"><span>Send</span><span class="motion-line"></span><span>320–380 px panel</span></div>
+          <div class="chat-shell short">
+            <div class="bubble"></div>
+            <div class="bubble user"></div>
+            <div class="composer"><div class="composer-line"></div><div class="send"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <span class="recommended">Рекомендовано</span>
+      <h3>A · Компактна chat-картка</h3>
+      <p>Поле плавно росте вгору до невеликої картки тієї ж ширини. Без trust panel і без full-screen.</p>
+    </div>
+  </div>
+
+  <div class="choice-card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="browserbar"></div>
+      <div class="stage">
+        <div class="brandline"></div>
+        <div class="inline-thread">
+          <div class="bubble"></div>
+          <div class="bubble user"></div>
+          <div class="bubble"></div>
+          <div class="dock"><div class="composer"><div class="composer-line"></div><div class="send"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>B · ChatGPT-потік без картки</h3>
+      <p>Повідомлення м’яко з’являються над тим самим полем. Мінімально, але сторінка поступово росте.</p>
+    </div>
+  </div>
+
+  <div class="choice-card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="browserbar"></div>
+      <div class="stage">
+        <div class="brandline"></div>
+        <div class="side-layout">
+          <div class="chat-shell">
+            <div class="bubble"></div>
+            <div class="bubble user"></div>
+            <div class="composer"><div class="composer-line"></div><div class="send"></div></div>
+          </div>
+          <div class="side-panel"><div class="side-line"></div><div class="side-line"></div><div class="side-line"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>C · Менша картка + trust panel</h3>
+      <p>Зберігає праву інформаційну панель, але layout все одно змінює ширину після Send.</p>
+    </div>
+  </div>
+</div>

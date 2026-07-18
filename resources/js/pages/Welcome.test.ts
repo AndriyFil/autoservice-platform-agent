@@ -20,8 +20,15 @@ describe('global customer intake', () => {
         expect(welcomeSource).toContain('PublicWorkspaceLayout');
         expect(welcomeSource).not.toContain('PublicHeader');
         expect(welcomeSource).not.toContain('PublicTrustPanel');
-        expect(welcomeSource).not.toContain('intakeExpanded');
         expect(welcomeSource).not.toContain('lg:grid-cols-[minmax(0,1fr)_18rem]');
+    });
+
+    it('expands the workspace after the intake conversation starts', () => {
+        expect(welcomeSource).toContain('const intakeExpanded = ref(false)');
+        expect(welcomeSource).toContain('@expanded-change="intakeExpanded = $event"');
+        expect(welcomeSource).toContain('intakeExpanded && !intakeSubmitted');
+        expect(welcomeSource).toContain("'h-[calc(100dvh-4rem)] items-stretch py-0 lg:h-dvh'");
+        expect(welcomeSource).toContain("'min-h-[calc(100dvh-4rem)] items-center py-8 lg:min-h-dvh'");
     });
 
     it('keeps customer and staff actions in the workspace navigation', () => {
@@ -31,6 +38,14 @@ describe('global customer intake', () => {
         expect(layoutSource).toContain(`route('customer-portal.index')`);
         expect(layoutSource).toContain('adminLoginUrl');
         expect(layoutSource).toContain('adminRegisterUrl');
+    });
+
+    it('keeps verified request history visible beside a new request', () => {
+        expect(welcomeSource).toContain("import CustomerRequestHistory from '@/components/public-portal/CustomerRequestHistory.vue'");
+        expect(welcomeSource).toContain('recentRequests?: CustomerRequestSummary[]');
+        expect(welcomeSource).toContain('hasMoreRequests?: boolean');
+        expect(welcomeSource).toContain('<template v-if="recentRequests && recentRequests.length > 0" #history>');
+        expect(welcomeSource).toContain('<CustomerRequestHistory :requests="recentRequests" :has-more="hasMoreRequests ?? false" />');
     });
 
     it('uses the shared public shell and truthful intake controls', () => {

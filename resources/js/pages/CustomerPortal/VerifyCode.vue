@@ -30,14 +30,14 @@ const submit = () => {
     <Head title="Check your phone" />
 
     <CustomerPortalLayout :can-login="canLogin" :can-register="canRegister" :admin-login-url="adminLoginUrl" :admin-register-url="adminRegisterUrl">
-        <div class="flex size-11 items-center justify-center rounded-lg bg-[#2f6471]/10 text-[#2f6471]">
+        <div class="flex size-12 items-center justify-center rounded-2xl bg-[#e9f3f2] text-[#0e7c86]">
             <KeyRound class="size-5" aria-hidden="true" />
         </div>
 
         <div class="mt-6">
-            <p class="text-sm font-medium text-[#2f6471]">Phone verification</p>
-            <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Check your phone</h1>
-            <p id="code-help" class="mt-3 text-sm leading-6 text-slate-600">
+            <p class="public-kicker">Phone verification</p>
+            <h1 class="mt-2 text-[1.75rem] font-bold leading-tight tracking-[-0.035em] text-[#0b1f33]">Check your phone</h1>
+            <p id="code-help" class="mt-3 text-[0.95rem] leading-6 text-[#607086]">
                 Enter the six-digit code sent to <span class="font-medium text-slate-800">{{ maskedPhone }}</span
                 >.
             </p>
@@ -49,7 +49,7 @@ const submit = () => {
                 <Input
                     id="code"
                     v-model="form.code"
-                    class="h-12 text-center font-mono text-lg tracking-[0.35em]"
+                    class="public-field h-14 text-center font-mono text-lg tracking-[0.32em]"
                     type="text"
                     name="code"
                     autocomplete="one-time-code"
@@ -66,7 +66,7 @@ const submit = () => {
                 </div>
             </div>
 
-            <Button type="submit" class="min-h-11 w-full bg-[#2f6471] font-semibold text-white hover:bg-[#285864]" :disabled="form.processing">
+            <Button type="submit" class="public-button-primary min-h-12 w-full" :disabled="form.processing">
                 <LoaderCircle v-if="form.processing" class="size-4 animate-spin" aria-hidden="true" />
                 <Check v-else class="size-4" aria-hidden="true" />
                 Verify phone
@@ -76,7 +76,7 @@ const submit = () => {
         <div class="mt-5 text-center">
             <Link
                 :href="route('customer-portal.access.create')"
-                class="inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+                class="public-focus inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#607086] transition hover:bg-[#f3f7f6] hover:text-[#0e7c86]"
             >
                 <ArrowLeft class="size-4" aria-hidden="true" />
                 Use a different phone number

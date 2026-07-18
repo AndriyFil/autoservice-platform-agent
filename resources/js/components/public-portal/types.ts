@@ -16,6 +16,15 @@ export type CustomerRequestDetail = CustomerRequestSummary & {
     problemDescription: string | null;
     customerName: string | null;
     vehicle: Partial<{ brand: string; model: string; year: number; licensePlate: string }>;
+    repairOrder: {
+        id: number;
+        status: {
+            value: 'draft' | 'in_progress' | 'completed' | 'cancelled';
+            label: string;
+        };
+        openedAt: string;
+        updatedAt: string;
+    } | null;
 };
 
 export type Paginated<T> = {

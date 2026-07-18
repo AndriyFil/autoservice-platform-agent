@@ -232,11 +232,15 @@ const submit = () => {
 </script>
 
 <template>
-    <section aria-labelledby="public-intake-title" class="w-full">
+    <section data-testid="intake-flow" aria-labelledby="public-intake-title" :class="chatExpanded ? 'h-full min-h-0 w-full' : 'w-full'">
         <h1 id="public-intake-title" class="sr-only">Request car service</h1>
         <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</p>
 
-        <form data-testid="intake-workspace" class="intake-workspace mx-auto flex w-full max-w-3xl flex-col" @submit.prevent="submit">
+        <form
+            data-testid="intake-workspace"
+            :class="['intake-workspace mx-auto flex w-full max-w-3xl flex-col', chatExpanded ? 'h-full min-h-0' : '']"
+            @submit.prevent="submit"
+        >
             <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden" />
 
             <Transition name="intake-reveal" mode="out-in">
@@ -272,9 +276,9 @@ const submit = () => {
                     key="conversation"
                     ref="transcriptViewport"
                     data-testid="intake-transcript"
-                    class="max-h-[24rem] min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-7 lg:px-9"
+                    class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-7 lg:px-9"
                 >
-                    <div data-testid="intake-chat" class="flex min-h-full flex-col justify-end">
+                    <div data-testid="intake-chat" class="flex min-h-full flex-col">
                         <PublicIntakeTranscript
                             :completed="completedConversation"
                             :active-state="activeState"
@@ -293,7 +297,7 @@ const submit = () => {
             <div
                 id="active-response"
                 :data-testid="chatExpanded ? 'intake-composer' : 'intake-starter-composer'"
-                :class="chatExpanded ? 'shrink-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-7 lg:px-9' : 'w-full'"
+                :class="chatExpanded ? 'shrink-0 px-4 py-4 sm:px-7 lg:px-9' : 'w-full'"
             >
                 <div
                     v-if="activeControl === 'problem-composer'"
@@ -314,8 +318,8 @@ const submit = () => {
                         autofocus
                         :class="
                             chatExpanded
-                                ? 'w-full resize-none rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base leading-6 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#0e7c86]/25'
-                                : 'min-h-12 min-w-0 flex-1 resize-none rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base leading-6 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[#0e7c86]/25'
+                                ? 'w-full resize-none rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base leading-6 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0e7c86]/25'
+                                : 'min-h-12 min-w-0 flex-1 resize-none rounded-2xl border-0 bg-slate-50 px-4 py-3 text-base leading-6 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0e7c86]/25'
                         "
                         placeholder="Describe the issue..."
                         :aria-invalid="Boolean(form.errors.message)"
@@ -346,10 +350,7 @@ const submit = () => {
                     </div>
                 </div>
 
-                <div
-                    v-else-if="activeControl === 'phone-input'"
-                    class="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_12px_36px_-22px_rgba(15,23,42,0.5)] sm:flex-row sm:items-center"
-                >
+                <div v-else-if="activeControl === 'phone-input'" data-testid="phone-input" class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label for="phone" class="sr-only">Phone number</label>
                     <div class="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-slate-50 px-4">
                         <Phone class="size-4 shrink-0 text-slate-500" aria-hidden="true" />

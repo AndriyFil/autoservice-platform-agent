@@ -5,6 +5,12 @@ export type RepairOrderCreateDefaults = {
     customer_name: string;
     customer_phone: string;
     vehicle_id: string;
+    new_vehicle: {
+        make: string;
+        model: string;
+        year: number | null;
+        plate: string;
+    };
     problem_description: string;
     booking_request_id: string;
     requires_estimate_approval: boolean;

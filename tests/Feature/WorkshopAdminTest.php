@@ -42,7 +42,8 @@ class WorkshopAdminTest extends TestCase
                 ->where('activeWorkshop.id', $workshop->id)
                 ->where('workshop.name', 'Main Auto')
                 ->where('workshop.slug', 'main-auto')
-                ->where('workshop.publicIntakePath', '/w/main-auto')
+                ->missing('workshop.publicIntakePath')
+                ->missing('workshop.publicIntakeUrl')
                 ->has('staffMembers', 1)
                 ->where('staffMembers.0.role.value', 'owner')
                 ->where('staffMembers.0.isCurrentUser', true));
@@ -82,9 +83,7 @@ class WorkshopAdminTest extends TestCase
             'slug' => 'new-auto',
         ]);
 
-        $this
-            ->get(route('public-intake.create', ['workshop' => 'new-auto']))
-            ->assertOk();
+        $this->get('/w/new-auto')->assertNotFound();
     }
 
     public function test_workshop_slug_must_be_unique_except_current_workshop(): void

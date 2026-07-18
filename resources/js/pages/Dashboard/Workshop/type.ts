@@ -15,8 +15,6 @@ export type WorkshopSettings = {
     id: number;
     name: string;
     slug: string;
-    publicIntakePath: string;
-    publicIntakeUrl: string;
     createdAt: string;
 };
 

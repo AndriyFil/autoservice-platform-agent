@@ -70,7 +70,7 @@ class BookingRequestShowQuery
                         'year' => $bookingRequest->vehicle->year,
                         'licensePlate' => $bookingRequest->vehicle->license_plate,
                     ]
-                    : null,
+                    : $this->vehicleSnapshot($bookingRequest),
                 'extractedData' => [
                     'phone' => $bookingRequest->customer_phone,
                     'customerName' => $bookingRequest->customer_name,
@@ -142,20 +142,36 @@ class BookingRequestShowQuery
 
     private function vehicleSummary(BookingRequest $bookingRequest): ?string
     {
-        if (! $bookingRequest->vehicle) {
-            return null;
-        }
-
         $summary = collect([
-            $bookingRequest->vehicle->brand,
-            $bookingRequest->vehicle->model,
-            $bookingRequest->vehicle->year,
-            $bookingRequest->vehicle->license_plate,
+            $bookingRequest->vehicle?->brand ?? $bookingRequest->vehicle_brand,
+            $bookingRequest->vehicle?->model ?? $bookingRequest->vehicle_model,
+            $bookingRequest->vehicle?->year ?? $bookingRequest->vehicle_year,
+            $bookingRequest->vehicle?->license_plate ?? $bookingRequest->vehicle_license_plate,
         ])
             ->filter(fn ($part): bool => filled($part))
             ->implode(' ');
 
         return $summary === '' ? null : $summary;
+    }
+
+    /**
+     * @return array{brand: string|null, model: string|null, year: int|null, licensePlate: string|null}|null
+     */
+    private function vehicleSnapshot(BookingRequest $bookingRequest): ?array
+    {
+        if (! filled($bookingRequest->vehicle_brand)
+            && ! filled($bookingRequest->vehicle_model)
+            && $bookingRequest->vehicle_year === null
+            && ! filled($bookingRequest->vehicle_license_plate)) {
+            return null;
+        }
+
+        return [
+            'brand' => $bookingRequest->vehicle_brand,
+            'model' => $bookingRequest->vehicle_model,
+            'year' => $bookingRequest->vehicle_year,
+            'licensePlate' => $bookingRequest->vehicle_license_plate,
+        ];
     }
 
     private function nullableTrim(?string $value): ?string

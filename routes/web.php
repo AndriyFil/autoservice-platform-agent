@@ -12,8 +12,6 @@ use App\Http\Controllers\DashboardRepairOrderController;
 use App\Http\Controllers\DashboardRepairOrderEstimateApprovalRequirementController;
 use App\Http\Controllers\DashboardRepairOrderLineController;
 use App\Http\Controllers\EstimateDashboardRepairOrderController;
-use App\Http\Controllers\PublicBookingRequestController;
-use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\PublicIntakeController;
 use App\Http\Controllers\WorkshopOnboardingController;
 use App\Http\Middleware\EnsureActiveWorkshop;
@@ -23,8 +21,12 @@ use App\Support\Urls\AppUrl;
 use Illuminate\Support\Facades\Route;
 
 $registerPublicSurface = static function (): void {
-    // Public surface: marketing homepage and workshop customer intake pages.
-    Route::get('/', PublicHomeController::class)->name('home');
+    // Public surface: one global customer intake entry.
+    Route::get('/', [PublicIntakeController::class, 'create'])->name('home');
+
+    Route::post('intake', [PublicIntakeController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('public-intake.store');
 
     Route::get('my-requests/access', [CustomerPortalAccessController::class, 'create'])
         ->middleware(RedirectIfCustomerPhoneVerified::class)
@@ -53,23 +55,6 @@ $registerPublicSurface = static function (): void {
         ->middleware(EnsureVerifiedCustomerPhone::class)
         ->name('customer-portal.show');
 
-    Route::get('w/{workshop:slug}', [PublicIntakeController::class, 'create'])
-        ->name('public-intake.create');
-
-    Route::post('w/{workshop:slug}/intake', [PublicIntakeController::class, 'store'])
-        ->middleware('throttle:10,1')
-        ->name('public-intake.store');
-
-    // Public surface: legacy workshop booking request routes kept for compatibility.
-    Route::get('book/{workshop:slug}', [PublicBookingRequestController::class, 'create'])
-        ->name('public-booking-requests.create');
-
-    Route::post('book/{workshop:slug}', [PublicBookingRequestController::class, 'store'])
-        ->middleware('throttle:10,1')
-        ->name('public-booking-requests.store');
-
-    Route::get('book/{workshop:slug}/success', [PublicBookingRequestController::class, 'success'])
-        ->name('public-booking-requests.success');
 };
 
 $registerAdminSurface = static function (): void {

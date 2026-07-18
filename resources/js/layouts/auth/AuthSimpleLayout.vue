@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import PublicBrand from '@/components/public/PublicBrand.vue';
 import { Link } from '@inertiajs/vue3';
 
 defineProps<{
@@ -9,23 +9,26 @@ defineProps<{
 </script>
 
 <template>
-    <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-        <div class="w-full max-w-sm">
-            <div class="flex flex-col gap-8">
-                <div class="flex flex-col items-center gap-4">
-                    <Link :href="route('home')" class="flex flex-col items-center gap-2 font-medium">
-                        <div class="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                            <AppLogoIcon class="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                        </div>
-                        <span class="sr-only">{{ title }}</span>
-                    </Link>
-                    <div class="space-y-2 text-center">
-                        <h1 class="text-xl font-medium">{{ title }}</h1>
-                        <p class="text-center text-sm text-muted-foreground">{{ description }}</p>
-                    </div>
+    <main class="public-page flex min-h-svh flex-col">
+        <header class="mx-auto flex w-full max-w-md px-5 py-6 sm:px-6 sm:py-8">
+            <Link
+                :href="route('home')"
+                class="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e7c86] focus-visible:ring-offset-4"
+                aria-label="AutoService home"
+            >
+                <PublicBrand />
+            </Link>
+        </header>
+
+        <section class="mx-auto flex w-full max-w-md flex-1 px-4 pb-12 pt-3 sm:px-6 sm:pb-16 sm:pt-5">
+            <div class="public-card w-full self-start rounded-[1.75rem] p-6 sm:p-8">
+                <div class="mb-7">
+                    <p class="public-kicker">Workshop access</p>
+                    <h1 class="mt-2 text-[1.75rem] font-bold leading-tight tracking-[-0.035em] text-[#0b1f33]">{{ title }}</h1>
+                    <p class="mt-3 text-[0.95rem] leading-6 text-[#607086]">{{ description }}</p>
                 </div>
                 <slot />
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 </template>

@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Domain\BookingRequests\Enums\BookingRequestStatus;
 use App\Domain\CustomerPortal\Queries\CustomerRequestIndexQuery;
+use App\Domain\RepairOrders\Enums\RepairOrderStatus;
 use App\Models\BookingRequest;
+use App\Models\RepairOrder;
 use App\Models\Workshop;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -152,7 +154,37 @@ class CustomerPortalRequestHistoryTest extends TestCase
                 ->has('recentRequests', 1)
                 ->where('hasMoreRequests', false)
                 ->missing('request.customerPhone')
-                ->missing('request.repairOrder'));
+                ->where('request.repairOrder', null));
+    }
+
+    public function test_verified_customer_can_see_safe_linked_repair_order_status(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-18 12:00:00');
+
+        $workshop = Workshop::factory()->create(['name' => 'Main Auto']);
+        $bookingRequest = BookingRequest::factory()->for($workshop)->create([
+            'customer_phone' => '+380501112233',
+            'problem_description' => 'Brake noise',
+        ]);
+        $repairOrder = RepairOrder::factory()->create([
+            'workshop_id' => $workshop->id,
+            'customer_id' => $bookingRequest->customer_id,
+            'booking_request_id' => $bookingRequest->id,
+            'status' => RepairOrderStatus::InProgress,
+            'opened_at' => now()->subHour(),
+        ]);
+
+        $this->withSession($this->activeVerifiedSession('+380501112233'))
+            ->get("/my-requests/{$bookingRequest->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->where('request.repairOrder.id', $repairOrder->id)
+                ->where('request.repairOrder.status.value', RepairOrderStatus::InProgress->value)
+                ->where('request.repairOrder.status.label', RepairOrderStatus::InProgress->label())
+                ->where('request.repairOrder.openedAt', $repairOrder->opened_at->toIso8601String())
+                ->where('request.repairOrder.updatedAt', $repairOrder->updated_at->toIso8601String())
+                ->missing('request.repairOrder.notes')
+                ->missing('request.repairOrder.createdByUserId'));
     }
 
     public function test_verified_customer_receives_404_for_another_phone_request(): void

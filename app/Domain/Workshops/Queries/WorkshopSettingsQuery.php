@@ -3,7 +3,6 @@
 namespace App\Domain\Workshops\Queries;
 
 use App\Models\WorkshopUser;
-use App\Support\Urls\AppUrl;
 
 class WorkshopSettingsQuery
 {
@@ -12,8 +11,6 @@ class WorkshopSettingsQuery
      *     id: int,
      *     name: string,
      *     slug: string,
-     *     publicIntakePath: string,
-     *     publicIntakeUrl: string,
      *     createdAt: string
      * }
      */
@@ -25,8 +22,6 @@ class WorkshopSettingsQuery
             'id' => $workshop->id,
             'name' => $workshop->name,
             'slug' => $workshop->slug,
-            'publicIntakePath' => route('public-intake.create', $workshop, false),
-            'publicIntakeUrl' => AppUrl::publicPath(route('public-intake.create', $workshop, false)),
             'createdAt' => $workshop->created_at->toISOString(),
         ];
     }

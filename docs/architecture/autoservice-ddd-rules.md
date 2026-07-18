@@ -51,7 +51,17 @@ Future domain contexts:
 - Customer Portal access verifies possession of a normalized phone through a short-lived session. It does not create Customer `User` accounts, passwords, or credentials.
 - A `Vehicle` belongs to a `Customer`.
 - Public intake creates a `BookingRequest`, not a `RepairOrder`.
+- Every `BookingRequest` is workshop-scoped. Public intake must never create an unassigned request.
 - A `RepairOrder` is an internal workshop order.
+
+## Public Customer Intake
+
+- `/` is the global customer intake entry.
+- The customer describes the problem, provides contact and existing vehicle details, selects a workshop, and reviews the request in one same-page flow.
+- Workshop selection must happen before final submission. Selecting a workshop does not redirect or create a `BookingRequest`.
+- The server must resolve and validate the selected workshop before passing it to the public intake Action.
+- A `BookingRequest` is created only on final submission and always belongs to the selected workshop.
+- The workshop-specific `/w/{workshop:slug}` intake flow was removed and must not be reintroduced as a parallel public entry.
 
 ## RepairOrder Status
 

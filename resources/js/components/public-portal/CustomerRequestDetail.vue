@@ -54,6 +54,22 @@ const formatDateTime = (value: string) =>
             </dl>
         </header>
 
+        <section
+            v-if="request.repairOrder"
+            data-testid="repair-order-summary"
+            class="mt-6 rounded-3xl border border-[#dfe4e4] bg-white p-6 shadow-sm sm:p-8"
+        >
+            <p class="public-kicker">Repair order</p>
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-xl font-semibold text-[#0b1f33]">Repair order #{{ request.repairOrder.id }}</h2>
+                <span class="rounded-full bg-[#e9f3f2] px-3 py-1.5 text-sm font-semibold text-[#0e7c86]">
+                    {{ request.repairOrder.status.label }}
+                </span>
+            </div>
+            <p class="mt-4 text-sm text-[#607086]">Opened {{ formatDateTime(request.repairOrder.openedAt) }}</p>
+            <p class="mt-1 text-sm text-[#607086]">Last updated {{ formatDateTime(request.repairOrder.updatedAt) }}</p>
+        </section>
+
         <section class="mt-6 rounded-3xl border border-[#dfe4e4] bg-white p-6 shadow-sm sm:p-8">
             <h2 class="text-lg font-semibold text-[#0b1f33]">Request progress</h2>
             <ol aria-label="Request progress" class="mt-5 space-y-5 border-l-2 border-[#b9d4d1] pl-5">
@@ -67,6 +83,13 @@ const formatDateTime = (value: string) =>
                     <p class="text-sm font-semibold text-[#0b1f33]">Current status: {{ request.status.label }}</p>
                     <time :datetime="request.updatedAt" class="mt-1 block text-sm text-[#607086]">
                         Last updated {{ formatDateTime(request.updatedAt) }}
+                    </time>
+                </li>
+                <li v-if="request.repairOrder">
+                    <p class="text-sm font-semibold text-[#0b1f33]">Repair order created</p>
+                    <p class="mt-1 text-sm text-[#43566c]">Current order status: {{ request.repairOrder.status.label }}</p>
+                    <time :datetime="request.repairOrder.updatedAt" class="mt-1 block text-sm text-[#607086]">
+                        Last updated {{ formatDateTime(request.repairOrder.updatedAt) }}
                     </time>
                 </li>
             </ol>

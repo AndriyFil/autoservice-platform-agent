@@ -88,6 +88,8 @@ describe('PublicIntakeFlow', () => {
         expect(wrapper.find('#message').exists()).toBe(true);
         expect(buttonWithText(wrapper, 'Send')).toBeDefined();
         expect(wrapper.get('[data-testid="problem-composer"]').classes()).toContain('flex');
+        expect(wrapper.get('#message').classes()).toContain('focus:outline-none');
+        expect(wrapper.get('#message').classes()).toContain('focus:ring-[#0e7c86]/25');
         expect(wrapper.get('[data-testid="intake-starter"]').text()).not.toContain('The workshop will confirm the diagnosis.');
     });
 
@@ -195,9 +197,19 @@ describe('PublicIntakeFlow', () => {
         await wrapper.get('#message').setValue('Brake noise');
         await buttonWithText(wrapper, 'Send')?.trigger('click');
 
+        expect(wrapper.get('[data-testid="intake-flow"]').classes()).toContain('h-full');
+        expect(wrapper.get('[data-testid="intake-workspace"]').classes()).toContain('h-full');
         expect(wrapper.get('[data-testid="intake-chat"]').classes()).toContain('flex-col');
+        expect(wrapper.get('[data-testid="intake-chat"]').classes()).not.toContain('justify-end');
+        expect(wrapper.get('[data-testid="intake-transcript"]').classes()).toContain('flex-1');
         expect(wrapper.get('[data-testid="intake-transcript"]').classes()).toContain('overflow-y-auto');
+        expect(wrapper.get('[data-testid="intake-transcript"]').classes()).not.toContain('max-h-[24rem]');
         expect(wrapper.get('[data-testid="intake-composer"]').classes()).toContain('shrink-0');
+        expect(wrapper.get('[data-testid="intake-composer"]').classes()).not.toContain('border-t');
+        expect(wrapper.get('[data-testid="intake-composer"]').classes()).not.toContain('bg-white');
+        expect(wrapper.get('[data-testid="phone-input"]').classes()).not.toContain('border');
+        expect(wrapper.get('[data-testid="phone-input"]').classes()).not.toContain('bg-white');
+        expect(wrapper.get('[data-testid="phone-input"]').classes()).not.toContain('shadow-[0_12px_36px_-22px_rgba(15,23,42,0.5)]');
     });
 
     it('keeps one bounded workspace shell before and after expansion', async () => {

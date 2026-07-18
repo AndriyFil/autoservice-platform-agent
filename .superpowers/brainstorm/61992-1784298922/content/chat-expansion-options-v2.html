@@ -1,0 +1,86 @@
+<style>
+  .cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:18px; }
+  .card { cursor:pointer; transition:transform .18s ease,box-shadow .18s ease,outline-color .18s ease; }
+  .card:hover { transform:translateY(-2px); }
+  .card.selected { outline:3px solid var(--primary); outline-offset:2px; box-shadow:0 14px 34px color-mix(in srgb,var(--primary) 18%,transparent); }
+  .card.selected .pick { background:var(--primary); color:var(--primary-foreground); }
+  .demo { min-height:265px; padding:16px; display:flex; flex-direction:column; background:color-mix(in srgb,var(--muted) 55%,var(--background)); }
+  .topline { height:12px; width:38%; border-radius:999px; background:color-mix(in srgb,var(--foreground) 16%,transparent); }
+  .scene { flex:1; display:flex; align-items:center; justify-content:center; }
+  .column { width:84%; display:flex; flex-direction:column; gap:9px; }
+  .shell { height:142px; border:1px solid var(--border); border-radius:15px; padding:11px; display:flex; flex-direction:column; justify-content:flex-end; gap:8px; background:var(--card); }
+  .message { height:19px; width:54%; border-radius:9px; background:color-mix(in srgb,var(--primary) 13%,var(--card)); }
+  .message.me { width:40%; align-self:flex-end; background:color-mix(in srgb,var(--viz-series-1) 18%,var(--card)); }
+  .composer { height:36px; border:1px solid var(--input); border-radius:999px; display:flex; align-items:center; gap:8px; padding:0 7px 0 12px; background:var(--card); }
+  .inputline { flex:1; height:7px; border-radius:999px; background:color-mix(in srgb,var(--muted-foreground) 24%,transparent); }
+  .send { width:24px; height:24px; border-radius:50%; background:var(--primary); }
+  .thread { min-height:142px; display:flex; flex-direction:column; justify-content:flex-end; gap:9px; }
+  .thread .composer { border-top-left-radius:12px; border-top-right-radius:12px; }
+  .twocol { width:94%; display:grid; grid-template-columns:minmax(0,1fr) 35%; gap:9px; }
+  .trust { border:1px solid var(--border); border-radius:12px; padding:10px; background:var(--card); }
+  .trust span { display:block; height:7px; border-radius:999px; margin-bottom:8px; background:color-mix(in srgb,var(--muted-foreground) 18%,transparent); }
+  .pick { margin-top:12px; display:flex; justify-content:center; align-items:center; min-height:38px; border:1px solid var(--border); border-radius:10px; font-weight:500; }
+  .tag { display:inline-flex; margin-bottom:8px; padding:3px 8px; border-radius:999px; background:color-mix(in srgb,var(--primary) 14%,transparent); font-size:12px; }
+  @media (max-width:900px) { .cards { grid-template-columns:1fr; } .demo { min-height:240px; } }
+</style>
+
+<h2>Обери поведінку після Send</h2>
+<p class="subtitle">Тепер вибір підсвічується. Якщо вагаєшся — обирай A: це найменший плавний перехід без full-screen.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="demo">
+      <div class="topline"></div>
+      <div class="scene">
+        <div class="column">
+          <div class="shell">
+            <div class="message"></div>
+            <div class="message me"></div>
+            <div class="composer"><div class="inputline"></div><div class="send"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <span class="tag">Рекомендовано</span>
+      <h3>A · Компактна картка</h3>
+      <p>Поле росте вгору до 320–380 px. Ширина й центр не змінюються.</p>
+      <div class="pick">Обрати A</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="demo">
+      <div class="topline"></div>
+      <div class="scene">
+        <div class="column thread">
+          <div class="message"></div>
+          <div class="message me"></div>
+          <div class="composer"><div class="inputline"></div><div class="send"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Потік без картки</h3>
+      <p>Повідомлення з’являються над полем, як у ChatGPT. Сторінка росте вниз.</p>
+      <div class="pick">Обрати B</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="demo">
+      <div class="topline"></div>
+      <div class="scene">
+        <div class="twocol">
+          <div class="shell"><div class="message"></div><div class="composer"><div class="inputline"></div><div class="send"></div></div></div>
+          <div class="trust"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Картка + trust panel</h3>
+      <p>Панель лишається, але після Send layout помітно змінює ширину.</p>
+      <div class="pick">Обрати C</div>
+    </div>
+  </div>
+</div>

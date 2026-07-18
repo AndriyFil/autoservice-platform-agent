@@ -17,6 +17,7 @@ const request = (overrides: Partial<CustomerRequestDetailPayload> = {}): Custome
     updatedAt: '2026-07-18T09:30:00+03:00',
     customerName: 'Olena',
     vehicle: { brand: 'Toyota', model: 'Corolla', year: 2018, licensePlate: 'AA 1234 BB' },
+    repairOrder: null,
     ...overrides,
 });
 
@@ -48,6 +49,35 @@ describe('CustomerRequestDetail', () => {
         expect(wrapper.find('[data-testid="customer-name"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="vehicle-details"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="problem-description"]').exists()).toBe(false);
+    });
+
+    it('renders a linked repair order and its progress milestone', () => {
+        const wrapper = mount(CustomerRequestDetail, {
+            props: {
+                request: request({
+                    repairOrder: {
+                        id: 73,
+                        status: { value: 'in_progress', label: 'In progress' },
+                        openedAt: '2026-07-18T08:30:00+03:00',
+                        updatedAt: '2026-07-18T10:00:00+03:00',
+                    },
+                }),
+            },
+        });
+
+        expect(wrapper.get('[data-testid="repair-order-summary"]').text()).toContain('Repair order #73');
+        expect(wrapper.get('[data-testid="repair-order-summary"]').text()).toContain('In progress');
+        expect(wrapper.get('ol[aria-label="Request progress"]').text()).toContain('Repair order created');
+        expect(wrapper.get('ol[aria-label="Request progress"]').text()).toContain('Current order status: In progress');
+    });
+
+    it('omits repair order details when no order is linked', () => {
+        const wrapper = mount(CustomerRequestDetail, {
+            props: { request: request({ repairOrder: null }) },
+        });
+
+        expect(wrapper.find('[data-testid="repair-order-summary"]').exists()).toBe(false);
+        expect(wrapper.get('ol[aria-label="Request progress"]').text()).not.toContain('Repair order created');
     });
 
     it('composes the detail page in the public workspace with selected history', () => {
