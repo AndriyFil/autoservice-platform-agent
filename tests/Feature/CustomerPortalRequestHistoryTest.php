@@ -126,6 +126,56 @@ class CustomerPortalRequestHistoryTest extends TestCase
                 ->has('requests.data', 0));
     }
 
+    public function test_verified_customer_can_open_an_owned_request(): void
+    {
+        $workshop = Workshop::factory()->create(['name' => 'Main Auto']);
+        $bookingRequest = BookingRequest::factory()->for($workshop)->create([
+            'customer_phone' => '+380501112233',
+            'problem_description' => 'Brake noise',
+            'customer_name' => 'Olena',
+            'vehicle_brand' => 'Toyota',
+            'vehicle_model' => 'Corolla',
+            'vehicle_year' => 2018,
+            'vehicle_license_plate' => 'AA 1234 BB',
+        ]);
+
+        $this->withSession($this->activeVerifiedSession('+380501112233'))
+            ->get("/my-requests/{$bookingRequest->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('CustomerPortal/Show', false)
+                ->where('request.id', $bookingRequest->id)
+                ->where('request.problemDescription', 'Brake noise')
+                ->where('request.workshopName', 'Main Auto')
+                ->where('request.customerName', 'Olena')
+                ->where('request.vehicle.brand', 'Toyota')
+                ->has('recentRequests', 1)
+                ->where('hasMoreRequests', false)
+                ->missing('request.customerPhone')
+                ->missing('request.repairOrder'));
+    }
+
+    public function test_verified_customer_receives_404_for_another_phone_request(): void
+    {
+        $bookingRequest = BookingRequest::factory()->create([
+            'customer_phone' => '+380509999999',
+        ]);
+
+        $this->withSession($this->activeVerifiedSession('+380501112233'))
+            ->get("/my-requests/{$bookingRequest->id}")
+            ->assertNotFound();
+    }
+
+    public function test_unverified_customer_is_redirected_before_request_detail_is_resolved(): void
+    {
+        $bookingRequest = BookingRequest::factory()->create([
+            'customer_phone' => '+380501112233',
+        ]);
+
+        $this->get("/my-requests/{$bookingRequest->id}")
+            ->assertRedirect('/my-requests/access');
+    }
+
     /** @return array<string, int|string> */
     private function activeVerifiedSession(string $phone): array
     {

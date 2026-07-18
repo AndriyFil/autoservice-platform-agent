@@ -48,6 +48,11 @@ $registerPublicSurface = static function (): void {
         ->middleware(EnsureVerifiedCustomerPhone::class)
         ->name('customer-portal.index');
 
+    Route::get('my-requests/{bookingRequest}', [CustomerPortalController::class, 'show'])
+        ->whereNumber('bookingRequest')
+        ->middleware(EnsureVerifiedCustomerPhone::class)
+        ->name('customer-portal.show');
+
     Route::get('w/{workshop:slug}', [PublicIntakeController::class, 'create'])
         ->name('public-intake.create');
 
