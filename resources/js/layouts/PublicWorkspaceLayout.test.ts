@@ -30,7 +30,6 @@ describe('PublicWorkspaceLayout', () => {
         const wrapper = mountLayout();
         const sidebar = wrapper.get('[data-testid="desktop-sidebar"]');
         expect(sidebar.text()).toContain('New request');
-        expect(wrapper.text()).toContain('My requests');
         expect(wrapper.text()).toContain('How it works');
         expect(wrapper.text()).toContain('Prices');
         expect(wrapper.text()).toContain('Help');
@@ -38,6 +37,16 @@ describe('PublicWorkspaceLayout', () => {
         expect(wrapper.text()).toContain('Staff login');
         expect(wrapper.find('[data-testid="history-slot"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="workspace-content"]').exists()).toBe(true);
+    });
+
+    it('shows one portal entry before verification and replaces it with verified history', () => {
+        const unverified = mount(PublicWorkspaceLayout, {
+            props: { adminLoginUrl: '', adminRegisterUrl: '' },
+            global: { mocks: { route } },
+        });
+
+        expect(unverified.get('[data-testid="desktop-sidebar"]').text()).toContain('My requests');
+        expect(mountLayout().get('[data-testid="desktop-sidebar"]').text()).not.toContain('My requests');
     });
 
     it('provides an accessible mobile menu trigger', () => {

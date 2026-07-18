@@ -46,15 +46,15 @@ const closeInfoPanel = () => {
                     <Plus class="size-4" aria-hidden="true" />
                     New request
                 </Link>
+                <slot v-if="$slots.history" name="history" />
                 <Link
+                    v-else
                     :href="route('customer-portal.index')"
                     class="public-focus flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium text-[#43566c] transition hover:bg-slate-100 hover:text-[#0b1f33]"
                 >
                     <ClipboardList class="size-4" aria-hidden="true" />
                     My requests
                 </Link>
-                <slot name="history" />
-
                 <div class="my-3 border-t border-slate-200" />
                 <button
                     type="button"
@@ -134,7 +134,9 @@ const closeInfoPanel = () => {
                                 <Plus class="size-4" aria-hidden="true" />
                                 New request
                             </Link>
+                            <slot v-if="$slots.history" name="history" />
                             <Link
+                                v-else
                                 :href="route('customer-portal.index')"
                                 class="flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium text-[#43566c]"
                                 @click="closeMobileMenu"
@@ -142,7 +144,6 @@ const closeInfoPanel = () => {
                                 <ClipboardList class="size-4" aria-hidden="true" />
                                 My requests
                             </Link>
-                            <slot name="history" />
                             <button
                                 type="button"
                                 class="flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-left text-sm text-[#43566c]"
