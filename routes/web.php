@@ -44,7 +44,7 @@ $registerPublicSurface = static function (): void {
         ->middleware('throttle:customer-portal-code-verification')
         ->name('customer-portal.verify.store');
 
-    Route::get('my-requests', CustomerPortalController::class)
+    Route::get('my-requests', [CustomerPortalController::class, 'index'])
         ->middleware(EnsureVerifiedCustomerPhone::class)
         ->name('customer-portal.index');
 

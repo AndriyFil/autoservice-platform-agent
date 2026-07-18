@@ -8,6 +8,7 @@ use App\Models\BookingRequest;
 use App\Models\Workshop;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class CustomerPortalRequestHistoryTest extends TestCase
@@ -80,5 +81,57 @@ class CustomerPortalRequestHistoryTest extends TestCase
         $this->assertSame([], $history['recent']);
         $this->assertFalse($history['hasMore']);
         $this->assertSame(0, $history['requests']->total());
+    }
+
+    public function test_verified_customer_receives_only_requests_for_the_verified_phone(): void
+    {
+        $workshop = Workshop::factory()->create(['name' => 'Main Auto']);
+        $owned = BookingRequest::factory()->for($workshop)->create([
+            'customer_phone' => '+380501112233',
+            'problem_description' => 'Brake noise',
+        ]);
+        BookingRequest::factory()->for($workshop)->create([
+            'customer_phone' => '+380509999999',
+            'problem_description' => 'Private request',
+        ]);
+
+        $response = $this->withSession($this->activeVerifiedSession('+380501112233'))
+            ->get('/my-requests');
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('CustomerPortal/Index')
+                ->has('recentRequests', 1)
+                ->where('recentRequests.0.id', $owned->id)
+                ->where('recentRequests.0.title', 'Brake noise')
+                ->where('recentRequests.0.workshopName', 'Main Auto')
+                ->where('hasMoreRequests', false)
+                ->has('requests.data', 1)
+                ->missing('phone')
+                ->missing('verifiedPhone'));
+        $response->assertDontSee('Private request')
+            ->assertDontSee('+380501112233')
+            ->assertDontSee('+380509999999');
+    }
+
+    public function test_verified_customer_receives_empty_request_history(): void
+    {
+        $this->withSession($this->activeVerifiedSession('+380501112233'))
+            ->get('/my-requests')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('CustomerPortal/Index')
+                ->has('recentRequests', 0)
+                ->where('hasMoreRequests', false)
+                ->has('requests.data', 0));
+    }
+
+    /** @return array<string, int|string> */
+    private function activeVerifiedSession(string $phone): array
+    {
+        return [
+            'customer_portal.verified_phone' => $phone,
+            'customer_portal.verified_until' => now()->addMinutes(10)->timestamp,
+        ];
     }
 }

@@ -61,13 +61,16 @@ class CustomerPortalAccessTest extends TestCase
                 ->missing('phone'));
     }
 
-    public function test_verified_placeholder_uses_the_customer_portal_index_component(): void
+    public function test_verified_customer_uses_the_empty_customer_portal_index_component(): void
     {
         $this->withSession($this->activeVerifiedSession())
             ->get('/my-requests')
             ->assertOk()
             ->assertInertia(fn (Assert $page): Assert => $page
-                ->component('CustomerPortal/Index'));
+                ->component('CustomerPortal/Index')
+                ->has('recentRequests', 0)
+                ->where('hasMoreRequests', false)
+                ->has('requests.data', 0));
     }
 
     public function test_access_page_receives_expired_session_state(): void
