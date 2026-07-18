@@ -102,7 +102,7 @@ html {
         box-shadow: 0 22px 70px -48px rgb(11 31 51 / 45%);
     }
 
-    .public-field {
+    .public-page .public-field {
         min-height: 3rem;
         width: 100%;
         border: 1px solid #ccd5d7;
@@ -115,12 +115,12 @@ html {
             box-shadow 160ms ease;
     }
 
-    .public-field::placeholder {
+    .public-page .public-field::placeholder {
         color: #8a98a8;
     }
 
-    .public-field:focus,
-    .public-field:focus-visible {
+    .public-page .public-field:focus,
+    .public-page .public-field:focus-visible {
         border-color: var(--public-brand);
         outline: none;
         box-shadow: 0 0 0 3px rgb(14 124 134 / 16%);

@@ -26,6 +26,12 @@ describe('shared public experience design', () => {
         expect(css).not.toContain('linear-gradient');
     });
 
+    it('keeps public fields light when generic dark-theme input utilities are present', () => {
+        expect(css).toContain('.public-page .public-field {');
+        expect(css).toContain('.public-page .public-field::placeholder');
+        expect(css).toContain('.public-page .public-field:focus');
+    });
+
     it('uses one recognizable AutoService identity across public surfaces', () => {
         expect(brand).toContain('AutoService');
         expect(brand).toContain('Wrench');
