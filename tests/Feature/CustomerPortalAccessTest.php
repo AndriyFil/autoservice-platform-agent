@@ -45,7 +45,12 @@ class CustomerPortalAccessTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page): Assert => $page
                 ->component('CustomerPortal/RequestAccess')
-                ->where('sessionExpired', false));
+                ->where('sessionExpired', false)
+                ->has('canLogin')
+                ->has('canRegister')
+                ->has('adminLoginUrl')
+                ->has('adminRegisterUrl')
+                ->missing('recentRequests'));
     }
 
     public function test_verification_page_exposes_only_a_masked_pending_phone(): void
@@ -58,7 +63,12 @@ class CustomerPortalAccessTest extends TestCase
             ->assertInertia(fn (Assert $page): Assert => $page
                 ->component('CustomerPortal/VerifyCode')
                 ->where('maskedPhone', '••••••••0015')
-                ->missing('phone'));
+                ->has('canLogin')
+                ->has('canRegister')
+                ->has('adminLoginUrl')
+                ->has('adminRegisterUrl')
+                ->missing('phone')
+                ->missing('recentRequests'));
     }
 
     public function test_verified_customer_uses_the_empty_customer_portal_index_component(): void

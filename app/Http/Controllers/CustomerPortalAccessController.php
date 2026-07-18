@@ -7,7 +7,9 @@ use App\Domain\CustomerPortal\Actions\VerifyPhoneCodeAction;
 use App\Domain\CustomerPortal\Exceptions\PhoneVerificationFailed;
 use App\Http\Requests\RequestCustomerPortalCodeRequest;
 use App\Http\Requests\VerifyCustomerPortalCodeRequest;
+use App\Support\Urls\AppUrl;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,6 +19,10 @@ class CustomerPortalAccessController extends Controller
     {
         return Inertia::render('CustomerPortal/RequestAccess', [
             'sessionExpired' => session()->get('customer_portal.session_expired', false),
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'adminLoginUrl' => AppUrl::adminPath('/login'),
+            'adminRegisterUrl' => AppUrl::adminPath('/register'),
         ]);
     }
 
@@ -44,6 +50,10 @@ class CustomerPortalAccessController extends Controller
 
         return Inertia::render('CustomerPortal/VerifyCode', [
             'maskedPhone' => $this->maskPhone($phone),
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'adminLoginUrl' => AppUrl::adminPath('/login'),
+            'adminRegisterUrl' => AppUrl::adminPath('/register'),
         ]);
     }
 

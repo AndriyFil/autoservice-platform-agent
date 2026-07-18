@@ -9,6 +9,10 @@ import { ArrowRight, Clock3, LoaderCircle, Phone } from 'lucide-vue-next';
 
 defineProps<{
     sessionExpired?: boolean;
+    canLogin?: boolean;
+    canRegister?: boolean;
+    adminLoginUrl: string;
+    adminRegisterUrl: string;
 }>();
 
 const form = useForm({
@@ -25,7 +29,7 @@ const submit = () => {
 <template>
     <Head title="Access your service requests" />
 
-    <CustomerPortalLayout>
+    <CustomerPortalLayout :can-login="canLogin" :can-register="canRegister" :admin-login-url="adminLoginUrl" :admin-register-url="adminRegisterUrl">
         <div class="flex size-11 items-center justify-center rounded-lg bg-[#2f6471]/10 text-[#2f6471]">
             <Phone class="size-5" aria-hidden="true" />
         </div>
